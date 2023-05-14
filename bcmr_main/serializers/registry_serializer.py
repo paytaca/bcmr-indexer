@@ -27,4 +27,8 @@ class RegistrySerializer(serializers.ModelSerializer):
     def get_identities(self, obj):
         key = obj.token.updated_at.isoformat()
         token = TokenSerializer(obj.token)
-        return { key: token.data }
+        return { 
+            obj.token.category: {
+                key: token.data
+            }
+        }
