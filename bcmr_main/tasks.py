@@ -1,5 +1,6 @@
 from celery import shared_task
 
+from bcmr_main.utils import decode_bcmr_op_url
 from bcmr_main.models import *
 
 from dateutil import parser
@@ -11,9 +12,22 @@ import hashlib
 LOGGER = logging.getLogger(__name__)
 
 
+def log_invalid_op_ret(json_hash, bcmr_url_encoded):
+    LOGGER.info('--- Invalid OP_RETURN data received ---\n\n')
+    LOGGER.info(f'BCMR-JSON Hash: {json_hash}')
+    LOGGER.info(f'Encoded BCMR URL: {bcmr_url_encoded}')
+
+
 @shared_task(queue='process_op_return')
 def process_op_return(category, json_hash, bcmr_url_encoded):
-    bcmr_url_decoded = ''  # update
+    result = decode_bcmr_op_url(bcmr_url_encoded)
+
+    if not result['success']:
+        log_invalid_op_ret(json_hash, bcmr_url_encoded)
+        return
+        
+    bcmr_url_decoded = 'https://'
+    bcmr_url_decoded += result['url']
     response = requests.get(bcmr_url_decoded)
     
     if response.status_code == 200:
@@ -76,5 +90,7 @@ def process_op_return(category, json_hash, bcmr_url_encoded):
                         registry_identity=registry_identity,
                         token=token
                     ).save()
+        else:
+            log_invalid_op_ret(json_hash, bcmr_url_encoded)
     else:
         LOGGER.info(f'Something\'s wrong in fetching BCMR {bcmr_url_decoded} - {response.status_code}')
