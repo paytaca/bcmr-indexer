@@ -13,6 +13,7 @@ gevent==21.1.2
 gunicorn==20.0.4
 psycopg2-binary==2.8.6
 python-decouple==3.3
+python-dateutil==2.8.2
 redis==3.5.3
 supervisor==4.2.1
 whitenoise==5.1.0
