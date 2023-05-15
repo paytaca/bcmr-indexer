@@ -1,9 +1,11 @@
 from rest_framework import serializers
 
+from django.conf import settings
+
 from bcmr_main.models import Token
 
 
-class TokenSerializer(serializers.ModelSerializer):
+class IdentitySerializer(serializers.ModelSerializer):
     token = serializers.SerializerMethodField()
     uris = serializers.SerializerMethodField()
 
@@ -34,3 +36,29 @@ class TokenSerializer(serializers.ModelSerializer):
         if obj.is_nft:
             result['nfts'] = obj.nfts
         return result
+
+
+class TokenSerializer(serializers.ModelSerializer):
+    metadata_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Token
+        fields = (
+            'category',
+            'name',
+            'description',
+            'symbol',
+            'decimals',
+            'icon',
+            'updated_at',
+            'is_nft',
+            'nfts',
+            'metadata_url',
+        )
+
+    def get_metadata_url(self, obj):
+        url_addition = ''
+        if settings.NETWORK == 'chipnet':
+            url_addition = '-chipnet'
+
+        return f'https://bcmr{url_addition}.paytaca.com/api/registries/{obj.category}/latest/'

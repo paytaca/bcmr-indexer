@@ -10,6 +10,8 @@ app_name = "bcmr_main"
 router = routers.DefaultRouter()
 
 router.register("", views.WebhookViewSet, basename="webhook")
+router.register("tokens", views.TokenViewSet)
+
 
 urlpatterns = router.urls
 urlpatterns += [

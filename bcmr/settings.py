@@ -28,6 +28,7 @@ SECRET_KEY = 'django-insecure-pv!^!=pl^ia3f2rqyua82#&t9j!zk4+7^kqcnw(u)8f4&f8y%h
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEPLOYMENT_INSTANCE = config('DEPLOYMENT_INSTANCE', default='dev')
+NETWORK = config('NETWORK', default='chipnet')
 DEBUG = DEPLOYMENT_INSTANCE == 'dev'
 
 ALLOWED_HOSTS = ['*']
@@ -44,6 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
+    'django_filters',
     'bcmr_main',
 ]
 
@@ -239,3 +241,12 @@ LOGGING = {
 # CORS HEADERS
 
 CORS_ORIGIN_ALLOW_ALL = True
+
+
+# REST_FRAMEWORK
+
+REST_FRAMEWORK = {
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend'
+    ]
+}
