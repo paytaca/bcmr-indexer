@@ -32,3 +32,7 @@ class Token(models.Model):
             'symbol',
             'is_nft',
         )
+
+    def save(self, *args, **kwargs):
+        self.updated_at = timezone.now()
+        super(Token, self).save(*args, **kwargs)

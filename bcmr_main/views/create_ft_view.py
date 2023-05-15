@@ -23,21 +23,19 @@ def create_ft(request):
         if Token.objects.filter(category=category).exists():
             message = 'Fungible Token category already exists!'
         else:
-            now = timezone.now()
             token = Token(
                 category=category,
                 name=name,
                 description=description,
                 symbol=symbol,
                 decimals=decimals,
-                icon=icon,
-                updated_at=now
+                icon=icon
             )
             token.save()
 
             registry_data = {
                 'token': token,
-                'latest_revision': now,
+                'latest_revision': timezone.now(),
                 'registry_identity': {
                     'name': f'{name}\'s Registry',
                     'description': f'{name}\'s CashToken Metadata'
