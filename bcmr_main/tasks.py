@@ -20,19 +20,13 @@ def log_invalid_op_ret(json_hash, bcmr_url_encoded):
 
 @shared_task(queue='process_op_return')
 def process_op_return(category, json_hash, bcmr_url_encoded):
-    result = decode_bcmr_op_url(bcmr_url_encoded)
-
-    if not result['success']:
-        log_invalid_op_ret(json_hash, bcmr_url_encoded)
-        return
-        
-    bcmr_url_decoded = 'https://'
-    bcmr_url_decoded += result['url']
+    decoded_url = decode_bcmr_op_url(bcmr_url_encoded)
+    bcmr_url_decoded = 'https://' + decoded_url.strip()
     response = requests.get(bcmr_url_decoded)
     
     if response.status_code == 200:
         bcmr = response.json()
-        hasher = hashlib(response.text.encode())
+        hasher = hashlib.sha256(response.text.encode())
         bcmr_hash = hasher.hexdigest()
 
         if json_hash == bcmr_hash:
@@ -93,4 +87,4 @@ def process_op_return(category, json_hash, bcmr_url_encoded):
         else:
             log_invalid_op_ret(json_hash, bcmr_url_encoded)
     else:
-        LOGGER.info(f'Something\'s wrong in fetching BCMR {bcmr_url_decoded} - {response.status_code}')
+        LOGGER.info(f'Something\'s wrong in fetching BCMR --- {bcmr_url_decoded} - {response.status_code}')
