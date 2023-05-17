@@ -11,8 +11,8 @@ services:
       - /home/ubuntu/.ssh:/root/ssh:ro
     environment:
       SSH_DEBUG: "-v"
-      TUNNEL_HOST: bchn-chipnet
-      REMOTE_HOST: "${BCHN_CHIPNET_HOST}"
+      TUNNEL_HOST: bchn-mainnet
+      REMOTE_HOST: "${BCHN_MAINNET_HOST}"
       LOCAL_PORT: 8332
       REMOTE_PORT: 8332
   postgres:
@@ -20,19 +20,19 @@ services:
     volumes:
       - paytaca_bcmr_db_data:/var/lib/postgresql/data
     env_file:
-      - /home/ubuntu/paytaca-bcmr/compose/.env_chipnet
+      - /home/ubuntu/paytaca-bcmr/compose/.env_mainnet
     expose:
       - "5432"
   redis:
     image: "redis:alpine"
     env_file:
-      - /home/ubuntu/paytaca-bcmr/compose/.env_chipnet
+      - /home/ubuntu/paytaca-bcmr/compose/.env_mainnet
   backend:
     container_name: paytaca_bcmr_backend
     build: /home/ubuntu/paytaca-bcmr
     image: paytaca_bcmr_web
     command: [ "supervisord", "-c", "/code/supervisord.conf", "--nodaemon" ]
-    env_file: /home/ubuntu/paytaca-bcmr/compose/.env_chipnet
+    env_file: /home/ubuntu/paytaca-bcmr/compose/.env_mainnet
     ports:
       - 8000:8000
     depends_on:

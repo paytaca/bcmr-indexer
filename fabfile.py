@@ -20,6 +20,16 @@ def chipnet(ctx):
 
 
 @task
+def mainnet(ctx):
+    ctx.config.network = 'mainnet'
+    ctx.config.project_dir = f'/home/ubuntu/{project}'
+    ctx.config.run.env['conn'] = Connection(
+        config['MAINNET_SERVER_HOST'],
+        user=config['MAINNET_SERVER_USER']
+    )
+
+
+@task
 def uname(ctx):
     conn = ctx.config.run.env['conn']
     conn.run('uname -a')
