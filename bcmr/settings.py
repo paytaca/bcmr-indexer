@@ -268,3 +268,12 @@ REST_FRAMEWORK = {
 RPC_USER = decipher(config('RPC_USER'))
 BCHN_RPC_PASSWORD = decipher(config('BCHN_RPC_PASSWORD'))
 BCHN_NODE = f'http://{RPC_USER}:{BCHN_RPC_PASSWORD}@bchn:8332'
+
+
+# watchtower
+
+prefix = ''
+if NETWORK == 'chipnet':
+    prefix = 'chipnet.'
+    
+WATCHTOWER_WEBHOOK_URL = f'https://{prefix}watchtower.cash/api'
