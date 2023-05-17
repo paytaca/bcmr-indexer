@@ -14,7 +14,16 @@ from pathlib import Path
 from decouple import config
 import psycopg2
 import redis
+import base64
 import os
+
+
+def decipher(value):
+    try:
+        return base64.b64decode(value.encode()).decode()
+    except:
+        return value
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -246,7 +255,16 @@ CORS_ORIGIN_ALLOW_ALL = True
 # REST_FRAMEWORK
 
 REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 100,
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend'
     ]
 }
+
+
+# BCHN
+
+RPC_USER = decipher(config('RPC_USER'))
+BCHN_RPC_PASSWORD = decipher(config('BCHN_RPC_PASSWORD'))
+BCHN_NODE = f'http://{RPC_USER}:{BCHN_RPC_PASSWORD}@bchn:8332'

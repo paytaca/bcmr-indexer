@@ -23,6 +23,17 @@ class RegistryAdmin(admin.ModelAdmin):
         'latest_revision',
     ]
 
+class IdentityOutputAdmin(admin.ModelAdmin):
+    list_display = [
+        'tx_hash',
+        'authbase',
+        'genesis',
+        'spent',
+        'burned',
+        'token',
+        'date_created',
+    ]
 
 admin.site.register(Token, TokenAdmin)
 admin.site.register(Registry, RegistryAdmin)
+admin.site.register(IdentityOutput, IdentityOutputAdmin)
