@@ -25,7 +25,8 @@ def mainnet(ctx):
     ctx.config.project_dir = f'/home/ubuntu/{project}'
     ctx.config.run.env['conn'] = Connection(
         config['MAINNET_SERVER_HOST'],
-        user=config['MAINNET_SERVER_USER']
+        user=config['MAINNET_SERVER_USER'],
+        connect_kwargs = { 'key_filename': config['SERVER_SSH_KEY'] }
     )
 
 
@@ -63,21 +64,21 @@ def sync(ctx):
 def build(ctx):
     conn = ctx.config.run.env['conn']
     with conn.cd(ctx.config.project_dir):
-        conn.run(f'docker-compose -f compose/{ctx.config.network}.yml --env-file {ctx.config.project_dir}/.env build')
+        conn.run(f'sudo docker-compose -f compose/{ctx.config.network}.yml --env-file {ctx.config.project_dir}/.env build')
 
 
 @task
 def up(ctx):
     conn = ctx.config.run.env['conn']
     with conn.cd(ctx.config.project_dir):
-        conn.run(f'docker-compose -f compose/{ctx.config.network}.yml --env-file {ctx.config.project_dir}/.env up -d')
+        conn.run(f'sudo docker-compose -f compose/{ctx.config.network}.yml --env-file {ctx.config.project_dir}/.env up -d')
 
 
 @task
 def down(ctx):
     conn = ctx.config.run.env['conn']
     with conn.cd(ctx.config.project_dir):
-        conn.run(f'docker-compose -f compose/{ctx.config.network}.yml --env-file {ctx.config.project_dir}/.env down --remove-orphans')
+        conn.run(f'sudo docker-compose -f compose/{ctx.config.network}.yml --env-file {ctx.config.project_dir}/.env down --remove-orphans')
 
 
 @task
