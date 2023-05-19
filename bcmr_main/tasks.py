@@ -28,7 +28,9 @@ def process_op_ret(txid, json_hash, bcmr_url_encoded):
     
     if status_code == 200:
         bcmr = response.json()
-        hasher = hashlib.sha256(response.text.encode())
+        binary_content = bytearray()
+        binary_content.extend(response.text.encode())
+        hasher = hashlib.sha256(binary_content)
         bcmr_hash = hasher.hexdigest()
 
         if json_hash == bcmr_hash:
