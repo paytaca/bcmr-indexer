@@ -178,3 +178,19 @@ def process_tx(tx_hash):
                     ).save()
         else:
             pass
+
+
+@shared_task(queue='recheck_output_blockheight')
+def recheck_output_blockheight():
+    LOGGER.info('RECHECKING UNSAVED BLOCKHEIGHTS OF OUTPUTS')
+    
+    bchn = BCHN()
+    outputs = IdentityOutput.objects.filter(block__isnull=True)
+
+    for output in outputs:
+        tx = bchn._get_raw_transaction(output.tx_hash)
+
+        if 'blockhash' in tx.keys():
+            block = bchn.get_block_height(tx['blockhash'])
+            output.block = block
+            output.save()
