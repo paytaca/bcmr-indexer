@@ -13,7 +13,7 @@ class IdentityOutput(models.Model):
     burned = models.BooleanField(default=False)
     token = models.ForeignKey(
         Token,
-        related_name='identity_output',
+        related_name='identity_outputs',
         on_delete=models.CASCADE
     )
     date_created = models.DateTimeField(default=timezone.now)

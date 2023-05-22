@@ -15,7 +15,15 @@ def update_watchtower(sender, instance=None, created=False, **kwargs):
         'description': instance.description,
         'symbol': instance.symbol,
         'decimals': instance.decimals,
-        'image_url': instance.icon
+        'image_url': instance.icon,
+        'is_nft': instance.is_nft,
+        'nfts': instance.nfts
     }
+
+    if instance.is_nft:
+        outputs = instance.identity_outputs.order_by('-block')
+        if outputs.exists():
+            info_dict['current_txid'] = outputs.first().tx_hash
+
     url = f'{settings.WATCHTOWER_WEBHOOK_URL}/webhook/'
     response = requests.post(url, json=info_dict)
