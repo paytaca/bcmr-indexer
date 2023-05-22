@@ -104,10 +104,16 @@ def process_tx(tx_hash):
 
     bchn = BCHN()
     tx = bchn._get_raw_transaction(tx_hash)
-    block = bchn.get_block_height(tx['blockhash'])
+
+    block = None
+    if 'blockhash' in tx.keys():
+        block = bchn.get_block_height(tx['blockhash'])
 
     inputs = tx['vin']
     outputs = tx['vout']
+
+    if 'coinbase' in inputs[0].keys():
+        return
 
     input_txids = list(map(lambda i: i['txid'], inputs))
     token_outputs = []

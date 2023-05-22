@@ -15,6 +15,16 @@ services:
       REMOTE_HOST: "${BCHN_MAINNET_HOST}"
       LOCAL_PORT: 8332
       REMOTE_PORT: 8332
+  zmq:
+    image: cagataygurturk/docker-ssh-tunnel
+    volumes:
+      - /root/.ssh:/root/ssh:ro
+    environment:
+      SSH_DEBUG: "-v"
+      TUNNEL_HOST: bchn-mainnet
+      REMOTE_HOST: "${BCHN_MAINNET_HOST}"
+      LOCAL_PORT: 28332
+      REMOTE_PORT: 28332
   postgres:
     image: "postgres:11.1-alpine"
     volumes:

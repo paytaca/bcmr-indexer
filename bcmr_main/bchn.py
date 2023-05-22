@@ -19,13 +19,25 @@ class BCHN(object):
         return self.rpc_connection.getblockcount()
 
     def get_block(self, block):
-        block_hash = self.rpc_connection.getblockhash(block)
-        block_data = self.rpc_connection.getblock(block_hash)
-        return block_data['tx']
+        retries = 0
+        while retries < self.max_retries:
+            try:
+                block_hash = self.rpc_connection.getblockhash(block)
+                block_data = self.rpc_connection.getblock(block_hash)
+                return block_data['tx']
+            except:
+                retries += 1
+                time.sleep(1)
 
     def get_block_height(self, block_hash):
-        block = self.rpc_connection.getblock(block_hash)
-        return block['height']
+        retries = 0
+        while retries < self.max_retries:
+            try:
+                block = self.rpc_connection.getblock(block_hash)
+                return block['height']
+            except:
+                retries += 1
+                time.sleep(1)
 
     def _get_raw_transaction(self, txid):
         retries = 0
