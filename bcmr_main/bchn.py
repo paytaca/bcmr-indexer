@@ -14,16 +14,18 @@ class BCHN(object):
     def __init__(self):
         self.max_retries = 20
         self.rpc_connection = AuthServiceProxy(settings.BCHN_NODE)
+    
+    def get_latest_block(self):
+        return self.rpc_connection.getblockcount()
+
+    def get_block(self, block):
+        block_hash = self.rpc_connection.getblockhash(block)
+        block_data = self.rpc_connection.getblock(block_hash)
+        return block_data['tx']
 
     def get_block_height(self, block_hash):
-        retries = 0
-        while retries < self.max_retries:
-            try:
-                block = self.rpc_connection.getblock(block_hash)
-                return block['height']
-            except:
-                retries += 1
-                time.sleep(1)
+        block = self.rpc_connection.getblock(block_hash)
+        return block['height']
 
     def _get_raw_transaction(self, txid):
         retries = 0

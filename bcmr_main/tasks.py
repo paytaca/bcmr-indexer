@@ -153,6 +153,7 @@ def process_tx(tx_hash):
             if is_valid_op_ret:
                 token, _ = Token.objects.get_or_create(category=category)
                 if genesis:
+                    # save authbase tx
                     authbase_tx_hash = input_txids[input_txids.index(category)]
                     IdentityOutput(
                         tx_hash=authbase_tx_hash,
@@ -162,11 +163,12 @@ def process_tx(tx_hash):
                         spent=True
                     ).save()
 
-                IdentityOutput(
-                    tx_hash=tx_hash,
-                    block=block,
-                    token=token,
-                    genesis=genesis
-                ).save()
+                    # save genesis tx
+                    IdentityOutput(
+                        tx_hash=tx_hash,
+                        block=block,
+                        token=token,
+                        genesis=True
+                    ).save()
         else:
             pass
