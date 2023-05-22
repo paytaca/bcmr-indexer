@@ -26,6 +26,7 @@ class RegistryAdmin(admin.ModelAdmin):
 class IdentityOutputAdmin(admin.ModelAdmin):
     list_display = [
         'tx_hash',
+        'block',
         'authbase',
         'genesis',
         'spent',

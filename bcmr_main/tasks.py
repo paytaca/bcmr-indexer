@@ -104,6 +104,7 @@ def process_tx(tx_hash):
 
     bchn = BCHN()
     tx = bchn._get_raw_transaction(tx_hash)
+    block = bchn.get_block_height(tx['blockhash'])
 
     inputs = tx['vin']
     outputs = tx['vout']
@@ -141,7 +142,7 @@ def process_tx(tx_hash):
 
         if index == 0:
             genesis = False
-            is_valid_op_ret = False
+            is_valid_op_ret = True  # defaults to true for genesis txns without op return yet
 
             if bcmr_op_ret:  # has op return output?
                 is_valid_op_ret = process_op_ret(**bcmr_op_ret)
@@ -155,6 +156,7 @@ def process_tx(tx_hash):
                     authbase_tx_hash = input_txids[input_txids.index(category)]
                     IdentityOutput(
                         tx_hash=authbase_tx_hash,
+                        block=block,
                         token=token,
                         authbase=True,
                         spent=True
@@ -162,6 +164,7 @@ def process_tx(tx_hash):
 
                 IdentityOutput(
                     tx_hash=tx_hash,
+                    block=block,
                     token=token,
                     genesis=genesis
                 ).save()

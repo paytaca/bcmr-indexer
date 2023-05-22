@@ -6,6 +6,7 @@ from bcmr_main.models.Token import Token
 
 class IdentityOutput(models.Model):
     tx_hash = models.CharField(max_length=100, unique=True, primary_key=True)
+    block = models.PositiveIntegerField(null=True, blank=True)
     authbase = models.BooleanField(default=False)
     genesis = models.BooleanField(default=False)
     spent = models.BooleanField(default=False)
@@ -18,7 +19,4 @@ class IdentityOutput(models.Model):
     date_created = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        ordering = (
-            '-date_created',
-            'token',
-        )
+        ordering = ('-block', )
