@@ -61,14 +61,13 @@ def process_op_ret(txid, json_hash, bcmr_url_encoded):
                         token.symbol = token_data['symbol']
                     if 'decimals' in token_data_keys:
                         token.decimals = token_data['decimals']
+                    if 'nfts' in latest_metadata_keys:
+                        token.is_nft = True
+                        token.nfts = latest_metadata['nfts']
                 
                 if 'uris' in latest_metadata_keys:
                     if 'icon' in latest_metadata['uris']:
                         token.icon = latest_metadata['uris']['icon']
-                
-                if 'nfts' in latest_metadata_keys:
-                    token.is_nft = True
-                    token.nfts = latest_metadata['nfts']
 
                 token.updated_at = latest_timestamp
                 token.save()
