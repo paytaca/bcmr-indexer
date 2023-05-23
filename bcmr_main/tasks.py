@@ -1,6 +1,9 @@
 from celery import shared_task
 
-from bcmr_main.utils import decode_bcmr_op_url
+from bcmr_main.utils import (
+    decode_bcmr_op_url,
+    send_webhook_token_update,
+)
 from bcmr_main.bchn import BCHN
 from bcmr_main.models import *
 
@@ -20,7 +23,14 @@ def log_invalid_op_ret(txid, json_hash, bcmr_url_encoded):
     LOGGER.error(f'Encoded BCMR URL: {bcmr_url_encoded}')
     
 
-def process_op_ret(txid, json_hash, bcmr_url_encoded):
+def process_op_ret(
+    txid,
+    json_hash,
+    bcmr_url_encoded,
+    index,
+    commitment='',
+    capability=''
+):
     decoded_url = decode_bcmr_op_url(bcmr_url_encoded)
     bcmr_url_decoded = 'https://' + decoded_url.strip()
     response = requests.get(bcmr_url_decoded)
@@ -61,9 +71,9 @@ def process_op_ret(txid, json_hash, bcmr_url_encoded):
                         token.symbol = token_data['symbol']
                     if 'decimals' in token_data_keys:
                         token.decimals = token_data['decimals']
-                    if 'nfts' in latest_metadata_keys:
+                    if 'nfts' in token_data_keys:
                         token.is_nft = True
-                        token.nfts = latest_metadata['nfts']
+                        token.nfts = token_data['nfts']
                 
                 if 'uris' in latest_metadata_keys:
                     if 'icon' in latest_metadata['uris']:
@@ -71,6 +81,14 @@ def process_op_ret(txid, json_hash, bcmr_url_encoded):
 
                 token.updated_at = latest_timestamp
                 token.save()
+
+                send_webhook_token_update(
+                    category,
+                    index,
+                    txid,
+                    commitment=commitment,
+                    capability=capability
+                )
 
                 registry = Registry.objects.filter(token=token)
 
@@ -115,6 +133,7 @@ def process_tx(tx_hash):
         return
 
     input_txids = list(map(lambda i: i['txid'], inputs))
+    identity_input = input_txids[0]
     token_outputs = []
     bcmr_op_ret = {}
     
@@ -123,7 +142,7 @@ def process_tx(tx_hash):
         scriptPubKey = output['scriptPubKey']
         output_type = scriptPubKey['type']
 
-        if output_type == 'pubkeyhash':
+        if output_type in ['pubkeyhash', 'scripthash']:
             if 'tokenData' in output.keys():
                 token_outputs.append(output)
         
@@ -143,40 +162,66 @@ def process_tx(tx_hash):
     for obj in token_outputs:
         index = obj['n']
         token_data = obj['tokenData']
+        is_nft = 'nft' in token_data.keys()
+
         category = token_data['category']
+        capability = ''
+        commitment = ''
+
+        if is_nft:
+            nft_data = token_data['nft']
+            commitment = nft_data['commitment']
+            capability = nft_data['capability']
+
+        # defaults to true for genesis outputs without op return yet and non-zero outputs
+        is_valid_op_ret = True
+        genesis = False
 
         if index == 0:
-            genesis = False
-            is_valid_op_ret = True  # defaults to true for genesis txns without op return yet
+            if bcmr_op_ret:
+                is_valid_op_ret = process_op_ret(
+                    bcmr_op_ret['txid'],
+                    bcmr_op_ret['json_hash'],
+                    bcmr_op_ret['bcmr_url_encoded'],
+                    index,
+                    commitment=commitment,
+                    capability=capability
+                )
 
-            if bcmr_op_ret:  # has op return output?
-                is_valid_op_ret = process_op_ret(**bcmr_op_ret)
-
-            if category in input_txids:  # is genesis txn?
+            if category == identity_input:
                 genesis = True
             
-            if is_valid_op_ret:
-                token, _ = Token.objects.get_or_create(category=category)
-                if genesis:
-                    # save authbase tx
-                    authbase_tx_hash = input_txids[input_txids.index(category)]
-                    IdentityOutput(
-                        tx_hash=authbase_tx_hash,
-                        block=block,
-                        token=token,
-                        authbase=True,
-                        spent=True
-                    ).save()
+        if is_valid_op_ret:
+            token, _ = Token.objects.get_or_create(category=category)
+            token.is_nft = is_nft
+            token.save()
 
-                    # save genesis tx
-                    IdentityOutput(
-                        tx_hash=tx_hash,
-                        block=block,
-                        token=token,
-                        genesis=True
-                    ).save()
-        else:
-            pass
+            send_webhook_token_update(
+                token.category,
+                index,
+                tx_hash,
+                commitment=commitment,
+                capability=capability
+            )
+
+            # if genesis:
+            #     # save authbase tx
+            #     authbase_tx_hash = identity_input
+            #     IdentityOutput(
+            #         tx_hash=authbase_tx_hash,
+            #         block=block,
+            #         token=token,
+            #         authbase=True,
+            #         spent=True
+            #     ).save()
+
+            #     # save genesis (for now)
+            #     IdentityOutput(
+            #         tx_hash=tx_hash,
+            #         block=block,
+            #         token=token,
+            #         genesis=genesis
+            #     ).save()
 
 
 @shared_task(queue='recheck_output_blockheight')

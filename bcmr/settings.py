@@ -199,10 +199,10 @@ CELERYD_PREFETCH_MULTIPLIER = 1
 CELERYD_MAX_TASKS_PER_CHILD = 5
 
 CELERY_BEAT_SCHEDULE = {
-    'recheck-output-blockheight': {
-        'task': 'bcmr_main.tasks.recheck_output_blockheight',
-        'schedule': 120
-    }
+    # 'recheck-output-blockheight': {
+    #     'task': 'bcmr_main.tasks.recheck_output_blockheight',
+    #     'schedule': 120
+    # }
 }
 
 
