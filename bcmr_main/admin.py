@@ -25,12 +25,13 @@ class RegistryAdmin(admin.ModelAdmin):
 
 class IdentityOutputAdmin(admin.ModelAdmin):
     list_display = [
-        'tx_hash',
+        'txid',
+        'index',
+        'address',
         'block',
         'authbase',
         'genesis',
         'spent',
-        'burned',
         'token',
         'date_created',
     ]

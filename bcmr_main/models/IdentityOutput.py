@@ -1,22 +1,29 @@
-from django.db import models
 from django.utils import timezone
+from django.db import models
 
 from bcmr_main.models.Token import Token
 
 
 class IdentityOutput(models.Model):
-    tx_hash = models.CharField(max_length=100, unique=True, primary_key=True)
+    txid = models.CharField(max_length=255)
+    index = models.PositiveIntegerField()
     block = models.PositiveIntegerField(null=True, blank=True)
+    address = models.CharField(max_length=100, null=True, blank=True)
+    token = models.ForeignKey(
+        Token,
+        related_name='outputs',
+        on_delete=models.CASCADE
+    )
+
     authbase = models.BooleanField(default=False)
     genesis = models.BooleanField(default=False)
     spent = models.BooleanField(default=False)
-    burned = models.BooleanField(default=False)
-    token = models.ForeignKey(
-        Token,
-        related_name='identity_outputs',
-        on_delete=models.CASCADE
-    )
+
     date_created = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        ordering = ('-block', )
+        ordering = ('-date_created', )
+        unique_together = (
+            'txid',
+            'index',
+        )

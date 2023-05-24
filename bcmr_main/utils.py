@@ -1,6 +1,7 @@
 from django.conf import settings
+from django.utils import timezone
 
-from bcmr_main.models import Token
+from bcmr_main.models import Token, IdentityOutput
 
 from subprocess import Popen, PIPE
 import requests
@@ -34,3 +35,32 @@ def send_webhook_token_update(category, index, txid, commitment='', capability='
 
     url = f'{settings.WATCHTOWER_WEBHOOK_URL}/webhook/'
     _ = requests.post(url, json=info_dict)
+
+
+def save_output(
+    txid,
+    index,
+    block,
+    address,
+    category,
+    authbase=False,
+    genesis=False,
+    spent=False
+):
+    token = Token.objects.get(category=category)
+    output, created = IdentityOutput.objects.get_or_create(
+        txid=txid,
+        index=index,
+        token=token
+    )
+    # used get or create only on txid & index, for the case of using the rescan_cashtoken_blocks script for existing txns
+    output.block = block
+    output.address = address
+    output.category = category
+    output.authbase = authbase
+    output.genesis = genesis
+    output.spent = spent
+
+    if not created:
+        output.date_created = timezone.now()
+    output.save()
