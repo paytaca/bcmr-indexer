@@ -17,9 +17,8 @@ class Command(BaseCommand):
             curr_block = 120000
             
         while curr_block < latest_block:
-            self.stdout.write(f'Rescanning block {curr_block}')
             transactions = node.get_block(curr_block)
-            self.stdout.write(f'Transactions: {len(transactions)}')
+            self.stdout.write(f'Block: {curr_block}  |  Transactions: {len(transactions)}')
 
             for txid in transactions:
                 process_tx.delay(txid)

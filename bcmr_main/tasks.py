@@ -1,7 +1,8 @@
 from celery import shared_task
 
 from bcmr_main.utils import (
-    decode_bcmr_op_url,
+    decode_str,
+    encode_str,
     send_webhook_token_update,
     save_output,
 )
@@ -11,52 +12,56 @@ from bcmr_main.models import *
 from dateutil import parser
 import logging
 import requests
-import hashlib
 
 
 LOGGER = logging.getLogger(__name__)
 
 
-def log_invalid_op_ret(txid, json_hash, bcmr_url_encoded):
+def log_invalid_op_ret(txid, encoded_bcmr_json_hash, encoded_bcmr_url):
     LOGGER.error('--- Invalid OP_RETURN data received ---\n\n')
     LOGGER.error(f'TXID: {txid}')
-    LOGGER.error(f'BCMR-JSON Hash: {json_hash}')
-    LOGGER.error(f'Encoded BCMR URL: {bcmr_url_encoded}')
+    LOGGER.error(f'Encoded BCMR JSON Hash: {encoded_bcmr_json_hash}')
+    LOGGER.error(f'Encoded BCMR URL: {encoded_bcmr_url}')
     
 
 def process_op_ret(
     txid,
-    json_hash,
-    bcmr_url_encoded,
-    index,
-    commitment='',
-    capability=''
+    encoded_bcmr_json_hash,
+    encoded_bcmr_url
 ):
-    decoded_url = decode_bcmr_op_url(bcmr_url_encoded)
-    bcmr_url_decoded = 'https://' + decoded_url.strip()
-    response = requests.get(bcmr_url_decoded)
+    decoded_bcmr_json_hash = decode_str(encoded_bcmr_json_hash)
+    decoded_bcmr_url = decode_str(encoded_bcmr_url)
+    decoded_bcmr_url = 'https://' + decoded_bcmr_url.strip()
+
+    response = requests.get(decoded_bcmr_url)
     status_code = response.status_code
     
     if status_code == 200:
-        bcmr = response.json()
-        binary_content = bytearray()
-        binary_content.extend(response.text.encode())
-        hasher = hashlib.sha256(binary_content)
-        bcmr_hash = hasher.hexdigest()
+        encoded_response_json_hash = encode_str(response.text)
 
-        if json_hash == bcmr_hash:
+        if decoded_bcmr_json_hash == encoded_response_json_hash:
+            bcmr = response.json()
             identities = bcmr['identities']
             version = bcmr['version']
             latest_revision = parser.parse(bcmr['latestRevision'])
             registry_identity = bcmr['registryIdentity']
 
             for category, token_history in identities.items():
+                # catch for old BCMR schemas
+                # v1 = list of dicts
+                # v2 = dict of dicts
+                if type(token_history) is not dict:
+                    continue
+
                 timestamps = list(token_history.keys())
                 timestamps.sort(key=lambda x: parser.parse(x))
                 latest_timestamp = timestamps[-1]
                 latest_metadata = token_history[latest_timestamp]
 
                 token, _ = Token.objects.get_or_create(category=category)
+                token.bcmr_url = decoded_bcmr_url
+                token.bcmr_json = bcmr
+
                 latest_metadata_keys = latest_metadata.keys()
 
                 if 'name' in latest_metadata_keys:
@@ -83,14 +88,6 @@ def process_op_ret(
                 token.updated_at = latest_timestamp
                 token.save()
 
-                send_webhook_token_update(
-                    category,
-                    index,
-                    txid,
-                    commitment=commitment,
-                    capability=capability
-                )
-
                 registry = Registry.objects.filter(token=token)
 
                 if registry.exists():
@@ -109,9 +106,9 @@ def process_op_ret(
             
             return True
         else:
-            log_invalid_op_ret(txid, json_hash, bcmr_url_encoded)
+            log_invalid_op_ret(txid, encoded_bcmr_json_hash, encoded_bcmr_url)
     else:
-        LOGGER.info(f'Something\'s wrong in fetching BCMR --- {bcmr_url_decoded} - {status_code}')
+        LOGGER.info(f'Something\'s wrong in fetching BCMR --- {decoded_bcmr_url} - {status_code}')
     
     return False
 
@@ -155,21 +152,15 @@ def process_tx(tx_hash):
                 accepted_BCMR_encoded_vals = [ '1380795202', '0442434d52' ]
                 if op_rets[1] in accepted_BCMR_encoded_vals:
                     bcmr_op_ret['txid'] = tx_hash
-                    bcmr_op_ret['json_hash'] = op_rets[2]
-                    bcmr_op_ret['bcmr_url_encoded'] = op_rets[3]
+                    bcmr_op_ret['encoded_bcmr_json_hash'] = op_rets[2]
+                    bcmr_op_ret['encoded_bcmr_url'] = op_rets[3]
     
 
     # defaults to true for genesis outputs without op return yet and non-zero outputs
     is_valid_op_ret = True
     if bcmr_op_ret:
-        is_valid_op_ret = process_op_ret(
-            bcmr_op_ret['txid'],
-            bcmr_op_ret['json_hash'],
-            bcmr_op_ret['bcmr_url_encoded'],
-            index,
-            commitment=commitment,
-            capability=capability
-        )
+        is_valid_op_ret = process_op_ret(**bcmr_op_ret)
+
 
     # parse and save identity outputs
     for obj in token_outputs:
@@ -198,14 +189,13 @@ def process_tx(tx_hash):
             token.is_nft = is_nft
             token.save()
 
-            if created:
-                send_webhook_token_update(
-                    token.category,
-                    index,
-                    tx_hash,
-                    commitment=commitment,
-                    capability=capability
-                )
+            send_webhook_token_update(
+                token.category,
+                index,
+                tx_hash,
+                commitment=commitment,
+                capability=capability
+            )
 
             output_data = {
                 'txid': tx_hash,

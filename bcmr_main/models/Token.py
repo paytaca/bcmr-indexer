@@ -19,6 +19,9 @@ class Token(models.Model):
     # see https://github.com/bitjson/chip-bcmr/blob/master/bcmr-v2.schema.ts
     nfts = models.JSONField(null=True, blank=True)
 
+    bcmr_json = models.JSONField(null=True, blank=True)
+    bcmr_url = models.URLField(null=True, blank=True)
+
     updated_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(
         max_length=10,

@@ -53,6 +53,8 @@ class TokenSerializer(serializers.ModelSerializer):
             'updated_at',
             'is_nft',
             'nfts',
+            'bcmr_url',
+            'bcmr_json',
             'metadata_url',
         )
 
