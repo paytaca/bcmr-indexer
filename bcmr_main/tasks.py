@@ -1,11 +1,6 @@
 from celery import shared_task
 
-from bcmr_main.utils import (
-    decode_str,
-    encode_str,
-    send_webhook_token_update,
-    save_output,
-)
+from bcmr_main.utils import *
 from bcmr_main.bchn import BCHN
 from bcmr_main.models import *
 
@@ -30,21 +25,21 @@ def process_op_ret(
     encoded_bcmr_url
 ):
     decoded_bcmr_json_hash = decode_str(encoded_bcmr_json_hash)
-    decoded_bcmr_url = decode_str(encoded_bcmr_url)
-    decoded_bcmr_url = 'https://' + decoded_bcmr_url.strip()
+    decoded_bcmr_url = decode_url(encoded_bcmr_url)
 
     response = requests.get(decoded_bcmr_url)
     status_code = response.status_code
+    is_valid = False
     
     if status_code == 200:
         encoded_response_json_hash = encode_str(response.text)
 
         if decoded_bcmr_json_hash == encoded_response_json_hash:
-            bcmr = response.json()
-            identities = bcmr['identities']
-            version = bcmr['version']
-            latest_revision = parser.parse(bcmr['latestRevision'])
-            registry_identity = bcmr['registryIdentity']
+            bcmr_json = response.json()
+            # identities = bcmr_json['identities']
+            # version = bcmr_json['version']
+            latest_revision = parser.parse(bcmr_json['latestRevision'])
+            # registry_identity = bcmr_json['registryIdentity']
 
             for category, token_history in identities.items():
                 # catch for old BCMR schemas
@@ -57,60 +52,25 @@ def process_op_ret(
                 timestamps.sort(key=lambda x: parser.parse(x))
                 latest_timestamp = timestamps[-1]
                 latest_metadata = token_history[latest_timestamp]
-
-                token, _ = Token.objects.get_or_create(category=category)
-                token.bcmr_url = decoded_bcmr_url
-                token.bcmr_json = bcmr
-
-                latest_metadata_keys = latest_metadata.keys()
-
-                if 'name' in latest_metadata_keys:
-                    token.name = latest_metadata['name']
-                if 'description' in latest_metadata_keys:
-                    token.description = latest_metadata['description']
-
-                if 'token' in latest_metadata_keys:
-                    token_data = latest_metadata['token']
-                    token_data_keys = token_data.keys()
-
-                    if 'symbol' in token_data_keys:
-                        token.symbol = token_data['symbol']
-                    if 'decimals' in token_data_keys:
-                        token.decimals = token_data['decimals']
-                    if 'nfts' in token_data_keys:
-                        token.is_nft = True
-                        token.nfts = token_data['nfts']
                 
-                if 'uris' in latest_metadata_keys:
-                    if 'icon' in latest_metadata['uris']:
-                        token.icon = latest_metadata['uris']['icon']
+                # is_nft = False
+                # if 'token' in latest_metadata.keys():
+                #     token_data = latest_metadata['token']
+                #     if 'nfts' in token_data.keys():
+                #         is_nft = True
 
-                token.updated_at = latest_timestamp
-                token.save()
-
-                registry = Registry.objects.filter(token=token)
-
-                if registry.exists():
-                    registry = registry.first()
-                    registry.version = version
-                    registry.latest_revision = latest_revision
-                    registry.registry_identity = registry_identity
-                    registry.save()
-                else:
-                    Registry(
-                        version=version,
-                        latest_revision=latest_revision,
-                        registry_identity=registry_identity,
-                        token=token
-                    ).save()
+                # record the latest identity metadata only
+                registry_json = bcmr_json
+                registry_json['identities'][category][latest_timestamp] = latest_metadata
+                save_registry(category, registry_json, latest_revision)
             
-            return True
+            is_valid = True
         else:
             log_invalid_op_ret(txid, encoded_bcmr_json_hash, encoded_bcmr_url)
     else:
         LOGGER.info(f'Something\'s wrong in fetching BCMR --- {decoded_bcmr_url} - {status_code}')
     
-    return False
+    return is_valid, decoded_bcmr_url
 
 
 @shared_task(queue='process_tx')
@@ -145,32 +105,43 @@ def process_tx(tx_hash):
                 token_outputs.append(output)
         
         elif output_type == 'nulldata':
-            op_return = scriptPubKey['asm']
-            op_rets = op_return.split(' ')
+            asm = scriptPubKey['asm']
+            asm = asm.split(' ')
 
-            if len(op_rets) == 4:
-                accepted_BCMR_encoded_vals = [ '1380795202', '0442434d52' ]
-                if op_rets[1] in accepted_BCMR_encoded_vals:
+            if len(asm) == 4:
+                is_bcmr_op_ret = False
+
+                if asm[1] == '1380795202':
+                    _hex = scriptPubKey['hex']
+                    # TODO: validate 0442434d52 in hex
+                    # example = 6a0442434d5240303139643032616261633166393637353439663433653037306637323334383337326363333537643639363463663232616230663862346331623139636636383f697066732e7061742e6d6e2f697066732f516d665170724a7470696f4a6d53774c56545735684d445155734150686443327569727553786659707a47794a4e
+                    is_bcmr_op_ret = True
+
+                if is_bcmr_op_ret:
                     bcmr_op_ret['txid'] = tx_hash
-                    bcmr_op_ret['encoded_bcmr_json_hash'] = op_rets[2]
-                    bcmr_op_ret['encoded_bcmr_url'] = op_rets[3]
-    
+                    bcmr_op_ret['encoded_bcmr_json_hash'] = asm[2]
+                    bcmr_op_ret['encoded_bcmr_url'] = asm[3]
+
 
     # defaults to true for genesis outputs without op return yet and non-zero outputs
     is_valid_op_ret = True
+    bcmr_url = None
+    
     if bcmr_op_ret:
-        is_valid_op_ret = process_op_ret(**bcmr_op_ret)
+        is_valid_op_ret, bcmr_url = process_op_ret(**bcmr_op_ret)
 
 
-    # parse and save identity outputs
+    # parse and save identity outputs and tokens
     for obj in token_outputs:
         index = obj['n']
         token_data = obj['tokenData']
-        is_nft = 'nft' in token_data.keys()
-        recipient = obj['scriptPubKey']['addresses'][0]
+        address = obj['scriptPubKey']['addresses'][0]
+        amount = int(token_data['amount'])
         category = token_data['category']
-        capability = ''
-        commitment = ''
+        capability = None
+        commitment = None
+        
+        is_nft = 'nft' in token_data.keys()
 
         if is_nft:
             nft_data = token_data['nft']
@@ -184,25 +155,31 @@ def process_tx(tx_hash):
             if category == identity_input_txid:
                 genesis = True
             
+        save_token(
+            amount,
+            category,
+            commitment=commitment,
+            capability=capability,
+            bcmr_url=bcmr_url,
+            is_nft=is_nft
+        )
+        
+        # send_webhook_token_update(
+        #     category,
+        #     index,
+        #     tx_hash,
+        #     commitment=commitment,
+        #     capability=capability
+        # )
+
         if is_valid_op_ret:
-            token, created = Token.objects.get_or_create(category=category)
-            token.is_nft = is_nft
-            token.save()
-
-            send_webhook_token_update(
-                token.category,
-                index,
-                tx_hash,
-                commitment=commitment,
-                capability=capability
-            )
-
             output_data = {
                 'txid': tx_hash,
                 'index': index,
                 'block': block,
-                'address': recipient,
-                'category': token.category,
+                'address': address,
+                'category': category,
+                'commitment': commitment,
                 'authbase': False,
                 'spent': False,
                 'genesis': False

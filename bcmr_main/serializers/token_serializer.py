@@ -5,62 +5,38 @@ from django.conf import settings
 from bcmr_main.models import Token
 
 
-class IdentitySerializer(serializers.ModelSerializer):
-    token = serializers.SerializerMethodField()
-    uris = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Token
-        fields = (
-            'name',
-            'description',
-            'token',
-            'status',
-            'uris',
-        )
-
-    def get_uris(self, obj):
-        if obj.icon:
-            return {
-                'icon': obj.icon
-            }
-        return {}
-
-    def get_token(self, obj):
-        result = {
-            'category': obj.category,
-            'symbol': obj.symbol,
-            'decimals': obj.decimals 
-        }
-
-        if obj.is_nft:
-            result['nfts'] = obj.nfts
-        return result
-
-
 class TokenSerializer(serializers.ModelSerializer):
-    metadata_url = serializers.SerializerMethodField()
+    original_bcmr_url = serializers.SerializerMethodField()
+    paytaca_bcmr_url = serializers.SerializerMethodField()
+    paytaca_bcmr_json = serializers.SerializerMethodField()
 
     class Meta:
         model = Token
         fields = (
             'category',
-            'name',
-            'description',
-            'symbol',
-            'decimals',
-            'icon',
-            'updated_at',
+            'amount',
+            'commitment',
+            'capability',
             'is_nft',
-            'nfts',
-            'bcmr_url',
-            'bcmr_json',
-            'metadata_url',
+            'original_bcmr_url', # link to original registry
+            'paytaca_bcmr_url',  # link to custom registry (contains only the latest metadata -- see tasks.py/process_op_ret)
+            'paytaca_bcmr_json', # custom json metadata from paytaca_bcmr_url
+            'updated_at',
         )
 
-    def get_metadata_url(self, obj):
-        url_addition = ''
-        if settings.NETWORK == 'chipnet':
-            url_addition = '-chipnet'
+    def get_original_bcmr_url(self, obj):
+        return obj.bcmr_url
 
-        return f'https://bcmr{url_addition}.paytaca.com/api/registries/{obj.category}/latest/'
+    def get_paytaca_bcmr_json(self, obj):
+        if obj.registry:
+            return obj.registry.data
+        return obj.registry
+
+    def get_paytaca_bcmr_url(self, obj):
+        if obj.registry:
+            url_addition = ''
+            if settings.NETWORK == 'chipnet':
+                url_addition = '-chipnet'
+
+            return f'https://bcmr{url_addition}.paytaca.com/api/registries/{obj.category}/latest/'
+        return None

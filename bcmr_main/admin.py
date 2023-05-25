@@ -9,17 +9,17 @@ admin.site.site_header = 'Paytaca BCMR Admin'
 class TokenAdmin(admin.ModelAdmin):
     list_display = [
         'category',
-        'name',
-        'symbol',
-        'decimals',
-        'status',
+        'amount',
         'is_nft',
+        'commitment',
+        'capability',
         'updated_at',
+        'bcmr_url',
     ]
 
 class RegistryAdmin(admin.ModelAdmin):
     list_display = [
-        'token',
+        'category',
         'latest_revision',
     ]
 

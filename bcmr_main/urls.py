@@ -14,6 +14,6 @@ router.register("tokens", views.TokenViewSet)
 
 urlpatterns = router.urls
 urlpatterns += [
-    path('create_ft/', views.create_ft),
-    re_path(r"^registries/(?P<token_id>[\w+:]+)/latest/$", views.RegistryView.as_view(), name='latest-token-registry'),
+#     path('create_ft/', views.create_ft),
+    re_path(r"^registries/(?P<category>[\w+:]+)/latest/$", views.RegistryView.as_view(), name='latest-token-registry'),
 ]

@@ -1,39 +1,44 @@
 from django.db import models
 from django.utils import timezone
 
+from bcmr_main.models.Registry import Registry
+
 
 class Token(models.Model):
-    class Status(models.TextChoices):
-        ACTIVE = 'active'
-        INACTIVE = 'inactive'
-        BURNED = 'burned'
+    class Capability(models.TextChoices):
+        MINTING = 'minting'
+        MUTABLE = 'mutable'
+        NONE = 'none'
 
-    category = models.CharField(max_length=255, primary_key=True, unique=True)
-    name = models.CharField(max_length=255, default='', blank=True)
-    description = models.TextField(default='', blank=True)
-    symbol = models.CharField(max_length=100, default='', blank=True)
-    decimals = models.PositiveIntegerField(default=0)
-    icon = models.CharField(max_length=255, default='', blank=True)
+    category = models.CharField(max_length=255)
+    amount = models.BigIntegerField(default=0)
     is_nft = models.BooleanField(default=False)
-
-    # see https://github.com/bitjson/chip-bcmr/blob/master/bcmr-v2.schema.ts
-    nfts = models.JSONField(null=True, blank=True)
-
-    bcmr_json = models.JSONField(null=True, blank=True)
-    bcmr_url = models.URLField(null=True, blank=True)
-
-    updated_at = models.DateTimeField(null=True, blank=True)
-    status = models.CharField(
-        max_length=10,
-        choices=Status.choices,
-        default=Status.ACTIVE
+    commitment = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True
     )
+    capability = models.CharField(
+        max_length=20,
+        choices=Capability.choices,
+        null=True,
+        blank=True
+    )
+    registry = models.ForeignKey(
+        Registry,
+        on_delete=models.CASCADE,
+        related_name='tokens',
+        null=True,
+        blank=True
+    )
+    bcmr_url = models.URLField(max_length=255, null=True, blank=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        ordering = (
-            'name',
-            'symbol',
-            'is_nft',
+        ordering = ('-updated_at', )
+        unique_together = (
+            'category',
+            'commitment',
         )
 
     def save(self, *args, **kwargs):
