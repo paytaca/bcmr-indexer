@@ -1,16 +1,13 @@
-from rest_framework import viewsets, mixins
+from rest_framework.views import APIView
 
-from django_filters import rest_framework as filters
+from django.http import JsonResponse
 
-from bcmr_main.serializers import TokenSerializer
-from bcmr_main.filters import TokenFilter
-from bcmr_main.models import Token
+from bcmr_main.utils import parse_token_info
 
 
-class TokenViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Token.objects.all()
-    serializer_class = TokenSerializer
-    filterset_class = TokenFilter
-    filterset_backends = (
-        filters.DjangoFilterBackend,
-    )
+class TokenView(APIView):
+
+    def get(self, request, *args, **kwargs):
+        category = kwargs.get('category', '')
+        token_info = parse_token_info(category)
+        return JsonResponse(token_info)

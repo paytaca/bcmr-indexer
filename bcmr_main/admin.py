@@ -20,7 +20,6 @@ class TokenAdmin(admin.ModelAdmin):
 class RegistryAdmin(admin.ModelAdmin):
     list_display = [
         'category',
-        'latest_revision',
     ]
 
 class IdentityOutputAdmin(admin.ModelAdmin):

@@ -6,9 +6,7 @@ from bcmr_main.models import Token
 
 
 class TokenSerializer(serializers.ModelSerializer):
-    original_bcmr_url = serializers.SerializerMethodField()
-    paytaca_bcmr_url = serializers.SerializerMethodField()
-    paytaca_bcmr_json = serializers.SerializerMethodField()
+    bcmr_url_mirror = serializers.SerializerMethodField()
 
     class Meta:
         model = Token
@@ -18,21 +16,12 @@ class TokenSerializer(serializers.ModelSerializer):
             'commitment',
             'capability',
             'is_nft',
-            'original_bcmr_url', # link to original registry
-            'paytaca_bcmr_url',  # link to custom registry (contains only the latest metadata -- see tasks.py/process_op_ret)
-            'paytaca_bcmr_json', # custom json metadata from paytaca_bcmr_url
+            'bcmr_url', # link to original registry
+            'bcmr_url_mirror',  # link to custom registry (contains only the latest metadata -- see tasks.py/process_op_ret)
             'updated_at',
         )
 
-    def get_original_bcmr_url(self, obj):
-        return obj.bcmr_url
-
-    def get_paytaca_bcmr_json(self, obj):
-        if obj.registry:
-            return obj.registry.data
-        return obj.registry
-
-    def get_paytaca_bcmr_url(self, obj):
+    def get_bcmr_url_mirror(self, obj):
         if obj.registry:
             url_addition = ''
             if settings.NETWORK == 'chipnet':

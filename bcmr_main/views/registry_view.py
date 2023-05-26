@@ -1,4 +1,3 @@
-from rest_framework import viewsets, status
 from rest_framework.views import APIView
 
 from django.http import JsonResponse
@@ -13,6 +12,6 @@ class RegistryView(APIView):
 
         try:
             registry = Registry.objects.get(category=category)
-            return JsonResponse(registry.data)
+            return JsonResponse(registry.metadata)
         except Registry.DoesNotExist as dne:
             return JsonResponse({})

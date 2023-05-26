@@ -49,10 +49,9 @@ def decode_url(encoded_url):
 #     _ = requests.post(url, json=info_dict)
 
 
-def save_registry(category, json_data, latest_revision):
+def save_registry(category, json_data):
     registry, _ = Registry.objects.get_or_create(category=category)
     registry.data = json_data
-    registry.latest_revision = latest_revision
     registry.save()
 
 
@@ -109,3 +108,39 @@ def save_output(
     if not created:
         output.date_created = timezone.now()
     output.save()
+
+
+def parse_token_info(category):
+    try:
+        info = {}
+        registry = Registry.objects.get(category=category)
+        identities = registry.metadata['identities']
+        identities = identities[category] # category key
+        metadata = identities[list(identities.keys())[0]] # timestamp keys
+
+        info['name'] = metadata['name']
+        info['description'] = metadata['description']
+
+        token_data = metadata['token']
+        token_data_keys = token_data.keys()
+
+        if 'uris' in metadata.keys():
+            uris = metadata['uris']
+            if 'icon' in uris.keys():
+                info['icon_url'] = uris['icon']
+
+        if 'symbol' in token_data_keys:
+            info['symbol'] = token_data['symbol']
+
+        if 'nfts' in token_data_keys:
+            nfts = token_data['nfts']
+
+            if 'parse' in nfts.keys():
+                parse = nfts['parse']
+
+                if 'types' in parse.keys():
+                    info['types'] = parse['types']
+                    
+        return info
+    except Registry.DoesNotExist as dne:
+        return {}

@@ -1,76 +1,13 @@
 from celery import shared_task
 
-from bcmr_main.utils import *
+from bcmr_main.op_return import *
 from bcmr_main.bchn import BCHN
 from bcmr_main.models import *
 
-from dateutil import parser
 import logging
-import requests
 
 
 LOGGER = logging.getLogger(__name__)
-
-
-def log_invalid_op_ret(txid, encoded_bcmr_json_hash, encoded_bcmr_url):
-    LOGGER.error('--- Invalid OP_RETURN data received ---\n\n')
-    LOGGER.error(f'TXID: {txid}')
-    LOGGER.error(f'Encoded BCMR JSON Hash: {encoded_bcmr_json_hash}')
-    LOGGER.error(f'Encoded BCMR URL: {encoded_bcmr_url}')
-    
-
-def process_op_ret(
-    txid,
-    encoded_bcmr_json_hash,
-    encoded_bcmr_url
-):
-    decoded_bcmr_json_hash = decode_str(encoded_bcmr_json_hash)
-    decoded_bcmr_url = decode_url(encoded_bcmr_url)
-
-    response = requests.get(decoded_bcmr_url)
-    status_code = response.status_code
-    is_valid = False
-    
-    if status_code == 200:
-        encoded_response_json_hash = encode_str(response.text)
-
-        if decoded_bcmr_json_hash == encoded_response_json_hash:
-            bcmr_json = response.json()
-            # identities = bcmr_json['identities']
-            # version = bcmr_json['version']
-            latest_revision = parser.parse(bcmr_json['latestRevision'])
-            # registry_identity = bcmr_json['registryIdentity']
-
-            for category, token_history in identities.items():
-                # catch for old BCMR schemas
-                # v1 = list of dicts
-                # v2 = dict of dicts
-                if type(token_history) is not dict:
-                    continue
-
-                timestamps = list(token_history.keys())
-                timestamps.sort(key=lambda x: parser.parse(x))
-                latest_timestamp = timestamps[-1]
-                latest_metadata = token_history[latest_timestamp]
-                
-                # is_nft = False
-                # if 'token' in latest_metadata.keys():
-                #     token_data = latest_metadata['token']
-                #     if 'nfts' in token_data.keys():
-                #         is_nft = True
-
-                # record the latest identity metadata only
-                registry_json = bcmr_json
-                registry_json['identities'][category][latest_timestamp] = latest_metadata
-                save_registry(category, registry_json, latest_revision)
-            
-            is_valid = True
-        else:
-            log_invalid_op_ret(txid, encoded_bcmr_json_hash, encoded_bcmr_url)
-    else:
-        LOGGER.info(f'Something\'s wrong in fetching BCMR --- {decoded_bcmr_url} - {status_code}')
-    
-    return is_valid, decoded_bcmr_url
 
 
 @shared_task(queue='process_tx')
@@ -140,7 +77,6 @@ def process_tx(tx_hash):
         category = token_data['category']
         capability = None
         commitment = None
-        
         is_nft = 'nft' in token_data.keys()
 
         if is_nft:

@@ -22,6 +22,7 @@ class IdentityOutput(models.Model):
     date_created = models.DateTimeField(default=timezone.now)
 
     class Meta:
+        verbose_name_plural = 'Identity Outputs'
         ordering = ('-date_created', )
         unique_together = (
             'txid',
