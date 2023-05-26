@@ -28,30 +28,24 @@ def decode_url(encoded_url):
     return decoded_bcmr_url
 
 
-# def send_webhook_token_update(category, index, txid, commitment='', capability=''):
-#     token = Token.objects.get(category=category)
-#     info_dict = {
-#         'index': index,
-#         'txid': txid,
-#         'category': token.category,
-#         'name': token.name,
-#         'description': token.description,
-#         'symbol': token.symbol,
-#         'decimals': token.decimals,
-#         'image_url': token.icon,
-#         'is_nft': token.is_nft,
-#         'nft_details': token.nfts,
-#         'commitment': commitment,
-#         'capability': capability
-#     }
+def send_webhook_token_update(category, index, txid, commitment=None, capability=None):
+    token = Token.objects.get(category=category, commitment=commitment)
+    info_dict = {
+        'index': index,
+        'txid': txid,
+        'category': category,
+        'is_nft': token.is_nft,
+        'commitment': commitment,
+        'capability': capability
+    }
 
-#     url = f'{settings.WATCHTOWER_WEBHOOK_URL}/webhook/'
-#     _ = requests.post(url, json=info_dict)
+    url = f'{settings.WATCHTOWER_WEBHOOK_URL}/webhook/'
+    _ = requests.post(url, json=info_dict)
 
 
 def save_registry(category, json_data):
     registry, _ = Registry.objects.get_or_create(category=category)
-    registry.data = json_data
+    registry.metadata = json_data
     registry.save()
 
 
@@ -112,25 +106,40 @@ def save_output(
 
 def parse_token_info(category):
     try:
-        info = {}
+        info = {
+            'name': '',
+            'description': '',
+            'symbol': '',
+            'decimals': 0,
+            'uris': { 'icon': '' },
+            'types': None
+        }
+
         registry = Registry.objects.get(category=category)
         identities = registry.metadata['identities']
         identities = identities[category] # category key
         metadata = identities[list(identities.keys())[0]] # timestamp keys
 
-        info['name'] = metadata['name']
-        info['description'] = metadata['description']
-
         token_data = metadata['token']
         token_data_keys = token_data.keys()
+        metadata_keys = metadata.keys()
 
-        if 'uris' in metadata.keys():
+        if 'name' in metadata_keys:
+            info['name'] = metadata['name']
+
+        if 'description' in metadata_keys:
+            info['description'] = metadata['description']
+
+        if 'uris' in metadata_keys:
             uris = metadata['uris']
             if 'icon' in uris.keys():
-                info['icon_url'] = uris['icon']
+                info['uris']['icon'] = uris['icon']
 
         if 'symbol' in token_data_keys:
             info['symbol'] = token_data['symbol']
+        
+        if 'decimals' in token_data_keys:
+            info['decimals'] = token_data['decimals']
 
         if 'nfts' in token_data_keys:
             nfts = token_data['nfts']

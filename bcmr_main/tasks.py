@@ -50,9 +50,13 @@ def process_tx(tx_hash):
 
                 if asm[1] == '1380795202':
                     _hex = scriptPubKey['hex']
-                    # TODO: validate 0442434d52 in hex
-                    # example = 6a0442434d5240303139643032616261633166393637353439663433653037306637323334383337326363333537643639363463663232616230663862346331623139636636383f697066732e7061742e6d6e2f697066732f516d665170724a7470696f4a6d53774c56545735684d445155734150686443327569727553786659707a47794a4e
-                    is_bcmr_op_ret = True
+                    decoded_hex = decode_str(_hex)
+                    validating_str = decoded_hex.split('@')[0]
+
+                    # example script pubkey hex
+                    # 6a0442434d5240303139643032616261633166393637353439663433653037306637323334383337326363333537643639363463663232616230663862346331623139636636383f697066732e7061742e6d6e2f697066732f516d665170724a7470696f4a6d53774c56545735684d445155734150686443327569727553786659707a47794a4e
+                    if '\x04BCMR' in validating_str:
+                        is_bcmr_op_ret = True
 
                 if is_bcmr_op_ret:
                     bcmr_op_ret['txid'] = tx_hash
@@ -100,13 +104,13 @@ def process_tx(tx_hash):
             is_nft=is_nft
         )
         
-        # send_webhook_token_update(
-        #     category,
-        #     index,
-        #     tx_hash,
-        #     commitment=commitment,
-        #     capability=capability
-        # )
+        send_webhook_token_update(
+            category,
+            index,
+            tx_hash,
+            commitment=commitment,
+            capability=capability
+        )
 
         if is_valid_op_ret:
             output_data = {
