@@ -39,10 +39,9 @@ class ZMQHandler():
                     tx_hash = binascii.hexlify(body).decode()
                     tx = self.BCHN._get_raw_transaction(tx_hash)
                     inputs = tx['vin']
-                    outputs = tx['vout']
 
                     if 'coinbase' in inputs[0].keys():
-                        return
+                        continue
                     
                     process_tx.delay(tx_hash)
         except KeyboardInterrupt:
