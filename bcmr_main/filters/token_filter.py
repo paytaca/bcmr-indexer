@@ -8,7 +8,5 @@ class TokenFilter(filters.FilterSet):
         model = Token
         fields = (
             'category',
-            'name',
-            'symbol',
             'is_nft',
         )

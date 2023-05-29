@@ -5,62 +5,27 @@ from django.conf import settings
 from bcmr_main.models import Token
 
 
-class IdentitySerializer(serializers.ModelSerializer):
-    token = serializers.SerializerMethodField()
-    uris = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Token
-        fields = (
-            'name',
-            'description',
-            'token',
-            'status',
-            'uris',
-        )
-
-    def get_uris(self, obj):
-        if obj.icon:
-            return {
-                'icon': obj.icon
-            }
-        return {}
-
-    def get_token(self, obj):
-        result = {
-            'category': obj.category,
-            'symbol': obj.symbol,
-            'decimals': obj.decimals 
-        }
-
-        if obj.is_nft:
-            result['nfts'] = obj.nfts
-        return result
-
-
 class TokenSerializer(serializers.ModelSerializer):
-    metadata_url = serializers.SerializerMethodField()
+    bcmr_url_mirror = serializers.SerializerMethodField()
 
     class Meta:
         model = Token
         fields = (
             'category',
-            'name',
-            'description',
-            'symbol',
-            'decimals',
-            'icon',
-            'updated_at',
+            'amount',
+            'commitment',
+            'capability',
             'is_nft',
-            'nfts',
-            'bcmr_url',
-            'bcmr_json',
-            'metadata_url',
+            'bcmr_url', # link to original registry
+            'bcmr_url_mirror',  # link to custom registry (contains only the latest metadata -- see tasks.py/process_op_ret)
+            'updated_at',
         )
 
-    def get_metadata_url(self, obj):
-        url_addition = ''
-        if settings.NETWORK == 'chipnet':
-            url_addition = '-chipnet'
+    def get_bcmr_url_mirror(self, obj):
+        if obj.registry:
+            url_addition = ''
+            if settings.NETWORK == 'chipnet':
+                url_addition = '-chipnet'
 
-        return f'https://bcmr{url_addition}.paytaca.com/api/registries/{obj.category}/latest/'
+            return f'https://bcmr{url_addition}.paytaca.com/api/registries/{obj.category}/latest/'
+        return None
