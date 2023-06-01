@@ -7,6 +7,9 @@ admin.site.site_header = 'Paytaca BCMR Admin'
 
 
 class TokenAdmin(admin.ModelAdmin):
+    search_fields = [
+        'category',
+    ]
     list_display = [
         'category',
         'amount',
@@ -18,6 +21,9 @@ class TokenAdmin(admin.ModelAdmin):
     ]
 
 class RegistryAdmin(admin.ModelAdmin):
+    search_fields = [
+        'category',
+    ]
     list_display = [
         'category',
         'valid',
@@ -25,6 +31,12 @@ class RegistryAdmin(admin.ModelAdmin):
     ]
 
 class IdentityOutputAdmin(admin.ModelAdmin):
+    search_fields = [
+        'txid',
+        'address',
+        'block',
+        'token__category',
+    ]
     list_display = [
         'txid',
         'index',
