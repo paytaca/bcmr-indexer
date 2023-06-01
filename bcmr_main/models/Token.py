@@ -1,8 +1,6 @@
 from django.db import models
 from django.utils import timezone
 
-from bcmr_main.models.Registry import Registry
-
 
 class Token(models.Model):
     class Capability(models.TextChoices):
@@ -21,13 +19,6 @@ class Token(models.Model):
     capability = models.CharField(
         max_length=20,
         choices=Capability.choices,
-        null=True,
-        blank=True
-    )
-    registry = models.ForeignKey(
-        Registry,
-        on_delete=models.CASCADE,
-        related_name='tokens',
         null=True,
         blank=True
     )

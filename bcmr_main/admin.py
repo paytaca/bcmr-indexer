@@ -20,6 +20,8 @@ class TokenAdmin(admin.ModelAdmin):
 class RegistryAdmin(admin.ModelAdmin):
     list_display = [
         'category',
+        'valid',
+        'date_created',
     ]
 
 class IdentityOutputAdmin(admin.ModelAdmin):

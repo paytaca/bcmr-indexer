@@ -31,6 +31,7 @@ def process_tx(tx_hash):
     identity_input_txid = input_txids[0]
     token_outputs = []
     bcmr_op_ret = {}
+    op_ret_str = ''
     
     # collect all outputs that are tokens (including BCMR op return)
     for output in outputs:
@@ -43,22 +44,14 @@ def process_tx(tx_hash):
         
         elif output_type == 'nulldata':
             asm = scriptPubKey['asm']
+            op_ret_str = asm
             asm = asm.split(' ')
 
             if len(asm) == 4:
-                is_bcmr_op_ret = False
-
                 if asm[1] == '1380795202':
                     _hex = scriptPubKey['hex']
-                    decoded_hex = decode_str(_hex)
-                    validating_str = decoded_hex.split('@')[0]
+                    # TODO: validate hex here
 
-                    # example script pubkey hex
-                    # 6a0442434d5240303139643032616261633166393637353439663433653037306637323334383337326363333537643639363463663232616230663862346331623139636636383f697066732e7061742e6d6e2f697066732f516d665170724a7470696f4a6d53774c56545735684d445155734150686443327569727553786659707a47794a4e
-                    if '\x04BCMR' in validating_str:
-                        is_bcmr_op_ret = True
-
-                if is_bcmr_op_ret:
                     bcmr_op_ret['txid'] = tx_hash
                     bcmr_op_ret['encoded_bcmr_json_hash'] = asm[2]
                     bcmr_op_ret['encoded_bcmr_url'] = asm[3]
@@ -69,7 +62,11 @@ def process_tx(tx_hash):
     bcmr_url = None
     
     if bcmr_op_ret:
-        is_valid_op_ret, bcmr_url = process_op_ret(**bcmr_op_ret)
+        is_valid_op_ret, bcmr_url = process_op_ret(**{
+            **bcmr_op_ret,
+            'op_return': op_ret_str,
+            'category': token_outputs[0]['tokenData']['category']
+        })
 
 
     # parse and save identity outputs and tokens

@@ -21,7 +21,6 @@ def encode_str(raw_string):
     return hasher.hexdigest()
 
 
-# without https://
 def decode_url(encoded_url):
     decoded_bcmr_url = decode_str(encoded_url)
     decoded_bcmr_url = 'https://' + decoded_bcmr_url.strip()
@@ -43,10 +42,13 @@ def send_webhook_token_update(category, index, txid, commitment=None, capability
     _ = requests.post(url, json=info_dict)
 
 
-def save_registry(category, json_data):
-    registry, _ = Registry.objects.get_or_create(category=category)
-    registry.metadata = json_data
-    registry.save()
+def save_registry(category, json_data, op_ret, valid=False):
+    Registry(
+        category=category,
+        metadata=json_data,
+        valid=valid,
+        op_return=op_ret
+    ).save()
 
 
 def save_token(
@@ -57,18 +59,12 @@ def save_token(
     bcmr_url=None,
     is_nft=False
 ):
-    try:
-        registry = Registry.objects.get(category=category)
-    except Registry.DoesNotExist as dne:
-        registry = None
-
     token, _ = Token.objects.get_or_create(
         category=category,
         commitment=commitment
     )
     token.bcmr_url = bcmr_url
     token.amount = amount
-    token.registry = registry
     token.capability = capability
     token.is_nft = is_nft
     token.save()
@@ -105,51 +101,52 @@ def save_output(
 
 
 def parse_token_info(category):
-    try:
-        info = {
-            'name': '',
-            'description': '',
-            'symbol': '',
-            'decimals': 0,
-            'uris': { 'icon': '' },
-            'types': None
-        }
+    info = {
+        'name': '',
+        'description': '',
+        'symbol': '',
+        'decimals': 0,
+        'uris': { 'icon': '' },
+        'types': None
+    }
 
-        registry = Registry.objects.get(category=category)
-        identities = registry.metadata['identities']
-        identities = identities[category] # category key
-        metadata = identities[list(identities.keys())[0]] # timestamp keys
-
-        token_data = metadata['token']
-        token_data_keys = token_data.keys()
-        metadata_keys = metadata.keys()
-
-        if 'name' in metadata_keys:
-            info['name'] = metadata['name']
-
-        if 'description' in metadata_keys:
-            info['description'] = metadata['description']
-
-        if 'uris' in metadata_keys:
-            uris = metadata['uris']
-            if 'icon' in uris.keys():
-                info['uris']['icon'] = uris['icon']
-
-        if 'symbol' in token_data_keys:
-            info['symbol'] = token_data['symbol']
-        
-        if 'decimals' in token_data_keys:
-            info['decimals'] = token_data['decimals']
-
-        if 'nfts' in token_data_keys:
-            nfts = token_data['nfts']
-
-            if 'parse' in nfts.keys():
-                parse = nfts['parse']
-
-                if 'types' in parse.keys():
-                    info['types'] = parse['types']
-                    
+    registries = Registry.objects.filter(category=category)
+    if not registries.exists():
         return info
-    except Registry.DoesNotExist as dne:
-        return {}
+
+    registry = registries.first()
+    identities = registry.metadata['identities']
+    identities = identities[list(identities.keys())[0]] # category key
+    metadata = identities[list(identities.keys())[0]] # timestamp keys
+
+    token_data = metadata['token']
+    token_data_keys = token_data.keys()
+    metadata_keys = metadata.keys()
+
+    if 'name' in metadata_keys:
+        info['name'] = metadata['name']
+
+    if 'description' in metadata_keys:
+        info['description'] = metadata['description']
+
+    if 'uris' in metadata_keys:
+        uris = metadata['uris']
+        if 'icon' in uris.keys():
+            info['uris']['icon'] = uris['icon']
+
+    if 'symbol' in token_data_keys:
+        info['symbol'] = token_data['symbol']
+    
+    if 'decimals' in token_data_keys:
+        info['decimals'] = token_data['decimals']
+
+    if 'nfts' in token_data_keys:
+        nfts = token_data['nfts']
+
+        if 'parse' in nfts.keys():
+            parse = nfts['parse']
+
+            if 'types' in parse.keys():
+                info['types'] = parse['types']
+                
+    return info

@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from django.conf import settings
 
-from bcmr_main.models import Token
+from bcmr_main.models import *
 
 
 class TokenSerializer(serializers.ModelSerializer):
@@ -22,7 +22,8 @@ class TokenSerializer(serializers.ModelSerializer):
         )
 
     def get_bcmr_url_mirror(self, obj):
-        if obj.registry:
+        registries = Registry.objects.filter(category=obj.category)
+        if registries.exists():
             url_addition = ''
             if settings.NETWORK == 'chipnet':
                 url_addition = '-chipnet'
