@@ -14,5 +14,8 @@ class RegistryView(APIView):
 
         if registries.exists():
             registry = registries.first()
-            return JsonResponse(registry.metadata)
+            metadata = registry.metadata
+            metadata['$schema'] = 'https://cashtokens.org/bcmr-v2.schema.json'
+            metadata['license'] = 'CC0-1.0'
+            return JsonResponse(metadata)
         return JsonResponse({})
