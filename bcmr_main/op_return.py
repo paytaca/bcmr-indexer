@@ -32,7 +32,10 @@ def process_op_ret(
     if status_code == 200:
         encoded_response_json_hash = encode_str(response.text)
 
-        if decoded_bcmr_json_hash == encoded_response_json_hash:            
+        if (
+            decoded_bcmr_json_hash == encoded_response_json_hash or
+            decoded_bcmr_json_hash == encoded_bcmr_json_hash
+        ):
             is_valid = True
         else:
             log_invalid_op_ret(txid, encoded_bcmr_json_hash, encoded_bcmr_url)
@@ -70,6 +73,12 @@ def process_op_ret(
 
             # record the latest identity metadata only
             bcmr_json['identities'][latest_category][latest_timestamp] = latest_data
-            save_registry(category, bcmr_json, op_return, valid=is_valid)
+            save_registry(
+                txid,
+                category,
+                bcmr_json,
+                op_return,
+                valid=is_valid
+            )
     
     return is_valid, decoded_bcmr_url
