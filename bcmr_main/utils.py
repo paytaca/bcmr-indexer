@@ -114,7 +114,7 @@ def parse_token_info(category, type_key=None):
 
     registries = Registry.objects.filter(category=category)
     if not registries.exists():
-        return info
+        raise Registry.DoesNotExist
 
     registry = registries.first()
     identities = registry.metadata['identities']
