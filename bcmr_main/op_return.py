@@ -1,4 +1,5 @@
 from bcmr_main.utils import *
+from bcmr_main.ipfs import *
 
 from dateutil import parser
 import requests
@@ -25,7 +26,14 @@ def process_op_ret(
     decoded_bcmr_json_hash = decode_str(encoded_bcmr_json_hash)
     decoded_bcmr_url = decode_url(encoded_bcmr_url)
 
-    response = requests.get(decoded_bcmr_url)
+    if encoded_bcmr_url.startswith('ipfs://'):
+        response = download_ipfs_bcmr_data(decoded_bcmr_url)
+    else:
+        response = requests.get(decoded_bcmr_url)
+
+    if not response:
+        return False, decoded_bcmr_url
+
     status_code = response.status_code
     is_valid = False
     
