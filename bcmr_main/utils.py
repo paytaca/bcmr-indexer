@@ -102,7 +102,7 @@ def save_output(
     output.save()
 
 
-def parse_token_info(category):
+def parse_token_info(category, type_key=None):
     info = {
         'name': '',
         'description': '',
@@ -144,11 +144,15 @@ def parse_token_info(category):
 
     if 'nfts' in token_data_keys:
         nfts = token_data['nfts']
-
         if 'parse' in nfts.keys():
             parse = nfts['parse']
 
-            if 'types' in parse.keys():
-                info['types'] = parse['types']
-                
+            if type_key:
+                info['types'] = {
+                    type_key: parse['types'][type_key]
+                }
+            else:
+                if 'types' in parse.keys():
+                    info['types'] = list(parse['types'].keys())
+                    
     return info

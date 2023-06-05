@@ -9,5 +9,6 @@ class TokenView(APIView):
 
     def get(self, request, *args, **kwargs):
         category = kwargs.get('category', '')
-        token_info = parse_token_info(category)
+        type_key = kwargs.get('type_key', '')
+        token_info = parse_token_info(category, type_key)
         return JsonResponse(token_info)
