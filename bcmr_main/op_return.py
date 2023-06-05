@@ -1,5 +1,6 @@
 from bcmr_main.utils import *
 from bcmr_main.ipfs import *
+from bcmr_main.models import Registry
 
 from dateutil import parser
 import requests
@@ -26,6 +27,14 @@ def process_op_ret(
     decoded_bcmr_json_hash = decode_str(encoded_bcmr_json_hash)
     decoded_bcmr_url = decode_url(encoded_bcmr_url)
 
+    registry_obj = Registry(
+        txid=txid,
+        category=category,
+        op_return=op_return,
+        bcmr_url=decoded_bcmr_url
+    )
+    registry_obj.save()
+
     if encoded_bcmr_url.startswith('ipfs://'):
         response = download_ipfs_bcmr_data(decoded_bcmr_url)
     else:
@@ -37,6 +46,9 @@ def process_op_ret(
     status_code = response.status_code
     is_valid = False
     
+    registry_obj.bcmr_request_status = status_code
+    registry_obj.save()
+
     if status_code == 200:
         encoded_response_json_hash = encode_str(response.text)
 
@@ -50,43 +62,8 @@ def process_op_ret(
     else:
         LOGGER.info(f'Something\'s wrong in fetching BCMR --- {decoded_bcmr_url} - {status_code}')
 
-
     bcmr_json = response.json()
-    bcmrs = []
-    
-    if 'identities' in bcmr_json.keys():
-        identities = bcmr_json['identities']
+    registry_obj.metadata = bcmr_json
+    registry_obj.save()
 
-        for bcmr_category, token_history in identities.items():
-            # exclude old identity schema versions
-            if type(token_history) is not dict:
-                continue
-
-            timestamps = list(token_history.keys())
-            timestamps.sort(key=lambda x: parser.parse(x))
-            latest_timestamp = timestamps[-1]
-            latest_metadata = token_history[latest_timestamp]
-            bcmrs.append({
-                'data': latest_metadata,
-                'timestamp': latest_timestamp,
-                'category': bcmr_category
-            })
-        
-        if bcmrs:
-            bcmrs.sort(key=lambda x: parser.parse(x['timestamp']))
-            latest_identity = bcmrs[-1]
-            latest_category = latest_identity['category']
-            latest_timestamp = latest_identity['timestamp']
-            latest_data = latest_identity['data']
-
-            # record the latest identity metadata only
-            bcmr_json['identities'][latest_category][latest_timestamp] = latest_data
-            save_registry(
-                txid,
-                category,
-                bcmr_json,
-                op_return,
-                valid=is_valid
-            )
-    
     return is_valid, decoded_bcmr_url

@@ -8,6 +8,8 @@ class Registry(models.Model):
     metadata = models.JSONField(null=True, blank=True)
     valid = models.BooleanField(default=False)
     op_return = models.TextField(default='')
+    bcmr_url = models.TextField(default='')
+    bcmr_request_status = models.IntegerField(null=True, blank=True)
     date_created = models.DateTimeField(default=timezone.now)
 
     class Meta:

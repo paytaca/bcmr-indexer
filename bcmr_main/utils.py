@@ -2,7 +2,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from bcmr_main.models import *
-
+from dateutil import parser
 import requests
 import hashlib
 
@@ -118,8 +118,22 @@ def parse_token_info(category, type_key=None):
 
     registry = registries.first()
     identities = registry.metadata['identities']
-    identities = identities[list(identities.keys())[0]] # category key
-    metadata = identities[list(identities.keys())[0]] # timestamp keys
+    identities = identities[category] # category key
+
+    if isinstance(identities, dict):
+        # BCMR v2
+        timestamps = []
+        for timestamp in identities.keys():
+            timestamps.append({
+                'timestamp': timestamp
+            })
+        if timestamps:
+            timestamps.sort(key=lambda x: parser.parse(x['timestamp']))
+            latest_timestamp = timestamps[-1]
+            metadata = identities[latest_timestamp['timestamp']]
+    if isinstance(identities, list):
+        # BCMR v1
+        metadata = identities[0]
 
     token_data = metadata['token']
     token_data_keys = token_data.keys()
