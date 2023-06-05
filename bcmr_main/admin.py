@@ -23,8 +23,10 @@ class TokenAdmin(admin.ModelAdmin):
 class RegistryAdmin(admin.ModelAdmin):
     search_fields = [
         'category',
+        'txid',
     ]
     list_display = [
+        'txid',
         'category',
         'valid',
         'date_created',

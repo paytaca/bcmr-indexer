@@ -42,8 +42,9 @@ def send_webhook_token_update(category, index, txid, commitment=None, capability
     _ = requests.post(url, json=info_dict)
 
 
-def save_registry(category, json_data, op_ret, valid=False):
+def save_registry(txid, category, json_data, op_ret, valid=False):
     Registry(
+        txid=txid,
         category=category,
         metadata=json_data,
         valid=valid,
