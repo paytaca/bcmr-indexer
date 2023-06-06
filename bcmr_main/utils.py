@@ -117,11 +117,20 @@ def parse_token_info(category, type_key=None):
         raise Registry.DoesNotExist
 
     registry = registries.first()
-    identities = registry.metadata['identities']
-    identities = identities[category] # category key
 
+    if not registry.metadata:
+        raise Registry.DoesNotExist
+        
+    identities = registry.metadata['identities']
+
+    try:
+        identities = identities[category] # category key
+    except KeyError as ke:
+        # for registries that have incorrect category used as key
+        raise Registry.DoesNotExist
+
+    # BCMR v2
     if isinstance(identities, dict):
-        # BCMR v2
         timestamps = []
         for timestamp in identities.keys():
             timestamps.append({
@@ -131,8 +140,9 @@ def parse_token_info(category, type_key=None):
             timestamps.sort(key=lambda x: parser.parse(x['timestamp']))
             latest_timestamp = timestamps[-1]
             metadata = identities[latest_timestamp['timestamp']]
+
+    # BCMR v1
     if isinstance(identities, list):
-        # BCMR v1
         metadata = identities[0]
 
     token_data = metadata['token']
