@@ -27,13 +27,12 @@ def process_op_ret(
     decoded_bcmr_json_hash = decode_str(encoded_bcmr_json_hash)
     decoded_bcmr_url = decode_url(encoded_bcmr_url)
 
-    registry_obj = Registry(
+    registry_obj, _ = Registry.objects.update_or_create(
         txid=txid,
-        category=category,
-        op_return=op_return,
-        bcmr_url=decoded_bcmr_url
+        category=category
     )
-    registry_obj.save()
+    registry_obj.op_return = op_return
+    registry_obj.bcmr_url = decoded_bcmr_url
 
     if decoded_bcmr_url.startswith('ipfs://'):
         response = download_ipfs_bcmr_data(decoded_bcmr_url)
@@ -52,8 +51,8 @@ def process_op_ret(
         encoded_response_json_hash = encode_str(response.text)
 
         if (
-            decoded_bcmr_json_hash == encoded_response_json_hash or
-            decoded_bcmr_json_hash == encoded_bcmr_json_hash
+            decoded_bcmr_json_hash == encoded_response_json_hash or  # bitcats (encoded before being hashed)
+            encoded_bcmr_json_hash == encoded_response_json_hash     # matthieu wallet (simple hash of BCMR json, no prior encoding)
         ):
             is_valid = True
             registry_obj.valid = is_valid
