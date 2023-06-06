@@ -47,7 +47,6 @@ def process_op_ret(
     is_valid = False
     
     registry_obj.bcmr_request_status = status_code
-    registry_obj.save()
 
     if status_code == 200:
         encoded_response_json_hash = encode_str(response.text)
@@ -57,13 +56,15 @@ def process_op_ret(
             decoded_bcmr_json_hash == encoded_bcmr_json_hash
         ):
             is_valid = True
+            registry_obj.valid = is_valid
         else:
             log_invalid_op_ret(txid, encoded_bcmr_json_hash, encoded_bcmr_url)
+
+        bcmr_json = response.json()
+        registry_obj.metadata = bcmr_json
     else:
         LOGGER.info(f'Something\'s wrong in fetching BCMR --- {decoded_bcmr_url} - {status_code}')
 
-    bcmr_json = response.json()
-    registry_obj.metadata = bcmr_json
     registry_obj.save()
 
     return is_valid, decoded_bcmr_url
