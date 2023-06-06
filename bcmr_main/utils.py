@@ -23,7 +23,7 @@ def encode_str(raw_string):
 
 def decode_url(encoded_url):
     decoded_bcmr_url = decode_str(encoded_url)
-    if not encoded_url.startswith('ipfs://'):
+    if not decoded_bcmr_url.startswith('ipfs://'):
         decoded_bcmr_url = 'https://' + decoded_bcmr_url.strip()
     return decoded_bcmr_url
 

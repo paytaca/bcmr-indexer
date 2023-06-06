@@ -35,7 +35,7 @@ def process_op_ret(
     )
     registry_obj.save()
 
-    if encoded_bcmr_url.startswith('ipfs://'):
+    if decoded_bcmr_url.startswith('ipfs://'):
         response = download_ipfs_bcmr_data(decoded_bcmr_url)
     else:
         response = requests.get(decoded_bcmr_url)
