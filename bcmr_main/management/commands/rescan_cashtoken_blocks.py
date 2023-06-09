@@ -3,12 +3,17 @@ from django.conf import settings
 
 from bcmr_main.bchn import BCHN
 from bcmr_main.tasks import process_tx
-
+from bcmr_main.models import *
 
 class Command(BaseCommand):
     help = "Rescan blocks to record missed transactions since first cashtoken block"
 
     def handle(self, *args, **options):
+        # NOTE: uncomment for testing
+        # Token.objects.all().delete()
+        # Registry.objects.all().delete()
+        # IdentityOutput.objects.all().delete()
+        
         node = BCHN()
         latest_block = node.get_latest_block()
 
@@ -21,7 +26,7 @@ class Command(BaseCommand):
             self.stdout.write(f'Block: {curr_block}  |  Transactions: {len(transactions)}')
 
             for txid in transactions:
-                process_tx.delay(txid)
+                process_tx.delay(txid, block_txns=transactions)
 
             curr_block += 1
 

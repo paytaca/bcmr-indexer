@@ -4,6 +4,7 @@ from django.db import models
 
 class IdentityOutput(models.Model):
     txid = models.CharField(max_length=255, unique=True)
+    parent_txid = models.CharField(max_length=255, unique=True)  # 0th input txid
     block = models.PositiveIntegerField(null=True, blank=True)
     address = models.CharField(max_length=100, null=True, blank=True)
     category = models.CharField(max_length=255, null=True, blank=True)

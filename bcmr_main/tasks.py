@@ -15,7 +15,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @shared_task(queue='process_tx')
-def process_tx(tx_hash):
+def process_tx(tx_hash, block_txns=None):
     LOGGER.info(f'PROCESSING TX --- {tx_hash}')
 
     bchn = BCHN()
@@ -57,23 +57,34 @@ def process_tx(tx_hash):
             op_ret_str = asm
             asm = asm.split(' ')
 
-            if asm[1] == '1380795202':
-                _hex = scriptPubKey['hex']
-                # TODO: validate hex here
+            if len(asm) >= 4:
+                if asm[1] == '1380795202':
+                    _hex = scriptPubKey['hex']
+                    # TODO: validate hex here
 
-                bcmr_op_ret['txid'] = tx_hash
-                bcmr_op_ret['encoded_bcmr_json_hash'] = asm[2]
-                bcmr_op_ret['encoded_bcmr_url'] = asm[3]
+                    bcmr_op_ret['txid'] = tx_hash
+                    bcmr_op_ret['encoded_bcmr_json_hash'] = asm[2]
+                    bcmr_op_ret['encoded_bcmr_url'] = asm[3]
 
-
+    TOKEN_DATA = None
     parents = IdentityOutput.objects.filter(txid=identity_input_txid)
+
     if parents.exists():
         TOKEN_DATA = traverse_authchain(identity_input_txid)
     else:
-        # dont record pure BCH identity outputs
-        if not token_outputs: return
-        TOKEN_DATA = token_outputs[0]['tokenData']
-    
+        if token_outputs:
+            TOKEN_DATA = token_outputs[0]['tokenData']
+
+        if block_txns:
+            if identity_input_txid in block_txns:
+                TOKEN_DATA = traverse_authchain(identity_input_txid)
+
+    # ignore txn if it:
+    # 1. no parent has been found in database AND
+    # 2. no parent found in same block AND
+    # 3. no token outputs found in txn
+    if TOKEN_DATA is None:
+        return
 
     # save identity output
     genesis = False
@@ -87,6 +98,7 @@ def process_tx(tx_hash):
         
     output_data = {
         'txid': tx_hash,
+        'parent_txid': identity_input_txid,
         'block': block,
         'address': identity_output['scriptPubKey']['addresses'][0],
         'category': category,
@@ -102,6 +114,7 @@ def process_tx(tx_hash):
         # save authbase tx
         authbase_tx = bchn._get_raw_transaction(identity_input_txid)
         output_data['address'] = authbase_tx['vout'][0]['scriptPubKey']['addresses'][0]
+        output_data['parent_txid'] = authbase_tx['vin'][0]['txid']
         output_data['spender'] = tx_hash
         output_data['txid'] = identity_input_txid
         output_data['authbase'] = True
@@ -116,6 +129,16 @@ def process_tx(tx_hash):
             spent=True,
             spender=current_output
         )
+
+    # for cases that BCHN returns a parent and a child txn on the same block,
+    # we check if any previous children that was saved in DB has this current output's txid as its parent
+    # if so, we mark the current output as spent and spender = that previously saved child (one only since parent_txid is unique)
+    children = IdentityOutput.objects.filter(parent_txid=tx_hash)
+    if children.exists():
+        current_output = IdentityOutput.objects.get(txid=tx_hash)
+        current_output.spent = True
+        current_output.spender = children.first()
+        current_output.save()
 
 
     # defaults to true for genesis outputs without op return yet and non-zero outputs
