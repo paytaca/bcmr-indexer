@@ -74,28 +74,26 @@ def save_token(
 
 def save_output(
     txid,
-    index,
     block,
     address,
     category,
-    commitment=None,
     authbase=False,
     genesis=False,
-    spent=False
+    spent=False,
+    spender=None
 ):
-    token = Token.objects.get(category=category, commitment=commitment)
-    output, created = IdentityOutput.objects.get_or_create(
-        txid=txid,
-        index=index,
-        token=token
-    )
-    # used get or create only on txid & index, for the case of using the rescan_cashtoken_blocks script for existing txns
+    output, created = IdentityOutput.objects.get_or_create(txid=txid)
+
+    # used get or create only on txid & category, for the case of using the rescan_cashtoken_blocks script for existing txns
     output.block = block
     output.address = address
     output.category = category
     output.authbase = authbase
     output.genesis = genesis
     output.spent = spent
+
+    if spender:
+        output.spender = IdentityOutput.objects.get(txid=spender)
 
     if not created:
         output.date_created = timezone.now()

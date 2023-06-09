@@ -35,21 +35,26 @@ class RegistryAdmin(admin.ModelAdmin):
 class IdentityOutputAdmin(admin.ModelAdmin):
     search_fields = [
         'txid',
-        'address',
+        'spender__txid',
         'block',
-        'token__category',
+        'address',
+        'category',
     ]
     list_display = [
         'txid',
-        'index',
-        'address',
+        'spender_txid',
         'block',
         'authbase',
         'genesis',
         'spent',
-        'token',
-        'date_created',
+        'address',
+        'category',
     ]
+
+    def spender_txid(self, obj):
+        if obj.spender:
+            return obj.spender.txid
+        return None
 
 admin.site.register(Token, TokenAdmin)
 admin.site.register(Registry, RegistryAdmin)
