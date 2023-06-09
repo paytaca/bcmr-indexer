@@ -9,7 +9,7 @@ class Token(models.Model):
         NONE = 'none'
 
     category = models.CharField(max_length=255)
-    amount = models.BigIntegerField(default=0)
+    txid = models.CharField(max_length=255, null=True, blank=True)
     is_nft = models.BooleanField(default=False)
     commitment = models.CharField(
         max_length=255,
@@ -30,8 +30,5 @@ class Token(models.Model):
         unique_together = (
             'category',
             'commitment',
+            'capability',
         )
-
-    def save(self, *args, **kwargs):
-        self.updated_at = timezone.now()
-        super(Token, self).save(*args, **kwargs)

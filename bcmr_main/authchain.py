@@ -9,6 +9,10 @@ def traverse_authchain(spent_txid):
     inputs = tx['vin']
     outputs = tx['vout']
     identity_input = inputs[0]
+
+    if 'coinbase' in identity_input.keys():
+        return
+
     identity_input_txid = identity_input['txid']
     identity_input_index = identity_input['vout']
     token_outputs = []

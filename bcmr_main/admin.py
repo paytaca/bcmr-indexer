@@ -9,10 +9,11 @@ admin.site.site_header = 'Paytaca BCMR Admin'
 class TokenAdmin(admin.ModelAdmin):
     search_fields = [
         'category',
+        'txid',
     ]
     list_display = [
         'category',
-        'amount',
+        'txid',
         'is_nft',
         'commitment',
         'capability',
@@ -47,6 +48,7 @@ class IdentityOutputAdmin(admin.ModelAdmin):
         'authbase',
         'genesis',
         'spent',
+        'date',
         'address',
         'category',
     ]

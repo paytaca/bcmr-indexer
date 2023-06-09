@@ -17,6 +17,8 @@ class IdentityOutput(models.Model):
         null=True,
         blank=True
     )
+    date = models.DateTimeField(null=True, blank=True)
     
     class Meta:
         verbose_name_plural = 'Identity Outputs'
+        ordering = ('-date', )

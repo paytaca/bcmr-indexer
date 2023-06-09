@@ -12,12 +12,11 @@ class TokenSerializer(serializers.ModelSerializer):
         model = Token
         fields = (
             'category',
-            'amount',
             'commitment',
             'capability',
             'is_nft',
             'bcmr_url', # link to original registry
-            'bcmr_url_mirror',  # link to custom registry (contains only the latest metadata -- see tasks.py/process_op_ret)
+            'bcmr_url_mirror',  # link to custom registry
             'updated_at',
         )
 

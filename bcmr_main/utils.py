@@ -3,8 +3,14 @@ from django.utils import timezone
 
 from bcmr_main.models import *
 from dateutil import parser
+from datetime import datetime
+import pytz
 import requests
 import hashlib
+
+
+def timestamp_to_date(timestamp):
+    return datetime.fromtimestamp(timestamp).replace(tzinfo=pytz.utc)
 
 
 def decode_str(encoded_string):
@@ -29,7 +35,11 @@ def decode_url(encoded_url):
 
 
 def send_webhook_token_update(category, index, txid, commitment=None, capability=None):
-    token = Token.objects.get(category=category, commitment=commitment)
+    token = Token.objects.get(
+        category=category,
+        commitment=commitment,
+        capability=capability
+    )
     info_dict = {
         'index': index,
         'txid': txid,
@@ -43,32 +53,27 @@ def send_webhook_token_update(category, index, txid, commitment=None, capability
     _ = requests.post(url, json=info_dict)
 
 
-def save_registry(txid, category, json_data, op_ret, valid=False):
-    Registry(
-        txid=txid,
-        category=category,
-        metadata=json_data,
-        valid=valid,
-        op_return=op_ret
-    ).save()
-
-
 def save_token(
-    amount,
+    txid,
     category,
     commitment=None,
     capability=None,
     bcmr_url=None,
-    is_nft=False
+    is_nft=False,
+    updated_at=None
 ):
-    token, _ = Token.objects.get_or_create(
+    token, created = Token.objects.get_or_create(
         category=category,
-        commitment=commitment
+        commitment=commitment,
+        capability=capability
     )
+    if created:
+        token.txid = txid
+
     token.bcmr_url = bcmr_url
-    token.amount = amount
     token.capability = capability
     token.is_nft = is_nft
+    token.updated_at = updated_at
     token.save()
 
 
@@ -80,7 +85,8 @@ def save_output(
     authbase=False,
     genesis=False,
     spent=False,
-    spender=None
+    spender=None,
+    date=None
 ):
     output, created = IdentityOutput.objects.get_or_create(txid=txid)
 
@@ -91,12 +97,11 @@ def save_output(
     output.authbase = authbase
     output.genesis = genesis
     output.spent = spent
+    output.date = date
 
     if spender:
         output.spender = IdentityOutput.objects.get(txid=spender)
 
-    if not created:
-        output.date_created = timezone.now()
     output.save()
 
 

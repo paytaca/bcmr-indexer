@@ -1,9 +1,12 @@
+from django.db.models import Q
+
 from celery import shared_task
 
 from bcmr_main.authchain import *
 from bcmr_main.op_return import *
 from bcmr_main.bchn import BCHN
 from bcmr_main.models import *
+from bcmr_main.utils import timestamp_to_date
 
 import logging
 
@@ -19,17 +22,20 @@ def process_tx(tx_hash):
     tx = bchn._get_raw_transaction(tx_hash)
 
     block = None
+    time = None
     if 'blockhash' in tx.keys():
         block = bchn.get_block_height(tx['blockhash'])
+    if 'time' in tx.keys():
+        time = timestamp_to_date(tx['time'])
 
     inputs = tx['vin']
     outputs = tx['vout']
-
-    if 'coinbase' in inputs[0].keys():
-        return
-
     identity_input = inputs[0]
     identity_output = outputs[0]
+
+    if 'coinbase' in identity_input.keys():
+        return
+
     identity_input_txid = identity_input['txid']
     identity_input_index = identity_input['vout']
 
@@ -87,12 +93,15 @@ def process_tx(tx_hash):
         'authbase': False,
         'spent': False,
         'genesis': genesis,
-        'spender': None
+        'spender': None,
+        'date': time
     }
     save_output(**output_data)
 
     if genesis:
         # save authbase tx
+        authbase_tx = bchn._get_raw_transaction(identity_input_txid)
+        output_data['address'] = authbase_tx['vout'][0]['scriptPubKey']['addresses'][0]
         output_data['spender'] = tx_hash
         output_data['txid'] = identity_input_txid
         output_data['authbase'] = True
@@ -117,7 +126,8 @@ def process_tx(tx_hash):
         is_valid_op_ret, bcmr_url = process_op_ret(**{
             **bcmr_op_ret,
             'op_return': op_ret_str,
-            'category': TOKEN_DATA['category']
+            'category': TOKEN_DATA['category'],
+            'date': time
         })
 
 
@@ -126,7 +136,6 @@ def process_tx(tx_hash):
         index = obj['n']
         token_data = obj['tokenData']
         address = obj['scriptPubKey']['addresses'][0]
-        amount = int(token_data['amount'])
         category = token_data['category']
         capability = None
         commitment = None
@@ -138,12 +147,13 @@ def process_tx(tx_hash):
             capability = nft_data['capability']
             
         save_token(
-            amount,
+            tx_hash,
             category,
             commitment=commitment,
             capability=capability,
             bcmr_url=bcmr_url,
-            is_nft=is_nft
+            is_nft=is_nft,
+            updated_at=time
         )
         
         send_webhook_token_update(
@@ -155,12 +165,33 @@ def process_tx(tx_hash):
         )
 
 
-@shared_task(queue='recheck_output_blockheight')
-def recheck_output_blockheight():
-    LOGGER.info('RECHECKING UNSAVED BLOCKHEIGHTS OF OUTPUTS')
+def record_txn_dates(qs, bchn):
+    for element in qs:
+        tx = bchn._get_raw_transaction(element.txid)
+            
+        if 'time' in tx.keys():
+            time = timestamp_to_date(tx['time'])
+            if isinstance(element, Registry):
+                element.date_created = time
+            elif isinstance(element, Token):
+                element.updated_at = time
+            element.save()
+
+
+@shared_task(queue='recheck_unconfirmed_txn_details')
+def recheck_unconfirmed_txn_details():
+    LOGGER.info('RECHECKING UNSAVED INFO OF UNCONFIRMED TXNS')
     
     bchn = BCHN()
-    outputs = IdentityOutput.objects.filter(block__isnull=True)
+    outputs = IdentityOutput.objects.filter(
+        Q(block__isnull=True) |
+        Q(date__isnull=True)
+    )
+    tokens = Token.objects.filter(updated_at__isnull=True)
+    registries = Registry.objects.filter(date_created__isnull=True)
+
+    record_txn_dates(tokens, bchn)
+    record_txn_dates(registries, bchn)
 
     for output in outputs:
         tx = bchn._get_raw_transaction(output.txid)
@@ -168,4 +199,8 @@ def recheck_output_blockheight():
         if 'blockhash' in tx.keys():
             block = bchn.get_block_height(tx['blockhash'])
             output.block = block
-            output.save()
+
+        if 'time' in tx.keys():
+            output.date = timestamp_to_date(tx['time'])
+
+        output.save()

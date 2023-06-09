@@ -22,7 +22,8 @@ def process_op_ret(
     encoded_bcmr_json_hash,
     encoded_bcmr_url,
     op_return,
-    category
+    category,
+    date
 ):
     decoded_bcmr_json_hash = decode_str(encoded_bcmr_json_hash)
     decoded_bcmr_url = decode_url(encoded_bcmr_url)
@@ -31,6 +32,7 @@ def process_op_ret(
         txid=txid,
         category=category
     )
+    registry_obj.date_created = date
     registry_obj.op_return = op_return
     registry_obj.bcmr_url = decoded_bcmr_url
 

@@ -1,5 +1,4 @@
 from django.db import models
-from django.utils import timezone
 
 
 class Registry(models.Model):
@@ -10,7 +9,7 @@ class Registry(models.Model):
     op_return = models.TextField(default='')
     bcmr_url = models.TextField(default='')
     bcmr_request_status = models.IntegerField(null=True, blank=True)
-    date_created = models.DateTimeField(default=timezone.now)
+    date_created = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name_plural = 'Registries'
