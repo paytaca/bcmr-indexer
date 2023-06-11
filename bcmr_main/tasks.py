@@ -37,7 +37,7 @@ def process_tx(tx_hash, block_txns=None):
         return
 
     identity_input_txid = identity_input['txid']
-    identity_input_index = identity_input['vout']
+    # identity_input_index = identity_input['vout']
 
     token_outputs = []
     bcmr_op_ret = {}
@@ -79,7 +79,7 @@ def process_tx(tx_hash, block_txns=None):
             if identity_input_txid in block_txns:
                 TOKEN_DATA = traverse_authchain(identity_input_txid)
 
-    # ignore txn if it:
+    # ignore txn if:
     # 1. no parent has been found in database AND
     # 2. no parent found in same block AND
     # 3. no token outputs found in txn
@@ -146,7 +146,7 @@ def process_tx(tx_hash, block_txns=None):
     bcmr_url = None
 
     if bcmr_op_ret:
-        is_valid_op_ret, bcmr_url = process_op_ret(**{
+        is_valid_op_ret, bcmr_url = process_op_return(**{
             **bcmr_op_ret,
             'op_return': op_ret_str,
             'category': TOKEN_DATA['category'],

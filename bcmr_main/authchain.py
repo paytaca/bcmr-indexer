@@ -1,4 +1,4 @@
-from bcmr_main.models import IdentityOutput
+# from bcmr_main.models import IdentityOutput
 from bcmr_main.bchn import BCHN
 
 
@@ -14,7 +14,7 @@ def traverse_authchain(spent_txid):
         return
 
     identity_input_txid = identity_input['txid']
-    identity_input_index = identity_input['vout']
+    # identity_input_index = identity_input['vout']
     token_outputs = []
 
     for output in outputs:

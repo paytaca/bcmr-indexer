@@ -35,22 +35,23 @@ def decode_url(encoded_url):
 
 
 def send_webhook_token_update(category, index, txid, commitment=None, capability=None):
-    token = Token.objects.get(
-        category=category,
-        commitment=commitment,
-        capability=capability
-    )
-    info_dict = {
-        'index': index,
-        'txid': txid,
-        'category': category,
-        'is_nft': token.is_nft,
-        'commitment': commitment,
-        'capability': capability
-    }
+    if settings.WATCHTOWER_WEBHOOK_URL:
+        token = Token.objects.get(
+            category=category,
+            commitment=commitment,
+            capability=capability
+        )
+        info_dict = {
+            'index': index,
+            'txid': txid,
+            'category': category,
+            'is_nft': token.is_nft,
+            'commitment': commitment,
+            'capability': capability
+        }
 
-    url = f'{settings.WATCHTOWER_WEBHOOK_URL}/webhook/'
-    _ = requests.post(url, json=info_dict)
+        url = f'{settings.WATCHTOWER_WEBHOOK_URL}/webhook/'
+        _ = requests.post(url, json=info_dict)
 
 
 def save_token(

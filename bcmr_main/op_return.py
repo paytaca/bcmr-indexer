@@ -10,14 +10,14 @@ import logging
 LOGGER = logging.getLogger(__name__)
 
 
-def log_invalid_op_ret(txid, encoded_bcmr_json_hash, encoded_bcmr_url):
+def log_invalid_op_return(txid, encoded_bcmr_json_hash, encoded_bcmr_url):
     LOGGER.error('--- Invalid OP_RETURN data received ---\n\n')
     LOGGER.error(f'TXID: {txid}')
     LOGGER.error(f'Encoded BCMR JSON Hash: {encoded_bcmr_json_hash}')
     LOGGER.error(f'Encoded BCMR URL: {encoded_bcmr_url}')
 
 
-def process_op_ret(
+def process_op_return(
     txid,
     encoded_bcmr_json_hash,
     encoded_bcmr_url,
@@ -51,7 +51,6 @@ def process_op_ret(
 
     if status_code == 200:
         encoded_response_json_hash = encode_str(response.text)
-
         if (
             decoded_bcmr_json_hash == encoded_response_json_hash or  # bitcats (encoded before being hashed)
             encoded_bcmr_json_hash == encoded_response_json_hash     # matthieu wallet (simple hash of BCMR json, no prior encoding)
@@ -59,7 +58,7 @@ def process_op_ret(
             is_valid = True
             registry_obj.valid = is_valid
         else:
-            log_invalid_op_ret(txid, encoded_bcmr_json_hash, encoded_bcmr_url)
+            log_invalid_op_return(txid, encoded_bcmr_json_hash, encoded_bcmr_url)
 
         bcmr_json = response.json()
         registry_obj.metadata = bcmr_json

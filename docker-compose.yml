@@ -20,8 +20,9 @@ services:
       - .env_dev
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
-  web:
+  backend:
     build: .
+    command: [ "supervisord", "-c", "/code/supervisord.conf", "--nodaemon" ]
     ports:
       - "8000:8000"
     env_file:
