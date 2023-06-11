@@ -28,6 +28,10 @@ def process_op_return(
     decoded_bcmr_json_hash = decode_str(encoded_bcmr_json_hash)
     decoded_bcmr_url = decode_url(encoded_bcmr_url)
 
+    # Double checking of <BCMR> OP_RETURN code
+    if op_return.split(' ')[1] != '1380795202':
+        return False, decoded_bcmr_url 
+
     registry_obj, _ = Registry.objects.update_or_create(
         txid=txid,
         category=category
