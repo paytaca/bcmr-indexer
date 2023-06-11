@@ -14,3 +14,6 @@ class Registry(models.Model):
     class Meta:
         verbose_name_plural = 'Registries'
         ordering = ('-date_created', )
+        indexes = [
+            models.Index(fields=['category'])
+        ]

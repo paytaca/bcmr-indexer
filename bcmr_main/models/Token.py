@@ -1,5 +1,4 @@
 from django.db import models
-from django.utils import timezone
 
 
 class Token(models.Model):
@@ -32,3 +31,6 @@ class Token(models.Model):
             'commitment',
             'capability',
         )
+        indexes = [
+            models.Index(fields=['category', 'commitment', 'capability', 'is_nft'])
+        ]

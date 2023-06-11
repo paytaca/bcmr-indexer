@@ -1,6 +1,7 @@
 import pytest
 from bcmr_main.op_return import process_op_return
 from bcmr_main.utils import timestamp_to_date
+from bcmr_main.models import Registry
 
 pytestmark = pytest.mark.django_db
 
@@ -34,6 +35,11 @@ class TestOpReturnValidation:
         encoded_bcmr_json_hash = op_return.split(' ')[2]
         encoded_bcmr_url = op_return.split(' ')[3]
 
+        # Check if registry table is empty
+        registries = Registry.objects.all()
+        assert registries.count() == 0
+
+        # Check if the BCMR is found valid
         is_valid, decoded_bcmr_url = process_op_return(
             txid,
             encoded_bcmr_json_hash,
@@ -43,3 +49,13 @@ class TestOpReturnValidation:
             date
         )
         assert is_valid, decoded_bcmr_url == bcmr_url
+
+        # Check if the record for this BCMR is saved in the registry table
+        registries = Registry.objects.all()
+        assert registries.count() == 1
+
+        registry = registries.first()
+        assert registry.txid == txid
+        assert registry.category == category
+        assert registry.op_return == op_return
+        assert registry.bcmr_url == bcmr_url

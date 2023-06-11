@@ -23,3 +23,6 @@ class IdentityOutput(models.Model):
     class Meta:
         verbose_name_plural = 'Identity Outputs'
         ordering = ('-date', )
+        indexes = [
+            models.Index(fields=['txid', 'category', 'spent'])
+        ]
