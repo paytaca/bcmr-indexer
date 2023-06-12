@@ -132,7 +132,21 @@ def process_tx(tx_hash, block_txns=None):
         genesis = identity_input_txid in token_categories
         if genesis:
             category = identity_input_txid
-        
+
+    if genesis:
+        # save authbase tx
+        authbase_tx = bchn._get_raw_transaction(identity_input_txid)
+        output_data = {}
+        output_data['block'] = block
+        output_data['category'] = category
+        output_data['address'] = authbase_tx['vout'][0]['scriptPubKey']['addresses'][0]
+        output_data['parent_txid'] = authbase_tx['vin'][0]['txid']
+        output_data['txid'] = identity_input_txid
+        output_data['authbase'] = True
+        output_data['genesis'] = False
+        output_data['spent'] = True
+        save_output(**output_data)
+
     output_data = {
         'txid': tx_hash,
         'parent_txid': identity_input_txid,
@@ -146,18 +160,6 @@ def process_tx(tx_hash, block_txns=None):
         'date': time
     }
     save_output(**output_data)
-
-    if genesis:
-        # save authbase tx
-        authbase_tx = bchn._get_raw_transaction(identity_input_txid)
-        output_data['address'] = authbase_tx['vout'][0]['scriptPubKey']['addresses'][0]
-        output_data['parent_txid'] = authbase_tx['vin'][0]['txid']
-        output_data['spender'] = tx_hash
-        output_data['txid'] = identity_input_txid
-        output_data['authbase'] = True
-        output_data['genesis'] = False
-        output_data['spent'] = True
-        save_output(**output_data)
 
     # set parent output as spent and spent by this current output
     if parents.exists():

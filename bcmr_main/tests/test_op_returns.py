@@ -3,8 +3,6 @@ from bcmr_main.op_return import process_op_return
 from bcmr_main.utils import timestamp_to_date
 from bcmr_main.models import Registry
 
-pytestmark = pytest.mark.django_db
-
 
 VALID_OP_RETURNS = [
     # BitCats BCMR

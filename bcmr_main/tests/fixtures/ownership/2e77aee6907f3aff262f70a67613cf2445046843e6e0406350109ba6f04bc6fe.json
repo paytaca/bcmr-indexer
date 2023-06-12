@@ -1,1 +1,84 @@
-{"txid": "2e77aee6907f3aff262f70a67613cf2445046843e6e0406350109ba6f04bc6fe", "hash": "2e77aee6907f3aff262f70a67613cf2445046843e6e0406350109ba6f04bc6fe", "version": 2, "size": 470, "locktime": 0, "vin": [{"txid": "2a339b694162bddaef102e8708cae3a2e4b6649b2b32a4e815757b9362a893af", "vout": 1, "scriptSig": {"asm": "2559e90ff54f1648f147561d09f9a6be235e2250b8d98c98d63c912c3f44b4ed90361f48b2370dd4f50ac8beaf85b60d2654e28a37dcd710dfe88a35360a3a3d[ALL|FORKID] 02c9461f060d07b01d102b5564b89463981d34c8699158a64f7b613c921363e40a", "hex": "412559e90ff54f1648f147561d09f9a6be235e2250b8d98c98d63c912c3f44b4ed90361f48b2370dd4f50ac8beaf85b60d2654e28a37dcd710dfe88a35360a3a3d412102c9461f060d07b01d102b5564b89463981d34c8699158a64f7b613c921363e40a"}, "sequence": 0, "value": 0.00001000}, {"txid": "2a339b694162bddaef102e8708cae3a2e4b6649b2b32a4e815757b9362a893af", "vout": 2, "scriptSig": {"asm": "29d28c0f6d4a23d523d1523b0305ca29c63f135c3099d0e9ec026408756ebb965f526ae6740a7d07e899f20b012f54e5136666d5a7cff7109a58bdad1ca75239[ALL|FORKID] 02c9461f060d07b01d102b5564b89463981d34c8699158a64f7b613c921363e40a", "hex": "4129d28c0f6d4a23d523d1523b0305ca29c63f135c3099d0e9ec026408756ebb965f526ae6740a7d07e899f20b012f54e5136666d5a7cff7109a58bdad1ca75239412102c9461f060d07b01d102b5564b89463981d34c8699158a64f7b613c921363e40a"}, "sequence": 0, "value": 0.02635135}], "vout": [{"value": 0.00001000, "n": 0, "scriptPubKey": {"asm": "OP_DUP OP_HASH160 6bb4760510b7f375eb5e6393b64e912695b28cfb OP_EQUALVERIFY OP_CHECKSIG", "hex": "76a9146bb4760510b7f375eb5e6393b64e912695b28cfb88ac", "reqSigs": 1, "type": "pubkeyhash", "addresses": ["bitcoincash:qp4mgas9zzmlxa0tte3e8djwjynftv5vlvpeg0hs4l"]}, "tokenData": {"category": "b69f76548653033603cdcb81299e3c1d1f3d61ad66e7ba0e6569b493605b4cbe", "amount": "10000"}}, {"value": 0.00001000, "n": 1, "scriptPubKey": {"asm": "OP_DUP OP_HASH160 ccf5eb0ca6fd68785d3ca8a3c4a0f3240b76f6c7 OP_EQUALVERIFY OP_CHECKSIG", "hex": "76a914ccf5eb0ca6fd68785d3ca8a3c4a0f3240b76f6c788ac", "reqSigs": 1, "type": "pubkeyhash", "addresses": ["bitcoincash:qrx0t6cv5m7ks7za8j52839q7vjqkahkcux4hxfvrz"]}, "tokenData": {"category": "b69f76548653033603cdcb81299e3c1d1f3d61ad66e7ba0e6569b493605b4cbe", "amount": "55380000"}}, {"value": 0.02633664, "n": 2, "scriptPubKey": {"asm": "OP_DUP OP_HASH160 ccf5eb0ca6fd68785d3ca8a3c4a0f3240b76f6c7 OP_EQUALVERIFY OP_CHECKSIG", "hex": "76a914ccf5eb0ca6fd68785d3ca8a3c4a0f3240b76f6c788ac", "reqSigs": 1, "type": "pubkeyhash", "addresses": ["bitcoincash:qrx0t6cv5m7ks7za8j52839q7vjqkahkcux4hxfvrz"]}}], "hex": "0200000002af93a862937b7515e8a4322b9b64b6e4a2e3ca08872e10efdabd6241699b332a0100000064412559e90ff54f1648f147561d09f9a6be235e2250b8d98c98d63c912c3f44b4ed90361f48b2370dd4f50ac8beaf85b60d2654e28a37dcd710dfe88a35360a3a3d412102c9461f060d07b01d102b5564b89463981d34c8699158a64f7b613c921363e40a00000000af93a862937b7515e8a4322b9b64b6e4a2e3ca08872e10efdabd6241699b332a02000000644129d28c0f6d4a23d523d1523b0305ca29c63f135c3099d0e9ec026408756ebb965f526ae6740a7d07e899f20b012f54e5136666d5a7cff7109a58bdad1ca75239412102c9461f060d07b01d102b5564b89463981d34c8699158a64f7b613c921363e40a0000000003e8030000000000003eefbe4c5b6093b469650ebae766ad613d1f1d3c9e2981cbcd033603538654769fb610fd102776a9146bb4760510b7f375eb5e6393b64e912695b28cfb88ace80300000000000040efbe4c5b6093b469650ebae766ad613d1f1d3c9e2981cbcd033603538654769fb610fe20084d0376a914ccf5eb0ca6fd68785d3ca8a3c4a0f3240b76f6c788acc02f2800000000001976a914ccf5eb0ca6fd68785d3ca8a3c4a0f3240b76f6c788ac00000000", "blockhash": "000000000000000003413b7cff0dd0a21bde97d55da24d888b452ebde12b31a2", "confirmations": 7, "time": 1686529017, "blocktime": 1686529017, "fee": 0.00000471}
+{
+    "txid": "2e77aee6907f3aff262f70a67613cf2445046843e6e0406350109ba6f04bc6fe",
+    "hash": "2e77aee6907f3aff262f70a67613cf2445046843e6e0406350109ba6f04bc6fe",
+    "version": 2,
+    "size": 470,
+    "locktime": 0,
+    "vin": [
+        {
+            "txid": "2a339b694162bddaef102e8708cae3a2e4b6649b2b32a4e815757b9362a893af",
+            "vout": 1,
+            "scriptSig": {
+                "asm": "2559e90ff54f1648f147561d09f9a6be235e2250b8d98c98d63c912c3f44b4ed90361f48b2370dd4f50ac8beaf85b60d2654e28a37dcd710dfe88a35360a3a3d[ALL|FORKID] 02c9461f060d07b01d102b5564b89463981d34c8699158a64f7b613c921363e40a",
+                "hex": "412559e90ff54f1648f147561d09f9a6be235e2250b8d98c98d63c912c3f44b4ed90361f48b2370dd4f50ac8beaf85b60d2654e28a37dcd710dfe88a35360a3a3d412102c9461f060d07b01d102b5564b89463981d34c8699158a64f7b613c921363e40a"
+            },
+            "sequence": 0,
+            "value": 0.00001000
+        },
+        {
+            "txid": "2a339b694162bddaef102e8708cae3a2e4b6649b2b32a4e815757b9362a893af",
+            "vout": 2,
+            "scriptSig": {
+                "asm": "29d28c0f6d4a23d523d1523b0305ca29c63f135c3099d0e9ec026408756ebb965f526ae6740a7d07e899f20b012f54e5136666d5a7cff7109a58bdad1ca75239[ALL|FORKID] 02c9461f060d07b01d102b5564b89463981d34c8699158a64f7b613c921363e40a",
+                "hex": "4129d28c0f6d4a23d523d1523b0305ca29c63f135c3099d0e9ec026408756ebb965f526ae6740a7d07e899f20b012f54e5136666d5a7cff7109a58bdad1ca75239412102c9461f060d07b01d102b5564b89463981d34c8699158a64f7b613c921363e40a"
+            },
+            "sequence": 0,
+            "value": 0.02635135
+        }
+    ],
+    "vout": [
+        {
+            "value": 0.00001000,
+            "n": 0,
+            "scriptPubKey": {
+                "asm": "OP_DUP OP_HASH160 6bb4760510b7f375eb5e6393b64e912695b28cfb OP_EQUALVERIFY OP_CHECKSIG",
+                "hex": "76a9146bb4760510b7f375eb5e6393b64e912695b28cfb88ac",
+                "reqSigs": 1,
+                "type": "pubkeyhash",
+                "addresses": [
+                    "bitcoincash:qp4mgas9zzmlxa0tte3e8djwjynftv5vlvpeg0hs4l"
+                ]
+            },
+            "tokenData": {
+                "category": "b69f76548653033603cdcb81299e3c1d1f3d61ad66e7ba0e6569b493605b4cbe",
+                "amount": "10000"
+            }
+        },
+        {
+            "value": 0.00001000,
+            "n": 1,
+            "scriptPubKey": {
+                "asm": "OP_DUP OP_HASH160 ccf5eb0ca6fd68785d3ca8a3c4a0f3240b76f6c7 OP_EQUALVERIFY OP_CHECKSIG",
+                "hex": "76a914ccf5eb0ca6fd68785d3ca8a3c4a0f3240b76f6c788ac",
+                "reqSigs": 1,
+                "type": "pubkeyhash",
+                "addresses": [
+                    "bitcoincash:qrx0t6cv5m7ks7za8j52839q7vjqkahkcux4hxfvrz"
+                ]
+            },
+            "tokenData": {
+                "category": "b69f76548653033603cdcb81299e3c1d1f3d61ad66e7ba0e6569b493605b4cbe",
+                "amount": "55380000"
+            }
+        },
+        {
+            "value": 0.02633664,
+            "n": 2,
+            "scriptPubKey": {
+                "asm": "OP_DUP OP_HASH160 ccf5eb0ca6fd68785d3ca8a3c4a0f3240b76f6c7 OP_EQUALVERIFY OP_CHECKSIG",
+                "hex": "76a914ccf5eb0ca6fd68785d3ca8a3c4a0f3240b76f6c788ac",
+                "reqSigs": 1,
+                "type": "pubkeyhash",
+                "addresses": [
+                    "bitcoincash:qrx0t6cv5m7ks7za8j52839q7vjqkahkcux4hxfvrz"
+                ]
+            }
+        }
+    ],
+    "hex": "0200000002af93a862937b7515e8a4322b9b64b6e4a2e3ca08872e10efdabd6241699b332a0100000064412559e90ff54f1648f147561d09f9a6be235e2250b8d98c98d63c912c3f44b4ed90361f48b2370dd4f50ac8beaf85b60d2654e28a37dcd710dfe88a35360a3a3d412102c9461f060d07b01d102b5564b89463981d34c8699158a64f7b613c921363e40a00000000af93a862937b7515e8a4322b9b64b6e4a2e3ca08872e10efdabd6241699b332a02000000644129d28c0f6d4a23d523d1523b0305ca29c63f135c3099d0e9ec026408756ebb965f526ae6740a7d07e899f20b012f54e5136666d5a7cff7109a58bdad1ca75239412102c9461f060d07b01d102b5564b89463981d34c8699158a64f7b613c921363e40a0000000003e8030000000000003eefbe4c5b6093b469650ebae766ad613d1f1d3c9e2981cbcd033603538654769fb610fd102776a9146bb4760510b7f375eb5e6393b64e912695b28cfb88ace80300000000000040efbe4c5b6093b469650ebae766ad613d1f1d3c9e2981cbcd033603538654769fb610fe20084d0376a914ccf5eb0ca6fd68785d3ca8a3c4a0f3240b76f6c788acc02f2800000000001976a914ccf5eb0ca6fd68785d3ca8a3c4a0f3240b76f6c788ac00000000",
+    "blockhash": "000000000000000003413b7cff0dd0a21bde97d55da24d888b452ebde12b31a2",
+    "confirmations": 7,
+    "time": 1686529017,
+    "blocktime": 1686529017,
+    "fee": 0.00000471
+}

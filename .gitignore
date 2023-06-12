@@ -213,3 +213,4 @@ supervisord.pid
 images
 /postgres-data
 /redis-data
+8000
