@@ -1,36 +1,25 @@
-# from bcmr_main.models import IdentityOutput
+from bcmr_main.models import IdentityOutput
 from bcmr_main.bchn import BCHN
 
 
-def traverse_authchain(spent_txid):
+def traverse_authchain(txid, ancestor_tx, block_txns):
+    """
+    Traverse the authchain in the transactions in this block
+    """
+    identity_output, _ = IdentityOutput.objects.get_or_create(
+        txid=txid,
+        parent_txid=ancestor_tx
+    )
+
     bchn = BCHN()
-    tx = bchn._get_raw_transaction(spent_txid)
-    
-    inputs = tx['vin']
-    outputs = tx['vout']
-    identity_input = inputs[0]
+    tx = bchn.get_transaction(ancestor_tx)
 
-    if 'coinbase' in identity_input.keys():
-        return
+    input_txids = []
+    for tx_input in tx['inputs']:
+        if tx_input['spent_index'] == 0:
+            input_txids.append(tx_input['txid'])
 
-    identity_input_txid = identity_input['txid']
-    # identity_input_index = identity_input['vout']
-    token_outputs = []
-
-    for output in outputs:
-        scriptPubKey = output['scriptPubKey']
-        output_type = scriptPubKey['type']
-        if output_type in ['pubkeyhash', 'scripthash']:
-            if 'tokenData' in output.keys():
-                token_outputs.append(output)
-
-    # stop recursion when we reach genesis transaction
-    if token_outputs:
-        main_token_output = token_outputs[0]
-        main_token_data = main_token_output['tokenData']
-        category = main_token_data['category']
-
-        if category == identity_input_txid:
-            return main_token_data
-
-    return traverse_authchain(identity_input_txid)
+    ancestor_txns = set(input_txids).intersection(set(block_txns))
+    if ancestor_txns:
+        for ancestor_txn in ancestor_txns:
+            return traverse_authchain(ancestor_tx, ancestor_txn, block_txns)

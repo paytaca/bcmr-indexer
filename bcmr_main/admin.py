@@ -37,8 +37,7 @@ class IdentityOutputAdmin(admin.ModelAdmin):
         'txid',
         'spender__txid',
         'block',
-        'address',
-        'category',
+        'address'
     ]
     list_display = [
         'parent_txid',
@@ -49,8 +48,7 @@ class IdentityOutputAdmin(admin.ModelAdmin):
         'genesis',
         'spent',
         'date',
-        'address',
-        'category',
+        'address'
     ]
 
     def spender_txid(self, obj):

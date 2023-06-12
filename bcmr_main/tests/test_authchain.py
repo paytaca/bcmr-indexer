@@ -39,7 +39,6 @@ class TestIdentityOutputs:
                 identity_output.txid,
                 identity_output.authbase,
                 identity_output.genesis,
-                identity_output.category,
                 identity_output.spent,
                 spender
             )
@@ -119,7 +118,6 @@ class TestIdentityOutputs:
                 identity_output.txid,
                 identity_output.authbase,
                 identity_output.genesis,
-                identity_output.category,
                 identity_output.spent,
                 spender
             )

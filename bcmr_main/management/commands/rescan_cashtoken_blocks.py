@@ -23,10 +23,16 @@ class Command(BaseCommand):
             
         while curr_block < latest_block:
             transactions = node.get_block(curr_block)
-            self.stdout.write(f'Block: {curr_block}  |  Transactions: {len(transactions)}')
+            total_txs = len(transactions)
+            self.stdout.write(self.style.SUCCESS(f'Block: {curr_block}  |  Transactions: {total_txs}'))
 
-            for txid in transactions:
-                process_tx.delay(txid, block_txns=transactions)
+            for i, txid in enumerate(transactions, 1):
+                try:
+                    self.stdout.write(self.style.SUCCESS(f'    {curr_block} | {txid} | {i} of {total_txs}'))
+                    process_tx(txid, block_txns=transactions)
+                except Exception as exc:
+                    self.stdout.write(self.style.ERROR(f'Error processing txid: {txid}'))
+                    raise exc
 
             curr_block += 1
 

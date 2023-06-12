@@ -36,9 +36,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-pv!^!=pl^ia3f2rqyua82#&t9j!zk4+7^kqcnw(u)8f4&f8y%h'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEPLOYMENT_INSTANCE = config('DEPLOYMENT_INSTANCE', default='dev')
 NETWORK = config('NETWORK', default='chipnet')
-DEBUG = DEPLOYMENT_INSTANCE == 'dev'
+DEBUG = NETWORK == 'chipnet'
 
 ALLOWED_HOSTS = ['*']
 
@@ -163,6 +162,10 @@ REDIS_PASSWORD = config('REDIS_PASSWORD', default='')
 REDIS_PORT = config('REDIS_PORT', default=6379)
 
 CELERY_IMPORTS = ('bcmr_main.tasks', )
+
+DEPLOYMENT_INSTANCE = 'staging'
+if NETWORK == 'mainnet':
+    DEPLOYMENT_INSTANCE = 'prod'
 
 if DEPLOYMENT_INSTANCE in ['prod', 'staging']:
     DB_NUMS = [0, 1, 2, 3] # staging

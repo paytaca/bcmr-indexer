@@ -4,10 +4,9 @@ from django.db import models
 
 class IdentityOutput(models.Model):
     txid = models.CharField(max_length=70, unique=True)
-    parent_txid = models.CharField(max_length=70, unique=True)  # 0th input txid
+    parent_txid = models.CharField(max_length=70, null=True)
     block = models.PositiveIntegerField(null=True, blank=True)
     address = models.CharField(max_length=60, null=True, blank=True)
-    category = models.CharField(max_length=70, null=True, blank=True)
     authbase = models.BooleanField(default=False)
     genesis = models.BooleanField(default=False)
     spent = models.BooleanField(default=False)
@@ -22,7 +21,7 @@ class IdentityOutput(models.Model):
     
     class Meta:
         verbose_name_plural = 'Identity Outputs'
-        ordering = ('-date', )
+        ordering = ('-id', )
         indexes = [
-            models.Index(fields=['txid', 'category', 'spent'])
+            models.Index(fields=['txid', 'parent_txid', 'spent'])
         ]

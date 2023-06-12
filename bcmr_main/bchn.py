@@ -12,7 +12,7 @@ import json
 class BCHN(object):
 
     def __init__(self):
-        self.max_retries = 20
+        self.max_retries = 3
         self.rpc_connection = AuthServiceProxy(settings.BCHN_NODE)
     
     def get_latest_block(self):
@@ -27,7 +27,7 @@ class BCHN(object):
                 return block_data['tx']
             except:
                 retries += 1
-                time.sleep(1)
+                time.sleep(retries * 1.25)
 
     def get_block_height(self, block_hash):
         retries = 0
@@ -37,17 +37,22 @@ class BCHN(object):
                 return block['height']
             except:
                 retries += 1
-                time.sleep(1)
+                time.sleep(retries * 1.25)
 
     def _get_raw_transaction(self, txid):
         retries = 0
+        exception = None
         while retries < self.max_retries:
             try:
+                print(f'  Retry #{retries}')
                 txn = self.rpc_connection.getrawtransaction(txid, 2)
                 return txn
-            except:
+            except Exception as exc:
                 retries += 1
-                time.sleep(1)
+                exception = exc
+                time.sleep(retries * 1.25)
+        if exception:
+            raise exception
 
     def get_transaction(self, tx_hash):
         retries = 0
@@ -59,7 +64,7 @@ class BCHN(object):
                 break
             except:
                 retries += 1
-                time.sleep(1)
+                time.sleep(retries * 1.25)
 
     def _parse_transaction(self, txn, include_outputs=True):
         tx_hash = txn['hash']

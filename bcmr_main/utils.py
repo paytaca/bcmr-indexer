@@ -79,14 +79,13 @@ def save_output(
     parent_txid,
     block,
     address,
-    category,
     authbase=False,
     genesis=False,
     spent=False,
     spender=None,
     date=None
 ):
-    output, created = IdentityOutput.objects.get_or_create(
+    output, _ = IdentityOutput.objects.get_or_create(
         txid=txid,
         parent_txid=parent_txid
     )
@@ -94,7 +93,6 @@ def save_output(
     # used get or create only on txid & category, for the case of using the rescan_cashtoken_blocks script for existing txns
     output.block = block
     output.address = address
-    output.category = category
     output.authbase = authbase
     output.genesis = genesis
     output.spent = spent

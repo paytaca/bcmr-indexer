@@ -19,10 +19,11 @@ def log_invalid_op_return(txid, encoded_bcmr_json_hash, encoded_bcmr_url):
 
 def process_op_return(
     txid,
+    index,
     encoded_bcmr_json_hash,
     encoded_bcmr_url,
     op_return,
-    category,
+    publisher,
     date
 ):
     decoded_bcmr_json_hash = decode_str(encoded_bcmr_json_hash)
@@ -34,8 +35,9 @@ def process_op_return(
 
     registry_obj, _ = Registry.objects.update_or_create(
         txid=txid,
-        category=category
+        index=index
     )
+    registry_obj.publisher = publisher
     registry_obj.date_created = date
     registry_obj.op_return = op_return
     registry_obj.bcmr_url = decoded_bcmr_url

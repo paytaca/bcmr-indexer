@@ -18,8 +18,8 @@ LOGGER = logging.getLogger(__name__)
 def generate_token_identity(token_data):
     token_identity = ''
     token_identity += token_data.get('category', '')
-    token_identity += token_data.get('nft', {}).get('capability')
-    token_identity += token_data.get('nft', {}).get('commitment')
+    token_identity += token_data.get('nft', {}).get('capability', '')
+    token_identity += token_data.get('nft', {}).get('commitment', '')
     return token_identity
 
 
@@ -45,13 +45,16 @@ def process_tx(tx_hash, block_txns=None):
     if 'coinbase' in identity_input.keys():
         return
 
-    identity_input_txid = identity_input['txid']
-    # identity_input_index = identity_input['vout']
-
-    # track token identities in inputs for saving token ownership transfers
     parsed_tx = bchn._parse_transaction(tx, include_outputs=False)
     input_token_identities = []
+    input_txids = []
     for tx_input in parsed_tx['inputs']:
+
+        # get a list of input txids that are potential identity outputs spends
+        if tx_input['spent_index'] == 0:
+            input_txids.append(tx_input['txid'])
+        
+        # track token identities in inputs for saving token ownership transfers
         token_data = tx_input['token_data']
         if token_data:
             token_identity = generate_token_identity(token_data)
@@ -62,7 +65,7 @@ def process_tx(tx_hash, block_txns=None):
     bcmr_op_ret = {}
     op_ret_str = ''
     output_token_identities = []
-    for output in outputs:
+    for index, output in enumerate(outputs):
         scriptPubKey = output['scriptPubKey']
         output_type = scriptPubKey['type']
 
@@ -93,6 +96,7 @@ def process_tx(tx_hash, block_txns=None):
                     # TODO: validate hex here
 
                     bcmr_op_ret['txid'] = tx_hash
+                    bcmr_op_ret['index'] = index
                     bcmr_op_ret['encoded_bcmr_json_hash'] = asm[2]
                     bcmr_op_ret['encoded_bcmr_url'] = asm[3]
 
@@ -103,99 +107,85 @@ def process_tx(tx_hash, block_txns=None):
             # scenario: token burning
             pass
 
-    TOKEN_DATA = None
-    parents = IdentityOutput.objects.filter(txid=identity_input_txid)
+    if block_txns:
+        ancestor_txns = set(input_txids).intersection(set(block_txns))
+        if ancestor_txns:
+            for ancestor_txn in ancestor_txns:
+                traverse_authchain(tx_hash, ancestor_txn, block_txns)
 
-    if parents.exists():
-        TOKEN_DATA = traverse_authchain(identity_input_txid)
-    else:
-        if token_outputs:
-            TOKEN_DATA = token_outputs[0]['tokenData']
+    parents = IdentityOutput.objects.filter(txid__in=input_txids)
 
-        if block_txns:
-            if identity_input_txid in block_txns:
-                TOKEN_DATA = traverse_authchain(identity_input_txid)
-
-    # ignore txn if:
-    # 1. no parent has been found in database AND
-    # 2. no parent found in same block AND
-    # 3. no token outputs found in txn
-    if TOKEN_DATA is None:
-        return
-
-    # save identity output
+    # detect genesis
     genesis = False
-    category = TOKEN_DATA['category']
-    
+    category = None
+    input_zero_txid = inputs[0].get('txid')
     if token_outputs:
         token_categories = list(map(lambda x: x['tokenData']['category'], token_outputs))
-        genesis = identity_input_txid in token_categories
+        genesis = input_zero_txid in token_categories
         if genesis:
-            category = identity_input_txid
+            category = input_zero_txid
 
-    if genesis:
-        # save authbase tx
-        authbase_tx = bchn._get_raw_transaction(identity_input_txid)
-        output_data = {}
-        output_data['block'] = block
-        output_data['category'] = category
-        output_data['address'] = authbase_tx['vout'][0]['scriptPubKey']['addresses'][0]
-        output_data['parent_txid'] = authbase_tx['vin'][0]['txid']
-        output_data['txid'] = identity_input_txid
-        output_data['authbase'] = True
-        output_data['genesis'] = False
-        output_data['spent'] = True
+    if parents.count() or genesis:
+
+        if genesis:
+            # save authbase tx
+            authbase_tx = bchn._get_raw_transaction(category)
+            output_data = {}
+            output_data['block'] = block
+            output_data['address'] = authbase_tx['vout'][0]['scriptPubKey']['addresses'][0]
+            output_data['parent_txid'] = authbase_tx['vin'][0]['txid']
+            output_data['txid'] = category
+            output_data['authbase'] = True
+            output_data['genesis'] = False
+            output_data['spent'] = True
+            save_output(**output_data)
+
+        # save current identity output
+        output_data = {
+            'txid': tx_hash,
+            'parent_txid': category,
+            'block': block,
+            'address': identity_output['scriptPubKey']['addresses'][0],
+            'authbase': False,
+            'spent': False,
+            'genesis': genesis,
+            'spender': None,
+            'date': time
+        }
         save_output(**output_data)
 
-    output_data = {
-        'txid': tx_hash,
-        'parent_txid': identity_input_txid,
-        'block': block,
-        'address': identity_output['scriptPubKey']['addresses'][0],
-        'category': category,
-        'authbase': False,
-        'spent': False,
-        'genesis': genesis,
-        'spender': None,
-        'date': time
-    }
-    save_output(**output_data)
-
-    # set parent output as spent and spent by this current output
-    if parents.exists():
+        # set parent output as spent and spent by this current output
         current_output = IdentityOutput.objects.get(txid=tx_hash)
-        parents.update(
-            spent=True,
-            spender=current_output
-        )
+        if parents.exists():
+            parents.update(
+                spent=True,
+                spender=current_output
+            )
 
-    # for cases that BCHN returns a parent and a child txn on the same block,
-    # we check if any previous children that was saved in DB has this current output's txid as its parent
-    # if so, we mark the current output as spent and spender = that previously saved child (one only since parent_txid is unique)
-    children = IdentityOutput.objects.filter(parent_txid=tx_hash)
-    if children.exists():
-        current_output = IdentityOutput.objects.get(txid=tx_hash)
-        current_output.spent = True
-        current_output.spender = children.first()
-        current_output.save()
-
-
-    # defaults to true for genesis outputs without op return yet and non-zero outputs
-    is_valid_op_ret = True
-    bcmr_url = None
-
-    if bcmr_op_ret:
-        is_valid_op_ret, bcmr_url = process_op_return(**{
-            **bcmr_op_ret,
-            'op_return': op_ret_str,
-            'category': TOKEN_DATA['category'],
-            'date': time
-        })
+        # for cases that BCHN returns a parent and a child txn on the same block,
+        # we check if any previous children that was saved in DB has this current output's txid as its parent
+        # if so, we mark the current output as spent and spender = that previously saved child (one only since parent_txid is unique)
+        children = IdentityOutput.objects.filter(parent_txid=tx_hash)
+        if children.exists():
+            current_output = IdentityOutput.objects.get(txid=tx_hash)
+            current_output.spent = True
+            current_output.spender = children.first()
+            current_output.save()
 
 
-    # parse and save identity outputs and tokens
+        # defaults to true for genesis outputs without op return yet and non-zero outputs
+        if bcmr_op_ret:
+            process_op_return(**{
+                **bcmr_op_ret,
+                'op_return': op_ret_str,
+                'publisher': current_output,
+                'date': time
+            })
+
+
+    # parse and save tokens
     for obj in token_outputs:
-        index = obj['n']
+        # index = obj['n']
         token_data = obj['tokenData']
         category = token_data['category']
         capability = None
@@ -216,24 +206,25 @@ def process_tx(tx_hash, block_txns=None):
             date_created=time
         )
         
-        send_webhook_token_update(
-            category,
-            index,
-            tx_hash,
-            commitment=commitment,
-            capability=capability
-        )
+        # send_webhook_token_update(
+        #     category,
+        #     index,
+        #     tx_hash,
+        #     commitment=commitment,
+        #     capability=capability
+        # )
 
 
 def record_txn_dates(qs, bchn):
     for element in qs:
-        tx = bchn._get_raw_transaction(element.txid)
-            
-        if 'time' in tx.keys():
-            time = timestamp_to_date(tx['time'])
-            if isinstance(element, Registry) or isinstance(element, Token):
-                element.date_created = time
-            element.save()
+        if hasattr(element, 'txid'):
+            tx = bchn._get_raw_transaction(element.txid)
+                
+            if 'time' in tx.keys():
+                time = timestamp_to_date(tx['time'])
+                if isinstance(element, Registry) or isinstance(element, Token):
+                    element.date_created = time
+                element.save()
 
 
 @shared_task(queue='recheck_unconfirmed_txn_details')

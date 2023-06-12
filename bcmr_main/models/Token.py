@@ -24,7 +24,7 @@ class Token(models.Model):
     date_created = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        ordering = ('-date_created', )
+        ordering = ('-id', )
         unique_together = (
             'category',
             'commitment',
