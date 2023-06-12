@@ -59,9 +59,8 @@ def save_token(
     category,
     commitment=None,
     capability=None,
-    bcmr_url=None,
     is_nft=False,
-    updated_at=None
+    date_created=None
 ):
     token, created = Token.objects.get_or_create(
         category=category,
@@ -69,12 +68,9 @@ def save_token(
         capability=capability
     )
     if created:
-        token.txid = txid
-
-    token.bcmr_url = bcmr_url
-    token.capability = capability
-    token.is_nft = is_nft
-    token.updated_at = updated_at
+        token.debut_txid = txid
+        token.date_created = date_created
+        token.is_nft = is_nft
     token.save()
 
 
@@ -188,3 +184,13 @@ def parse_token_info(category, type_key=None):
                     info['types'] = list(parse['types'].keys())
                     
     return info
+
+
+def save_ownership(
+    category,
+    txid,
+    address,
+    amount,
+    spends
+):
+    pass

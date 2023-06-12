@@ -15,9 +15,7 @@ class TokenSerializer(serializers.ModelSerializer):
             'commitment',
             'capability',
             'is_nft',
-            'bcmr_url', # link to original registry
-            'bcmr_url_mirror',  # link to custom registry
-            'updated_at',
+            'date_created',
         )
 
     def get_bcmr_url_mirror(self, obj):

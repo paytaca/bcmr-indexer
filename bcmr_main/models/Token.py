@@ -7,8 +7,8 @@ class Token(models.Model):
         MUTABLE = 'mutable'
         NONE = 'none'
 
-    category = models.CharField(max_length=255)
-    txid = models.CharField(max_length=255, null=True, blank=True)
+    category = models.CharField(max_length=70)
+    debut_txid = models.CharField(max_length=70, null=True, blank=True)
     is_nft = models.BooleanField(default=False)
     commitment = models.CharField(
         max_length=255,
@@ -21,11 +21,10 @@ class Token(models.Model):
         null=True,
         blank=True
     )
-    bcmr_url = models.URLField(max_length=255, null=True, blank=True)
-    updated_at = models.DateTimeField(null=True, blank=True)
+    date_created = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        ordering = ('-updated_at', )
+        ordering = ('-date_created', )
         unique_together = (
             'category',
             'commitment',

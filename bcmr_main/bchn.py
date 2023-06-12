@@ -61,7 +61,7 @@ class BCHN(object):
                 retries += 1
                 time.sleep(1)
 
-    def _parse_transaction(self, txn):
+    def _parse_transaction(self, txn, include_outputs=True):
         tx_hash = txn['hash']
         
         # NOTE: very new transactions doesnt have timestamp
@@ -88,21 +88,22 @@ class BCHN(object):
             }
             transaction['inputs'].append(data)
 
-        transaction['outputs'] = []
-        outputs = txn['vout']
+        if include_outputs:
+            transaction['outputs'] = []
+            outputs = txn['vout']
 
-        for tx_output in outputs:
-            if 'value' in tx_output.keys() and 'addresses' in tx_output['scriptPubKey'].keys():
-                sats_value = int(float(tx_output['value'] * (10 ** 8)))
-                data = {
-                    'address': tx_output['scriptPubKey']['addresses'][0],
-                    'value': sats_value,
-                    'index': tx_output['n'],
-                    'token_data': None
-                }
-                if 'tokenData' in tx_output.keys():
-                    data['token_data'] = tx_output['tokenData']
-                transaction['outputs'].append(data)
+            for tx_output in outputs:
+                if 'value' in tx_output.keys() and 'addresses' in tx_output['scriptPubKey'].keys():
+                    sats_value = int(float(tx_output['value'] * (10 ** 8)))
+                    data = {
+                        'address': tx_output['scriptPubKey']['addresses'][0],
+                        'value': sats_value,
+                        'index': tx_output['n'],
+                        'token_data': None
+                    }
+                    if 'tokenData' in tx_output.keys():
+                        data['token_data'] = tx_output['tokenData']
+                    transaction['outputs'].append(data)
 
         transaction['tx_fee'] = txn['fee'] * (10 ** 8)
         return transaction

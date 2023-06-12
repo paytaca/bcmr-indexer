@@ -17,8 +17,7 @@ class TokenAdmin(admin.ModelAdmin):
         'is_nft',
         'commitment',
         'capability',
-        'updated_at',
-        'bcmr_url',
+        'date_created'
     ]
 
 class RegistryAdmin(admin.ModelAdmin):

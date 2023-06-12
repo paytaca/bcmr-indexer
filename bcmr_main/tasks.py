@@ -14,6 +14,15 @@ import logging
 LOGGER = logging.getLogger(__name__)
 
 
+
+def generate_token_identity(token_data):
+    token_identity = ''
+    token_identity += token_data.get('category', '')
+    token_identity += token_data.get('nft', {}).get('capability')
+    token_identity += token_data.get('nft', {}).get('commitment')
+    return token_identity
+
+
 @shared_task(queue='process_tx')
 def process_tx(tx_hash, block_txns=None):
     LOGGER.info(f'PROCESSING TX --- {tx_hash}')
@@ -39,11 +48,20 @@ def process_tx(tx_hash, block_txns=None):
     identity_input_txid = identity_input['txid']
     # identity_input_index = identity_input['vout']
 
+    # track token identities in inputs for saving token ownership transfers
+    parsed_tx = bchn._parse_transaction(tx, include_outputs=False)
+    input_token_identities = []
+    for tx_input in parsed_tx['inputs']:
+        token_data = tx_input['token_data']
+        if token_data:
+            token_identity = generate_token_identity(token_data)
+            input_token_identities.append(token_identity)
+    
+    # collect token outputs, and BCMR output
     token_outputs = []
     bcmr_op_ret = {}
     op_ret_str = ''
-    
-    # collect token outputs, and BCMR output
+    output_token_identities = []
     for output in outputs:
         scriptPubKey = output['scriptPubKey']
         output_type = scriptPubKey['type']
@@ -51,6 +69,18 @@ def process_tx(tx_hash, block_txns=None):
         if output_type in ['pubkeyhash', 'scripthash']:
             if 'tokenData' in output.keys():
                 token_outputs.append(output)
+
+                token_data = output['tokenData']
+                token_identity = generate_token_identity(token_data)
+                output_token_identities.append(token_identity)
+                
+                # TODO: save ownership records
+                if token_identity in input_token_identities:
+                    # scenario: token transfer
+                    pass
+                else:
+                    # scenario: token minting or mutation
+                    pass
         
         elif output_type == 'nulldata':
             asm = scriptPubKey['asm']
@@ -65,6 +95,12 @@ def process_tx(tx_hash, block_txns=None):
                     bcmr_op_ret['txid'] = tx_hash
                     bcmr_op_ret['encoded_bcmr_json_hash'] = asm[2]
                     bcmr_op_ret['encoded_bcmr_url'] = asm[3]
+
+    # TODO: catch token burning by checking which token identities
+    # are present in inputs but not in outputs
+    for token_id in input_token_identities:
+        if token_id not in output_token_identities:
+            pass
 
     TOKEN_DATA = None
     parents = IdentityOutput.objects.filter(txid=identity_input_txid)
@@ -158,7 +194,6 @@ def process_tx(tx_hash, block_txns=None):
     for obj in token_outputs:
         index = obj['n']
         token_data = obj['tokenData']
-        address = obj['scriptPubKey']['addresses'][0]
         category = token_data['category']
         capability = None
         commitment = None
@@ -174,9 +209,8 @@ def process_tx(tx_hash, block_txns=None):
             category,
             commitment=commitment,
             capability=capability,
-            bcmr_url=bcmr_url,
             is_nft=is_nft,
-            updated_at=time
+            date_created=time
         )
         
         send_webhook_token_update(
@@ -194,10 +228,8 @@ def record_txn_dates(qs, bchn):
             
         if 'time' in tx.keys():
             time = timestamp_to_date(tx['time'])
-            if isinstance(element, Registry):
+            if isinstance(element, Registry) or isinstance(element, Token):
                 element.date_created = time
-            elif isinstance(element, Token):
-                element.updated_at = time
             element.save()
 
 
@@ -210,7 +242,7 @@ def recheck_unconfirmed_txn_details():
         Q(block__isnull=True) |
         Q(date__isnull=True)
     )
-    tokens = Token.objects.filter(updated_at__isnull=True)
+    tokens = Token.objects.filter(date_created__isnull=True)
     registries = Registry.objects.filter(date_created__isnull=True)
 
     record_txn_dates(tokens, bchn)

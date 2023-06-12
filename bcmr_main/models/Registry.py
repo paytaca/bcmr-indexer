@@ -2,8 +2,8 @@ from django.db import models
 
 
 class Registry(models.Model):
-    category = models.CharField(max_length=255)
-    txid = models.CharField(max_length=255, unique=True)
+    category = models.CharField(max_length=70)
+    txid = models.CharField(max_length=70, unique=True)
     metadata = models.JSONField(null=True, blank=True)
     valid = models.BooleanField(default=False)
     op_return = models.TextField(default='')
