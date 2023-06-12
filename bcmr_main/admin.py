@@ -13,7 +13,6 @@ class TokenAdmin(admin.ModelAdmin):
     ]
     list_display = [
         'category',
-        'txid',
         'is_nft',
         'commitment',
         'capability',

@@ -100,6 +100,7 @@ def process_tx(tx_hash, block_txns=None):
     # are present in inputs but not in outputs
     for token_id in input_token_identities:
         if token_id not in output_token_identities:
+            # scenario: token burning
             pass
 
     TOKEN_DATA = None
