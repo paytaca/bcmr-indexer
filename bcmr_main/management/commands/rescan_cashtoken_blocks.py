@@ -1,6 +1,6 @@
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.conf import settings
-
+from django.utils import timezone
 from bcmr_main.bchn import BCHN
 from bcmr_main.tasks import process_tx
 from bcmr_main.models import *
@@ -24,6 +24,12 @@ class Command(BaseCommand):
         while curr_block < latest_block:
             transactions = node.get_block(curr_block)
             total_txs = len(transactions)
+            block_scan, _ = BlockScan.objects.get_or_create(
+                height=curr_block,
+                transactions=total_txs,
+                scan_started=timezone.now(),
+                scan_completed=None,
+            )
             self.stdout.write(self.style.SUCCESS(f'Block: {curr_block}  |  Transactions: {total_txs}'))
 
             for i, txid in enumerate(transactions, 1):
@@ -33,6 +39,10 @@ class Command(BaseCommand):
                 except Exception as exc:
                     self.stdout.write(self.style.ERROR(f'Error processing txid: {txid}'))
                     raise exc
+                
+            block_scan.scan_completed = timezone.now()
+            block_scan.scanned = True
+            block_scan.save()
 
             curr_block += 1
 

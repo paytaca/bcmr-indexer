@@ -53,7 +53,19 @@ class IdentityOutputAdmin(admin.ModelAdmin):
         if obj.spender:
             return obj.spender.txid
         return None
+    
+
+class BlockScanAdmin(admin.ModelAdmin):
+    list_display = [
+        'height',
+        'transactions',
+        'scanned',
+        'scan_started',
+        'scan_completed'
+    ]
+
 
 admin.site.register(Token, TokenAdmin)
 admin.site.register(Registry, RegistryAdmin)
 admin.site.register(IdentityOutput, IdentityOutputAdmin)
+admin.site.register(BlockScan, BlockScanAdmin)
