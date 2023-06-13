@@ -33,14 +33,12 @@ class RegistryAdmin(admin.ModelAdmin):
 
 class IdentityOutputAdmin(admin.ModelAdmin):
     search_fields = [
-        'parent_txid',
         'txid',
         'spender__txid',
         'block',
         'address'
     ]
     list_display = [
-        'parent_txid',
         'txid',
         'spender_txid',
         'block',

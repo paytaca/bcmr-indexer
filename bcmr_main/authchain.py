@@ -6,9 +6,15 @@ def traverse_authchain(txid, ancestor_tx, block_txns):
     """
     Traverse the authchain in the transactions in this block
     """
-    identity_output, _ = IdentityOutput.objects.get_or_create(
-        txid=txid,
-        parent_txid=ancestor_tx
+    tx_obj, _ = IdentityOutput.objects.get_or_create(txid=txid)
+    ancestor_obj, _ = IdentityOutput.objects.get_or_create(txid=ancestor_tx)
+    ancestor_obj.spent = True
+    ancestor_obj.spender = tx_obj
+    ancestor_obj.save()
+
+    print(
+        f' CHILD: {tx_obj.txid}',
+        f' PARENT: {ancestor_obj.txid}'
     )
 
     bchn = BCHN()

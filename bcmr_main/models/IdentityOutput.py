@@ -4,7 +4,6 @@ from django.db import models
 
 class IdentityOutput(models.Model):
     txid = models.CharField(max_length=70, unique=True)
-    parent_txid = models.CharField(max_length=70, null=True)
     block = models.PositiveIntegerField(null=True, blank=True)
     address = models.CharField(max_length=60, null=True, blank=True)
     authbase = models.BooleanField(default=False)
@@ -23,5 +22,5 @@ class IdentityOutput(models.Model):
         verbose_name_plural = 'Identity Outputs'
         ordering = ('-id', )
         indexes = [
-            models.Index(fields=['txid', 'parent_txid', 'spent'])
+            models.Index(fields=['txid', 'spent'])
         ]

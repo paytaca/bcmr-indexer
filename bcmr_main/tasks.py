@@ -133,21 +133,17 @@ def process_tx(tx_hash, block_txns=None):
             output_data = {}
             output_data['block'] = block
             output_data['address'] = authbase_tx['vout'][0]['scriptPubKey']['addresses'][0]
-            output_data['parent_txid'] = authbase_tx['vin'][0]['txid']
             output_data['txid'] = category
             output_data['authbase'] = True
             output_data['genesis'] = False
-            output_data['spent'] = True
             save_output(**output_data)
 
         # save current identity output
         output_data = {
             'txid': tx_hash,
-            'parent_txid': category,
             'block': block,
             'address': identity_output['scriptPubKey']['addresses'][0],
             'authbase': False,
-            'spent': False,
             'genesis': genesis,
             'spender': None,
             'date': time
@@ -165,12 +161,12 @@ def process_tx(tx_hash, block_txns=None):
         # for cases that BCHN returns a parent and a child txn on the same block,
         # we check if any previous children that was saved in DB has this current output's txid as its parent
         # if so, we mark the current output as spent and spender = that previously saved child (one only since parent_txid is unique)
-        children = IdentityOutput.objects.filter(parent_txid=tx_hash)
-        if children.exists():
-            current_output = IdentityOutput.objects.get(txid=tx_hash)
-            current_output.spent = True
-            current_output.spender = children.first()
-            current_output.save()
+        # children = IdentityOutput.objects.filter(parent_txid=tx_hash)
+        # if children.exists():
+        #     current_output = IdentityOutput.objects.get(txid=tx_hash)
+        #     current_output.spent = True
+        #     current_output.spender = children.first()
+        #     current_output.save()
 
 
         # defaults to true for genesis outputs without op return yet and non-zero outputs

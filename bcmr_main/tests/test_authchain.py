@@ -65,7 +65,7 @@ class TestIdentityOutputs:
         assert authbase_tx_obj.id == (genesis_tx_obj.id - 1)
 
 
-    def test_authchain_traversal(self):
+    def test_saving_ancestor_txns(self):
         # Check if identity output is not saved
         identity_outputs = IdentityOutput.objects.all()
         assert identity_outputs.count() == 0
@@ -123,3 +123,62 @@ class TestIdentityOutputs:
             )
 
         assert identity_outputs.count() == 5
+
+    def test_authchain_traversal_on_current_block(self):
+        # Check if identity output is not saved
+        identity_outputs = IdentityOutput.objects.all()
+        assert identity_outputs.count() == 0
+
+        # Use the Emerald DAO as test where the token genesis did not immediately contain the BCMR update
+        genesis_tx = '00003c40fa202816c357350eaa2e7ec2b47766209604941789ecf814f98ba4a6'
+        process_tx(genesis_tx)
+
+        # Check if the token record was saved
+        tokens = Token.objects.all()
+        assert tokens.count() == 1
+
+        # Check if identity outputs are saved
+        identity_outputs = IdentityOutput.objects.all()
+        assert identity_outputs.count() == 2
+
+        # Check that no registry has been saved yet
+        registries = Registry.objects.filter(valid=True)
+        assert registries.count() == 0
+
+        block_txns = [
+            'c8d08e34f74a83c470ff35d0bfebab81c5ade5e10df661a555f19b6ee05df01c',
+            '963af3f74933e5f5b204671b25a8f467f640bc56e8d3f9104a1ec8e118d7c919'
+        ]
+
+        # Third BCMR update
+        bcmr_update_tx = '66976cd8b18b4faafd7ad7b93540c65257179ed14218decb90c8613cddaf78c1'
+        process_tx(bcmr_update_tx, block_txns)
+
+        # Simulate the processing of other txs in the block
+        for txn in block_txns:
+            process_tx(txn, block_txns)
+
+        # Check if 5 identity outputs are saved
+        identity_outputs = IdentityOutput.objects.all()
+        assert identity_outputs.count() == 5
+
+        # Check if spent and spenders are properly populated
+        identity_output = IdentityOutput.objects.get(txid='00003c40fa202816c357350eaa2e7ec2b47766209604941789ecf814f98ba4a6')
+        assert identity_output.spent == True
+        assert identity_output.spender.txid == '963af3f74933e5f5b204671b25a8f467f640bc56e8d3f9104a1ec8e118d7c919'
+
+        identity_output = IdentityOutput.objects.get(txid='963af3f74933e5f5b204671b25a8f467f640bc56e8d3f9104a1ec8e118d7c919')
+        assert identity_output.spent == True
+        assert identity_output.spender.txid == 'c8d08e34f74a83c470ff35d0bfebab81c5ade5e10df661a555f19b6ee05df01c'
+
+        identity_output = IdentityOutput.objects.get(txid='c8d08e34f74a83c470ff35d0bfebab81c5ade5e10df661a555f19b6ee05df01c')
+        assert identity_output.spent == True
+        assert identity_output.spender.txid == '66976cd8b18b4faafd7ad7b93540c65257179ed14218decb90c8613cddaf78c1'
+
+        identity_output = IdentityOutput.objects.get(txid='66976cd8b18b4faafd7ad7b93540c65257179ed14218decb90c8613cddaf78c1')
+        assert identity_output.spent == False
+        assert identity_output.spender == None
+
+        # Check that 1 valid registry is saved
+        registries = Registry.objects.filter(valid=True)
+        assert registries.count() == 1
