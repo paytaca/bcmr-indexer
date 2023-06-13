@@ -44,7 +44,6 @@ class BCHN(object):
         exception = None
         while retries < self.max_retries:
             try:
-                print(f'  Retry #{retries}')
                 txn = self.rpc_connection.getrawtransaction(txid, 2)
                 return txn
             except Exception as exc:

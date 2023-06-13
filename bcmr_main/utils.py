@@ -115,10 +115,10 @@ def parse_token_info(category, type_key=None):
 
     registry = registries.first()
 
-    if not registry.metadata:
+    if not registry.contents:
         raise Registry.DoesNotExist
         
-    identities = registry.metadata['identities']
+    identities = registry.contents['identities']
 
     try:
         identities = identities[category] # category key

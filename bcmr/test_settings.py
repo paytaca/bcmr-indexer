@@ -102,7 +102,10 @@ DATABASES = {
         'PORT': config('POSTGRES_PORT', default=5432, cast=int),
         'USER': config('POSTGRES_USER', default='postgres'),
         'PASSWORD': config('POSTGRES_PASSWORD', default='badpassword'),
-        'DISABLE_SERVER_SIDE_CURSORS': True
+        'DISABLE_SERVER_SIDE_CURSORS': True,
+        'OPTIONS': {
+            'isolation_level': psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE,
+        }
     }
 }
 

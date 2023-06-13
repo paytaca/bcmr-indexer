@@ -20,6 +20,10 @@ class Command(BaseCommand):
         curr_block = 792773
         if settings.NETWORK == 'chipnet':
             curr_block = 120000
+
+        scanned_blocks = BlockScan.objects.filter(scanned=True)
+        if scanned_blocks.exists():
+            curr_block = scanned_blocks.latest('height').height
             
         while curr_block < latest_block:
             transactions = node.get_block(curr_block)

@@ -1,7 +1,5 @@
 from rest_framework.views import APIView
-
 from django.http import JsonResponse
-
 from bcmr_main.models import Registry
 
 
@@ -14,8 +12,8 @@ class RegistryView(APIView):
 
         if registries.exists():
             registry = registries.first()
-            if registry.metadata:
-                metadata = registry.metadata
+            if registry.contents:
+                metadata = registry.contents
                 metadata['$schema'] = 'https://cashtokens.org/bcmr-v2.schema.json'
                 metadata['license'] = 'CC0-1.0'
                 return JsonResponse(metadata)

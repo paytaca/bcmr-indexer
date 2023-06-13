@@ -33,3 +33,27 @@ class Token(models.Model):
         indexes = [
             models.Index(fields=['category', 'commitment', 'capability', 'is_nft'])
         ]
+
+    def __str__(self):
+        fields = [self.category, self.commitment, self.capability]
+        return '|'.join([x for x in fields if x])
+
+
+class TokenMetadata(models.Model):
+    token = models.ForeignKey(
+        'Token',
+        related_name='metadata',
+        on_delete=models.CASCADE
+    )
+    identity = models.ForeignKey(
+        'IdentityOutput',
+        related_name='tokens_created',
+        on_delete=models.CASCADE
+    )
+    registry = models.ForeignKey(
+        'Registry',
+        related_name='token_metadata',
+        on_delete=models.CASCADE
+    )
+    contents = models.JSONField(null=True, blank=True)
+    date_created = models.DateTimeField(null=True)

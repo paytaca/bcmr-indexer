@@ -12,11 +12,6 @@ def traverse_authchain(txid, ancestor_tx, block_txns):
     ancestor_obj.spender = tx_obj
     ancestor_obj.save()
 
-    print(
-        f' CHILD: {tx_obj.txid}',
-        f' PARENT: {ancestor_obj.txid}'
-    )
-
     bchn = BCHN()
     tx = bchn.get_transaction(ancestor_tx)
 

@@ -179,6 +179,14 @@ class TestIdentityOutputs:
         assert identity_output.spent == False
         assert identity_output.spender == None
 
-        # Check that 1 valid registry is saved
+        # Check that there is no valid registry
+        registries = Registry.objects.filter(valid=True)
+        assert registries.count() == 0
+
+        # Call revalidation of identities in saved registries
+        for registry in Registry.objects.all():
+            registry.revalidate_identities()
+
+        # Confirm there is only one valid registry after revalidations
         registries = Registry.objects.filter(valid=True)
         assert registries.count() == 1

@@ -1,8 +1,14 @@
 from bcmr_main.utils import *
 from bcmr_main.ipfs import *
-from bcmr_main.models import Registry
-
-from dateutil import parser
+from bcmr_main.models import (
+    Registry,
+    Token,
+    TokenMetadata
+)
+from django.utils import timezone
+from datetime import datetime
+from dateutil.parser import parse as parse_datetime
+from operator import itemgetter
 import requests
 import logging
 
@@ -35,12 +41,13 @@ def process_op_return(
 
     registry_obj, _ = Registry.objects.update_or_create(
         txid=txid,
-        index=index
+        index=index,
+        publisher=publisher
     )
-    registry_obj.publisher = publisher
     registry_obj.date_created = date
     registry_obj.op_return = op_return
     registry_obj.bcmr_url = decoded_bcmr_url
+    registry_obj.save()
 
     if decoded_bcmr_url.startswith('ipfs://'):
         response = download_ipfs_bcmr_data(decoded_bcmr_url)
@@ -51,7 +58,11 @@ def process_op_return(
         return False, decoded_bcmr_url
 
     status_code = response.status_code
-    is_valid = False
+    validity_checks = {
+        'bcmr_file_accessible': status_code == 200,
+        'bcmr_hash_match': None,
+        'identities_match': None
+    }
     
     registry_obj.bcmr_request_status = status_code
 
@@ -61,16 +72,71 @@ def process_op_return(
             decoded_bcmr_json_hash == encoded_response_json_hash or  # bitcats (encoded before being hashed)
             encoded_bcmr_json_hash == encoded_response_json_hash     # matthieu wallet (simple hash of BCMR json, no prior encoding)
         ):
-            is_valid = True
-            registry_obj.valid = is_valid
+            validity_checks['bcmr_hash_match'] = True
         else:
+            validity_checks['bcmr_hash_match'] = False
             log_invalid_op_return(txid, encoded_bcmr_json_hash, encoded_bcmr_url)
 
-        bcmr_json = response.json()
-        registry_obj.metadata = bcmr_json
+        contents = response.json()
+        registry_obj.contents = contents
+        registry_obj.save()
     else:
         LOGGER.info(f'Something\'s wrong in fetching BCMR --- {decoded_bcmr_url} - {status_code}')
 
+    # Parse the BCMR to get the associated identities and tokens
+    publisher_identities = publisher.get_identities()
+    matched_identities = set(contents['identities'].keys()).intersection(set(publisher_identities))
+    if matched_identities:
+        validity_checks['identities_match'] = True
+    else:
+        validity_checks['identities_match'] = False
+
+    is_valid = list(validity_checks.values()).count(True) == len(validity_checks.keys())
+    registry_obj.valid = is_valid
+    registry_obj.validity_checks = validity_checks
     registry_obj.save()
+
+    # Parse and save metadata regardless if identities are valid or not
+    if contents:
+        for identity in list(matched_identities):
+            # Get the latest non-future identity history record
+            histories_keys = contents['identities'][identity].keys()
+            histories = [
+                (x, parse_datetime(x)) for x in histories_keys if parse_datetime(x) <= timezone.now()
+            ]
+            histories.sort(key=itemgetter(1))
+            latest_key, history_date = histories[-1]
+            token_data = contents['identities'][identity][latest_key]['token']
+            token_check = Token.objects.filter(category=token_data['category'])
+            if token_check.exists():
+                token = token_check.last()
+                if 'nfts' in token_data.keys():
+                    nft_types = token_data['nfts']['parse']['types']
+                    for nft_type_key in nft_types:
+                        nft_token = Token.objects.filter(
+                            category=token_data['category'],
+                            # TODO: Refactor this later to support parseable NFTs. For now,
+                            # this only works for NFTs with type key equal to commitment.
+                            commitment=nft_type_key,
+                            capability=None
+                        )
+                        nft_token = nft_token.last()
+                        nft_token_metadata = TokenMetadata(
+                            token=nft_token,
+                            registry=registry_obj,
+                            identity=IdentityOutput.objects.get(txid=identity),
+                            contents=token_data,
+                            date_created=history_date
+                        )
+                        nft_token_metadata.save()
+                else:
+                    token_metadata = TokenMetadata(
+                        token=token,
+                        registry=registry_obj,
+                        identity=IdentityOutput.objects.get(txid=identity),
+                        contents=token_data,
+                        date_created=history_date
+                    )
+                    token_metadata.save()
 
     return is_valid, decoded_bcmr_url

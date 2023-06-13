@@ -126,7 +126,6 @@ def process_tx(tx_hash, block_txns=None):
             category = input_zero_txid
 
     if parents.count() or genesis:
-
         if genesis:
             # save authbase tx
             authbase_tx = bchn._get_raw_transaction(category)
@@ -153,21 +152,10 @@ def process_tx(tx_hash, block_txns=None):
         # set parent output as spent and spent by this current output
         current_output = IdentityOutput.objects.get(txid=tx_hash)
         if parents.exists():
-            parents.update(
-                spent=True,
-                spender=current_output
-            )
-
-        # for cases that BCHN returns a parent and a child txn on the same block,
-        # we check if any previous children that was saved in DB has this current output's txid as its parent
-        # if so, we mark the current output as spent and spender = that previously saved child (one only since parent_txid is unique)
-        # children = IdentityOutput.objects.filter(parent_txid=tx_hash)
-        # if children.exists():
-        #     current_output = IdentityOutput.objects.get(txid=tx_hash)
-        #     current_output.spent = True
-        #     current_output.spender = children.first()
-        #     current_output.save()
-
+            for parent in parents:
+                parent.spent = True
+                parent.spender = current_output
+                parent.save()
 
         # defaults to true for genesis outputs without op return yet and non-zero outputs
         if bcmr_op_ret:
@@ -177,7 +165,6 @@ def process_tx(tx_hash, block_txns=None):
                 'publisher': current_output,
                 'date': time
             })
-
 
     # parse and save tokens
     for obj in token_outputs:
