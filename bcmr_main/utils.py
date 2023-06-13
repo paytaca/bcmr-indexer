@@ -57,6 +57,7 @@ def send_webhook_token_update(category, index, txid, commitment=None, capability
 def save_token(
     txid,
     category,
+    amount,
     commitment=None,
     capability=None,
     is_nft=False,
@@ -68,6 +69,7 @@ def save_token(
         capability=capability
     )
     if created:
+        token.amount = amount
         token.debut_txid = txid
         token.date_created = date_created
         token.is_nft = is_nft

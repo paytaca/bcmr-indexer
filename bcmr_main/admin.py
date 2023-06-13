@@ -8,8 +8,7 @@ admin.site.site_header = 'Paytaca BCMR Admin'
 
 class TokenAdmin(admin.ModelAdmin):
     search_fields = [
-        'category',
-        'txid',
+        'category'
     ]
     list_display = [
         'category',
@@ -18,6 +17,30 @@ class TokenAdmin(admin.ModelAdmin):
         'capability',
         'date_created'
     ]
+
+class TokenMetadataAdmin(admin.ModelAdmin):
+    search_fields = [
+        'token__category'
+    ]
+    list_display = [
+        'category',
+        'is_nft',
+        'valid',
+        'contents'
+    ]
+
+    def category(self, obj):
+        return obj.token.category
+    
+    def is_nft(self, obj):
+        return obj.token.is_nft
+    
+    is_nft.boolean = True
+    
+    def valid(self, obj):
+        return obj.registry.valid
+    
+    valid.boolean = True
 
 class RegistryAdmin(admin.ModelAdmin):
     search_fields = [
@@ -65,6 +88,7 @@ class BlockScanAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Token, TokenAdmin)
+admin.site.register(TokenMetadata, TokenMetadataAdmin)
 admin.site.register(Registry, RegistryAdmin)
 admin.site.register(IdentityOutput, IdentityOutputAdmin)
 admin.site.register(BlockScan, BlockScanAdmin)

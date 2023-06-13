@@ -9,6 +9,7 @@ class Token(models.Model):
 
     category = models.CharField(max_length=70)
     debut_txid = models.CharField(max_length=70, null=True, blank=True)
+    amount = models.BigIntegerField(null=True)
     is_nft = models.BooleanField(default=False)
     commitment = models.CharField(
         max_length=255,
@@ -57,3 +58,6 @@ class TokenMetadata(models.Model):
     )
     contents = models.JSONField(null=True, blank=True)
     date_created = models.DateTimeField(null=True)
+
+    class Meta:
+        verbose_name_plural = 'Token metadata'

@@ -36,7 +36,7 @@ class TestOpReturnValidation:
         assert registries.count() == 0
 
         # Check if the BCMR is found valid
-        is_valid, decoded_bcmr_url = process_op_return(
+        validity_checks, decoded_bcmr_url = process_op_return(
             txid,
             0,
             encoded_bcmr_json_hash,
@@ -45,7 +45,7 @@ class TestOpReturnValidation:
             None,
             date
         )
-        assert is_valid, decoded_bcmr_url == bcmr_url
+        assert validity_checks['bcmr_hash_match'], decoded_bcmr_url == bcmr_url
 
         # Check if the record for this BCMR is saved in the registry table
         registries = Registry.objects.all()

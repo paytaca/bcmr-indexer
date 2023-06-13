@@ -125,6 +125,33 @@ def process_tx(tx_hash, block_txns=None):
         if genesis:
             category = input_zero_txid
 
+    # parse and save tokens
+    for obj in token_outputs:
+        token_data = obj['tokenData']
+        category = token_data['category']
+        capability = None
+        commitment = None
+        is_nft = 'nft' in token_data.keys()
+
+        if is_nft:
+            nft_data = token_data['nft']
+            commitment = nft_data['commitment']
+            capability = nft_data['capability']
+        
+        amount = None
+        if token_data['amount']:
+            amount = int(token_data['amount'])
+
+        save_token(
+            tx_hash,
+            category,
+            amount,
+            commitment=commitment,
+            capability=capability,
+            is_nft=is_nft,
+            date_created=time
+        )
+
     if parents.count() or genesis:
         if genesis:
             # save authbase tx
@@ -138,10 +165,15 @@ def process_tx(tx_hash, block_txns=None):
             save_output(**output_data)
 
         # save current identity output
+        recipient = ''
+        if identity_output['scriptPubKey']['type'] == 'nulldata':
+            recipient = 'nulldata'
+        else:
+            recipient = identity_output['scriptPubKey']['addresses'][0]
         output_data = {
             'txid': tx_hash,
             'block': block,
-            'address': identity_output['scriptPubKey']['addresses'][0],
+            'address': recipient,
             'authbase': False,
             'genesis': genesis,
             'spender': None,
@@ -165,29 +197,6 @@ def process_tx(tx_hash, block_txns=None):
                 'publisher': current_output,
                 'date': time
             })
-
-    # parse and save tokens
-    for obj in token_outputs:
-        # index = obj['n']
-        token_data = obj['tokenData']
-        category = token_data['category']
-        capability = None
-        commitment = None
-        is_nft = 'nft' in token_data.keys()
-
-        if is_nft:
-            nft_data = token_data['nft']
-            commitment = nft_data['commitment']
-            capability = nft_data['capability']
-            
-        save_token(
-            tx_hash,
-            category,
-            commitment=commitment,
-            capability=capability,
-            is_nft=is_nft,
-            date_created=time
-        )
         
         # send_webhook_token_update(
         #     category,

@@ -31,8 +31,10 @@ class IdentityOutput(models.Model):
     def _retrieve_identities(self, parents, identities=[]):
         _parents = []
         if parents:
+            authbases1 = parents.filter(authbase=True)
             ancestors = IdentityOutput.objects.filter(spender__in=parents)
-            authbases = ancestors.filter(authbase=True)
+            authbases2 = ancestors.filter(authbase=True)
+            authbases = authbases1 | authbases2
             identities += [x.txid for x in authbases]
             _parents = ancestors.filter(authbase=False)
         else:
