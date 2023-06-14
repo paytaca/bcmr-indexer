@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.postgres.fields import ArrayField
 
 
 class IdentityOutput(models.Model):
@@ -15,9 +16,8 @@ class IdentityOutput(models.Model):
         null=True,
         blank=True
     )
-    identities = models.ManyToManyField(
-        'self',
-        related_name='identity_outputs'
+    identities = ArrayField(
+        models.CharField(max_length=70), null=True, blank=True
     )
     date = models.DateTimeField(null=True, blank=True)
     
@@ -25,30 +25,49 @@ class IdentityOutput(models.Model):
         verbose_name_plural = 'Identity Outputs'
         ordering = ('-id', )
         indexes = [
-            models.Index(fields=['txid', 'spent'])
+            models.Index(fields=['txid', 'spent', 'authbase'])
         ]
 
     def _retrieve_identities(self, parents, identities=[]):
         _parents = []
         if parents:
-            authbases1 = parents.filter(authbase=True)
-            ancestors = IdentityOutput.objects.filter(spender__in=parents)
-            authbases2 = ancestors.filter(authbase=True)
-            authbases = authbases1 | authbases2
-            identities += [x.txid for x in authbases]
-            _parents = ancestors.filter(authbase=False)
+            # Check if parents already have identities
+            identities_check = parents.filter(identities__isnull=False)
+            if identities_check.count() == parents.count():
+                _parents = []
+                for child in identities_check:
+                    identities += child.identities
+            else:
+                print('-- I was here X', [x.txid for x in parents])
+                authbases1 = parents.filter(authbase=True)
+                ancestors = IdentityOutput.objects.filter(spender__in=parents)
+                print('--- ANCESTORS:', [x.txid for x in ancestors])
+                authbases2 = ancestors.filter(authbase=True)
+                authbases = authbases1 | authbases2
+                print('-- AUTHBASES:', [x.txid for x in authbases])
+                identities += [x.txid for x in authbases]
+                _parents = ancestors.filter(authbase=False)
+            return self._retrieve_identities(_parents, identities)
         else:
             return identities
-        return self._retrieve_identities(_parents, identities)
 
-    def get_identities(self, save=False):
-        if self.identities.all():
-            return [x.txid for x in self.identities.all()]
+    def get_identities(self):
+        identities = []
+        if self.authbase:
+            identities = [self.txid]
         else:
-            parents = IdentityOutput.objects.filter(spender__txid=self.txid)
-            identities = self._retrieve_identities(parents, [])
-            if save:
-                for identity in identities:
-                    identity_obj = IdentityOutput.objects.get(txid=identity)
-                    self.identities.add(identity_obj)
-            return identities
+            if self.identities:
+                identities = self.identities        
+            else:
+                parents = IdentityOutput.objects.filter(spender__txid=self.txid)
+                authbase_counts = [x.authbase for x in parents]
+                if parents.count() == authbase_counts.count(True):
+                    identities = [x.txid for x in parents]
+                else:
+                    identities = self._retrieve_identities(parents, [])
+        identities = list(set(identities))  # uniquify the list
+        # save identities
+        for identity in identities:
+            identity_obj = IdentityOutput.objects.get(txid=identity)
+            self.identities.add(identity_obj)
+        return identities

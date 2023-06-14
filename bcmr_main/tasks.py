@@ -27,6 +27,7 @@ def generate_token_identity(token_data):
 def process_tx(tx_hash, block_txns=None):
     LOGGER.info(f'PROCESSING TX --- {tx_hash}')
 
+    print(f'PROCESSING TX --- {tx_hash}')
     bchn = BCHN()
     tx = bchn._get_raw_transaction(tx_hash)
 
@@ -94,11 +95,8 @@ def process_tx(tx_hash, block_txns=None):
                 if asm[1] == '1380795202':
                     _hex = scriptPubKey['hex']
                     # TODO: validate hex here
-
                     bcmr_op_ret['txid'] = tx_hash
                     bcmr_op_ret['index'] = index
-                    bcmr_op_ret['encoded_bcmr_json_hash'] = asm[2]
-                    bcmr_op_ret['encoded_bcmr_url'] = asm[3]
 
     # TODO: catch token burning by checking which token identities
     # are present in inputs but not in outputs
@@ -110,10 +108,20 @@ def process_tx(tx_hash, block_txns=None):
     if block_txns:
         ancestor_txns = set(input_txids).intersection(set(block_txns))
         if ancestor_txns:
+            outputs_ids = []
             for ancestor_txn in ancestor_txns:
-                traverse_authchain(tx_hash, ancestor_txn, block_txns)
+                outputs_ids = traverse_authchain(tx_hash, ancestor_txn, block_txns, [])
+            print('--OUTPUT IDS:', outputs_ids)
+            outputs_created = IdentityOutput.objects.filter(id__in=outputs_ids)
+            for _output in outputs_created:
+                print('--- GETTING IDENTITIES:', _output.txid)
+                print('-- IDENTITITIES:', _output.get_identities())
 
-    parents = IdentityOutput.objects.filter(txid__in=input_txids)
+    print('--INPUT TXIDS:', input_txids)
+    parents = IdentityOutput.objects.filter(
+        txid__in=input_txids,
+        identities__isnull=False
+    )
 
     # detect genesis
     genesis = False
@@ -152,24 +160,32 @@ def process_tx(tx_hash, block_txns=None):
             date_created=time
         )
 
-    if parents.count() or genesis:
-        if genesis:
-            # save authbase tx
-            authbase_tx = bchn._get_raw_transaction(category)
-            output_data = {}
-            output_data['block'] = block
-            output_data['address'] = authbase_tx['vout'][0]['scriptPubKey']['addresses'][0]
-            output_data['txid'] = category
-            output_data['authbase'] = True
-            output_data['genesis'] = False
-            save_output(**output_data)
 
+    if genesis:
+        # save authbase tx
+        authbase_tx = bchn._get_raw_transaction(category)
+        output_data = {}
+        output_data['block'] = block
+        output_data['address'] = authbase_tx['vout'][0]['scriptPubKey']['addresses'][0]
+        output_data['txid'] = category
+        output_data['authbase'] = True
+        output_data['genesis'] = False
+        output_data['identities'] = [category]
+        save_output(**output_data)
+
+    if parents.count():
+        print('---PARENTS FOUND:', [x.txid for x in parents])
         # save current identity output
         recipient = ''
         if identity_output['scriptPubKey']['type'] == 'nulldata':
             recipient = 'nulldata'
         else:
             recipient = identity_output['scriptPubKey']['addresses'][0]
+
+        identities = []
+        for _parent in parents:
+            if _parent.identities:
+                identities += list(_parent.identities)
         output_data = {
             'txid': tx_hash,
             'block': block,
@@ -177,8 +193,10 @@ def process_tx(tx_hash, block_txns=None):
             'authbase': False,
             'genesis': genesis,
             'spender': None,
+            'identities': list(set(identities)),
             'date': time
         }
+        print(output_data)
         save_output(**output_data)
 
         # set parent output as spent and spent by this current output

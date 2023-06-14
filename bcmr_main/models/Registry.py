@@ -32,9 +32,12 @@ class Registry(models.Model):
 
     def revalidate_identities(self):
         validity_checks = self.validity_checks
-        publisher_identities = self.publisher.get_identities()
+        publisher_identities = self.publisher.identities
+        print('-- PUBLISHER IDENTITIES:', publisher_identities)
+        print('-- REGISRTY IDENTITIES:', self.contents['identities'].keys())
         matched_identities = set(self.contents['identities'].keys()).intersection(set(publisher_identities))
         if matched_identities:
+            print('-- MATCH FOUND!')
             validity_checks['identities_match'] = True
         is_valid = list(validity_checks.values()).count(True) == len(validity_checks.keys())
         self.valid = is_valid
