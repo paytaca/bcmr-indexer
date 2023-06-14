@@ -42,10 +42,13 @@ class IdentityOutput(models.Model):
         return self._retrieve_identities(_parents, identities)
 
     def get_identities(self, save=False):
-        parents = IdentityOutput.objects.filter(spender__txid=self.txid)
-        identities = self._retrieve_identities(parents, [])
-        if save:
-            for identity in identities:
-                identity_obj = IdentityOutput.objects.get(txid=identity)
-                self.identities.add(identity_obj)
-        return identities
+        if self.identities.all():
+            return [x.txid for x in self.identities.all()]
+        else:
+            parents = IdentityOutput.objects.filter(spender__txid=self.txid)
+            identities = self._retrieve_identities(parents, [])
+            if save:
+                for identity in identities:
+                    identity_obj = IdentityOutput.objects.get(txid=identity)
+                    self.identities.add(identity_obj)
+            return identities

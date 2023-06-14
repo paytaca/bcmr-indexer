@@ -89,7 +89,7 @@ def process_op_return(
         # Parse the BCMR to get the associated identities and tokens
         publisher_identities = []
         if publisher:
-            publisher_identities = publisher.get_identities()
+            publisher_identities = publisher.get_identities(save=True)
         matched_identities = set(contents['identities'].keys()).intersection(set(publisher_identities))
         if matched_identities:
             validity_checks['identities_match'] = True
