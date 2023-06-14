@@ -120,22 +120,23 @@ def process_op_return(
                         if 'nfts' in token_data.keys():
                             nft_types = token_data['nfts']['parse']['types']
                             for nft_type_key in nft_types:
-                                nft_token = Token.objects.filter(
+                                nft_token_check = Token.objects.filter(
                                     category=token_data['category'],
                                     # TODO: Refactor this later to support parseable NFTs. For now,
                                     # this only works for NFTs with type key equal to commitment.
                                     commitment=nft_type_key,
                                     capability=None
                                 )
-                                nft_token = nft_token.last()
-                                nft_token_metadata = TokenMetadata(
-                                    token=nft_token,
-                                    registry=registry_obj,
-                                    identity=IdentityOutput.objects.get(txid=identity),
-                                    contents=token_data,
-                                    date_created=history_date
-                                )
-                                nft_token_metadata.save()
+                                if nft_token_check.exists():
+                                    nft_token = nft_token_check.last()
+                                    nft_token_metadata = TokenMetadata(
+                                        token=nft_token,
+                                        registry=registry_obj,
+                                        identity=IdentityOutput.objects.get(txid=identity),
+                                        contents=token_data,
+                                        date_created=history_date
+                                    )
+                                    nft_token_metadata.save()
                         else:
                             token_metadata = TokenMetadata(
                                 token=token,

@@ -7,9 +7,11 @@ admin.site.site_header = 'Paytaca BCMR Admin'
 
 
 class TokenAdmin(admin.ModelAdmin):
+
     search_fields = [
         'category'
     ]
+
     list_display = [
         'category',
         'is_nft',
@@ -18,15 +20,24 @@ class TokenAdmin(admin.ModelAdmin):
         'date_created'
     ]
 
+
 class TokenMetadataAdmin(admin.ModelAdmin):
+
     search_fields = [
         'token__category'
     ]
+
     list_display = [
         'category',
         'is_nft',
         'valid',
         'contents'
+    ]
+
+    raw_id_fields = [
+        'token',
+        'registry',
+        'identity',
     ]
 
     def category(self, obj):
@@ -42,10 +53,13 @@ class TokenMetadataAdmin(admin.ModelAdmin):
     
     valid.boolean = True
 
+
 class RegistryAdmin(admin.ModelAdmin):
+
     search_fields = [
         'txid',
     ]
+
     list_display = [
         'txid',
         'index',
@@ -53,13 +67,20 @@ class RegistryAdmin(admin.ModelAdmin):
         'date_created',
     ]
 
+    raw_id_fields = [
+        'publisher'
+    ]
+
+
 class IdentityOutputAdmin(admin.ModelAdmin):
+
     search_fields = [
         'txid',
         'spender__txid',
         'block',
         'address'
     ]
+
     list_display = [
         'txid',
         'spender_txid',
@@ -71,6 +92,11 @@ class IdentityOutputAdmin(admin.ModelAdmin):
         'address'
     ]
 
+    raw_id_fields = [
+        'spender',
+        'identities'
+    ]
+
     def spender_txid(self, obj):
         if obj.spender:
             return obj.spender.txid
@@ -78,6 +104,7 @@ class IdentityOutputAdmin(admin.ModelAdmin):
     
 
 class BlockScanAdmin(admin.ModelAdmin):
+
     list_display = [
         'height',
         'transactions',

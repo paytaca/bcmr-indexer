@@ -8,7 +8,7 @@ class Ownership(models.Model):
         related_name='ownership_history',
         on_delete=models.CASCADE
     )
-    address = models.CharField(max_length=60, null=True, blank=True)
+    address = models.CharField(max_length=70, null=True, blank=True)
     txid = models.CharField(max_length=70, unique=True)
     index = models.IntegerField(null=True)
     date_acquired = models.DateTimeField(null=True, blank=True)

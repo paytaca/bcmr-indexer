@@ -4,7 +4,7 @@ from django.db import models
 class IdentityOutput(models.Model):
     txid = models.CharField(max_length=70, unique=True)
     block = models.PositiveIntegerField(null=True, blank=True)
-    address = models.CharField(max_length=60, null=True, blank=True)
+    address = models.CharField(max_length=70, null=True, blank=True)
     authbase = models.BooleanField(default=False)
     genesis = models.BooleanField(default=False)
     spent = models.BooleanField(default=False)
@@ -41,6 +41,11 @@ class IdentityOutput(models.Model):
             return identities
         return self._retrieve_identities(_parents, identities)
 
-    def get_identities(self):
+    def get_identities(self, save=False):
         parents = IdentityOutput.objects.filter(spender__txid=self.txid)
-        return self._retrieve_identities(parents, [])
+        identities = self._retrieve_identities(parents, [])
+        if save:
+            for identity in identities:
+                identity_obj = IdentityOutput.objects.get(txid=identity)
+                self.identities.add(identity_obj)
+        return identities
