@@ -12,15 +12,16 @@ def traverse_authchain(txid, ancestor_tx, block_txns):
     ancestor_obj.spender = tx_obj
     ancestor_obj.save()
 
-    bchn = BCHN()
-    tx = bchn.get_transaction(ancestor_tx)
+    if not ancestor_obj.authbase:
+        bchn = BCHN()
+        tx = bchn.get_transaction(ancestor_tx)
 
-    input_txids = []
-    for tx_input in tx['inputs']:
-        if tx_input['spent_index'] == 0:
-            input_txids.append(tx_input['txid'])
+        input_txids = []
+        for tx_input in tx['inputs']:
+            if tx_input['spent_index'] == 0:
+                input_txids.append(tx_input['txid'])
 
-    ancestor_txns = set(input_txids).intersection(set(block_txns))
-    if ancestor_txns:
-        for ancestor_txn in ancestor_txns:
-            return traverse_authchain(ancestor_tx, ancestor_txn, block_txns)
+        ancestor_txns = set(input_txids).intersection(set(block_txns))
+        if ancestor_txns:
+            for ancestor_txn in ancestor_txns:
+                return traverse_authchain(ancestor_tx, ancestor_txn, block_txns)

@@ -236,7 +236,7 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False
         },
-        'main': {
+        'bcmr_main': {
             'handlers': ['console'],
             'level': 'INFO',
             'propagate': False

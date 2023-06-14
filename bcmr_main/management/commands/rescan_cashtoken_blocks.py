@@ -4,6 +4,10 @@ from django.utils import timezone
 from bcmr_main.bchn import BCHN
 from bcmr_main.tasks import process_tx
 from bcmr_main.models import *
+import logging
+
+
+LOGGER = logging.getLogger(__name__)
 
 class Command(BaseCommand):
     help = "Rescan blocks to record missed transactions since first cashtoken block"
@@ -13,7 +17,8 @@ class Command(BaseCommand):
         # Token.objects.all().delete()
         # Registry.objects.all().delete()
         # IdentityOutput.objects.all().delete()
-        
+        LOGGER.info('STARTING RESCANNING OF BLOCKS')
+
         node = BCHN()
         latest_block = node.get_latest_block()
 
@@ -26,6 +31,7 @@ class Command(BaseCommand):
             curr_block = scanned_blocks.latest('height').height
             
         while curr_block < latest_block:
+            LOGGER.info(f'Obtaining block data for #{curr_block}...')
             transactions = node.get_block(curr_block)
             total_txs = len(transactions)
             block_scan, _ = BlockScan.objects.get_or_create(
@@ -34,14 +40,14 @@ class Command(BaseCommand):
                 scan_started=timezone.now(),
                 scan_completed=None,
             )
-            self.stdout.write(self.style.SUCCESS(f'Block: {curr_block}  |  Transactions: {total_txs}'))
+            LOGGER.info(f'Block: {curr_block}  |  Transactions: {total_txs}')
 
             for i, txid in enumerate(transactions, 1):
                 try:
-                    self.stdout.write(self.style.SUCCESS(f'    {curr_block} | {txid} | {i} of {total_txs}'))
+                    LOGGER.info(f'    {curr_block} | {txid} | {i} of {total_txs}')
                     process_tx(txid, block_txns=transactions)
                 except Exception as exc:
-                    self.stdout.write(self.style.ERROR(f'Error processing txid: {txid}'))
+                    LOGGER.error(f'Error processing txid: {txid}')
                     raise exc
                 
             block_scan.scan_completed = timezone.now()
@@ -50,4 +56,4 @@ class Command(BaseCommand):
 
             curr_block += 1
 
-        self.stdout.write(self.style.SUCCESS('Rescanning block tasks queued!'))
+        LOGGER.info('Rescanning block tasks queued!')
