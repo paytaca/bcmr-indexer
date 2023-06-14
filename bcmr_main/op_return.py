@@ -108,5 +108,69 @@ def process_op_return(
 
     registry_obj.validity_checks = validity_checks
     registry_obj.save()
+    if contents:
+        # Parse the BCMR to get the associated identities and tokens
+        publisher_identities = []
+
+        if publisher:
+            publisher_identities = publisher.get_identities(save=True)
+
+        matched_identities = set(contents['identities'].keys()).intersection(set(publisher_identities))        
+        if matched_identities:
+            validity_checks['identities_match'] = True
+        else:
+            validity_checks['identities_match'] = False
+
+        is_valid = list(validity_checks.values()).count(True) == len(validity_checks.keys())
+        registry_obj.valid = is_valid
+        registry_obj.validity_checks = validity_checks
+        registry_obj.save()
+
+        # Parse and save metadata regardless if identities are valid or not
+        for identity in list(matched_identities):
+            # Get the latest non-future identity history record
+            identity_records = contents['identities'][identity]
+
+            if isinstance(identity_records, dict):
+                histories_keys = identity_records.keys()
+                histories = [
+                    (x, parse_datetime(x)) for x in histories_keys if parse_datetime(x) <= timezone.now()
+                ]
+                histories.sort(key=itemgetter(1))
+                latest_key, history_date = histories[-1]
+                token_data = contents['identities'][identity][latest_key]['token']
+                token_check = Token.objects.filter(category=token_data['category'])
+                
+                if token_check.exists():
+                    token = token_check.last()
+                    if 'nfts' in token_data.keys():
+                        nft_types = token_data['nfts']['parse']['types']
+                        for nft_type_key in nft_types:
+                            nft_token_check = Token.objects.filter(
+                                category=token_data['category'],
+                                # TODO: Refactor this later to support parseable NFTs. For now,
+                                # this only works for NFTs with type key equal to commitment.
+                                commitment=nft_type_key,
+                                capability=None
+                            )
+                            if nft_token_check.exists():
+                                nft_token = nft_token_check.last()
+                                nft_token_metadata = TokenMetadata(
+                                    token=nft_token,
+                                    registry=registry_obj,
+                                    identity=IdentityOutput.objects.get(txid=identity),
+                                    contents=token_data,
+                                    date_created=history_date
+                                )
+                                nft_token_metadata.save()
+                    else:
+                        token_metadata = TokenMetadata(
+                            token=token,
+                            registry=registry_obj,
+                            identity=IdentityOutput.objects.get(txid=identity),
+                            contents=token_data,
+                            date_created=history_date
+                        )
+                        token_metadata.save()
 
     return validity_checks, decoded_bcmr_url

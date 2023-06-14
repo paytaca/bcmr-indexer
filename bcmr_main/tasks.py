@@ -53,8 +53,8 @@ def _process_tx(tx, bchn):
     parsed_tx = bchn._parse_transaction(tx, include_outputs=False)
     input_token_identities = []
     input_txids = []
-    for tx_input in parsed_tx['inputs']:
 
+    for tx_input in parsed_tx['inputs']:
         # get a list of input txids that are potential identity outputs spends
         if tx_input['spent_index'] == 0:
             input_txids.append(tx_input['txid'])
@@ -70,6 +70,7 @@ def _process_tx(tx, bchn):
     bcmr_op_ret = {}
     op_ret_str = ''
     output_token_identities = []
+    
     for index, output in enumerate(outputs):
         scriptPubKey = output['scriptPubKey']
         output_type = scriptPubKey['type']
@@ -81,14 +82,6 @@ def _process_tx(tx, bchn):
                 token_data = output['tokenData']
                 token_identity = generate_token_identity(token_data)
                 output_token_identities.append(token_identity)
-                
-                # TODO: save ownership records
-                if token_identity in input_token_identities:
-                    # scenario: token transfer
-                    pass
-                else:
-                    # scenario: token minting or mutation
-                    pass
         
         elif output_type == 'nulldata':
             if not bcmr_op_ret:
@@ -116,6 +109,7 @@ def _process_tx(tx, bchn):
     genesis = False
     category = None
     input_zero_txid = inputs[0].get('txid')
+
     if token_outputs:
         token_categories = list(map(lambda x: x['tokenData']['category'], token_outputs))
         genesis = input_zero_txid in token_categories
@@ -125,7 +119,7 @@ def _process_tx(tx, bchn):
     # parse and save tokens
     for obj in token_outputs:
         token_data = obj['tokenData']
-        category = token_data['category']
+        _category = token_data['category']
         capability = None
         commitment = None
         is_nft = 'nft' in token_data.keys()
@@ -139,9 +133,9 @@ def _process_tx(tx, bchn):
         if token_data['amount']:
             amount = int(token_data['amount'])
 
-        save_token(
+        cashtoken = save_token(
             tx_hash,
-            category,
+            _category,
             amount,
             commitment=commitment,
             capability=capability,
@@ -160,6 +154,39 @@ def _process_tx(tx, bchn):
         output_data['genesis'] = False
         output_data['identities'] = [category]
         save_output(**output_data)
+        token_identity = generate_token_identity(token_data)
+
+        # TODO: save ownership records
+        # TODO: add ownerships to fetching of null time in recheck_unconfirmed_txn_details task
+        if token_identity in input_token_identities:
+            # scenario: token transfer
+            ownership, _ = Ownership.objects.get_or_create(
+                txid=tx_hash,
+                token=cashtoken
+            )
+            ownership.address = obj['scriptPubKey']['addresses'][0]
+            ownership.index = obj['n']
+            ownership.date_acquired = time
+            ownership.save()
+
+            previous_ownerships = Ownership.objects.filter(txid__in=input_txids)
+            previous_ownerships.update(spent=True, spender=tx_hash)
+        else:
+            # scenario: token minting or mutation
+            pass
+
+
+    if parents.count() or genesis:
+        if genesis:
+            # save authbase tx
+            authbase_tx = bchn._get_raw_transaction(category)
+            output_data = {}
+            output_data['block'] = block
+            output_data['address'] = authbase_tx['vout'][0]['scriptPubKey']['addresses'][0]
+            output_data['txid'] = category
+            output_data['authbase'] = True
+            output_data['genesis'] = False
+            save_output(**output_data)
 
     if parents.count():
         print('---PARENTS FOUND:', [x.txid for x in parents])
@@ -174,6 +201,7 @@ def _process_tx(tx, bchn):
         for _parent in parents:
             if _parent.identities:
                 identities += list(_parent.identities)
+            
         output_data = {
             'txid': tx_hash,
             'block': block,
@@ -188,11 +216,7 @@ def _process_tx(tx, bchn):
 
         # set parent output as spent and spent by this current output
         current_output = IdentityOutput.objects.get(txid=tx_hash)
-        if parents.exists():
-            for parent in parents:
-                parent.spent = True
-                parent.spender = current_output
-                parent.save()
+        parents.update(spent=True, spender=current_output)
 
         # defaults to true for genesis outputs without op return yet and non-zero outputs
         if bcmr_op_ret:

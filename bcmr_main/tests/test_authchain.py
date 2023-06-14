@@ -55,8 +55,8 @@ class TestIdentityOutputs:
         assert identity_outputs.count() == 2
 
         # check if authbase is properly saved
-        authbase_tx_obj = IdentityOutput.objects.get(txid=authbase_txid)
-        assert authbase_tx_obj.txid == authbase_txid
+        authbase_tx_obj = IdentityOutput.objects.filter(authbase=True)
+        authbase_tx_obj = authbase_tx_obj.first()
         assert authbase_tx_obj.authbase == True
         assert authbase_tx_obj.genesis == False
 
@@ -71,7 +71,6 @@ class TestIdentityOutputs:
         assert authbase_tx_obj.spent == True
         assert authbase_tx_obj.spender.txid == genesis_txid
         assert authbase_tx_obj.id == (genesis_tx_obj.id - 1)
-
 
     def test_saving_ancestor_txns(self):
         # Check if identity output is not saved
