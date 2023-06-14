@@ -73,7 +73,9 @@ def save_token(
         token.debut_txid = txid
         token.date_created = date_created
         token.is_nft = is_nft
-    token.save()
+        token.save()
+
+    return token
 
 
 def save_output(

@@ -9,7 +9,7 @@ class BlockScan(models.Model):
     scanned = models.BooleanField(default=False, db_index=True)
 
     def __str__(self):
-        status = 'PEDNING'
+        status = 'PENDING'
         if self.scan_started:
             status = 'STARTED'
         if self.scan_completed:

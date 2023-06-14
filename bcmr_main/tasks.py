@@ -48,8 +48,8 @@ def process_tx(tx_hash, block_txns=None):
     parsed_tx = bchn._parse_transaction(tx, include_outputs=False)
     input_token_identities = []
     input_txids = []
-    for tx_input in parsed_tx['inputs']:
 
+    for tx_input in parsed_tx['inputs']:
         # get a list of input txids that are potential identity outputs spends
         if tx_input['spent_index'] == 0:
             input_txids.append(tx_input['txid'])
@@ -65,6 +65,7 @@ def process_tx(tx_hash, block_txns=None):
     bcmr_op_ret = {}
     op_ret_str = ''
     output_token_identities = []
+    
     for index, output in enumerate(outputs):
         scriptPubKey = output['scriptPubKey']
         output_type = scriptPubKey['type']
@@ -76,14 +77,6 @@ def process_tx(tx_hash, block_txns=None):
                 token_data = output['tokenData']
                 token_identity = generate_token_identity(token_data)
                 output_token_identities.append(token_identity)
-                
-                # TODO: save ownership records
-                if token_identity in input_token_identities:
-                    # scenario: token transfer
-                    pass
-                else:
-                    # scenario: token minting or mutation
-                    pass
         
         elif output_type == 'nulldata':
             asm = scriptPubKey['asm']
@@ -119,6 +112,7 @@ def process_tx(tx_hash, block_txns=None):
     genesis = False
     category = None
     input_zero_txid = inputs[0].get('txid')
+
     if token_outputs:
         token_categories = list(map(lambda x: x['tokenData']['category'], token_outputs))
         genesis = input_zero_txid in token_categories
@@ -128,7 +122,7 @@ def process_tx(tx_hash, block_txns=None):
     # parse and save tokens
     for obj in token_outputs:
         token_data = obj['tokenData']
-        category = token_data['category']
+        _category = token_data['category']
         capability = None
         commitment = None
         is_nft = 'nft' in token_data.keys()
@@ -142,15 +136,37 @@ def process_tx(tx_hash, block_txns=None):
         if token_data['amount']:
             amount = int(token_data['amount'])
 
-        save_token(
+        cashtoken = save_token(
             tx_hash,
-            category,
+            _category,
             amount,
             commitment=commitment,
             capability=capability,
             is_nft=is_nft,
             date_created=time
         )
+
+        token_identity = generate_token_identity(token_data)
+
+        # TODO: save ownership records
+        # TODO: add ownerships to fetching of null time in recheck_unconfirmed_txn_details task
+        if token_identity in input_token_identities:
+            # scenario: token transfer
+            ownership, _ = Ownership.objects.get_or_create(
+                txid=tx_hash,
+                token=cashtoken
+            )
+            ownership.address = obj['scriptPubKey']['addresses'][0]
+            ownership.index = obj['n']
+            ownership.date_acquired = time
+            ownership.save()
+
+            previous_ownerships = Ownership.objects.filter(txid__in=input_txids)
+            previous_ownerships.update(spent=True, spender=tx_hash)
+        else:
+            # scenario: token minting or mutation
+            pass
+
 
     if parents.count() or genesis:
         if genesis:
@@ -170,6 +186,7 @@ def process_tx(tx_hash, block_txns=None):
             recipient = 'nulldata'
         else:
             recipient = identity_output['scriptPubKey']['addresses'][0]
+            
         output_data = {
             'txid': tx_hash,
             'block': block,
@@ -183,11 +200,7 @@ def process_tx(tx_hash, block_txns=None):
 
         # set parent output as spent and spent by this current output
         current_output = IdentityOutput.objects.get(txid=tx_hash)
-        if parents.exists():
-            for parent in parents:
-                parent.spent = True
-                parent.spender = current_output
-                parent.save()
+        parents.update(spent=True, spender=current_output)
 
         # defaults to true for genesis outputs without op return yet and non-zero outputs
         if bcmr_op_ret:

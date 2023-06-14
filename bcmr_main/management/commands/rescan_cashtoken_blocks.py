@@ -15,8 +15,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # NOTE: uncomment for testing
         # Token.objects.all().delete()
+        # TokenMetadata.objects.all().delete()
         # Registry.objects.all().delete()
         # IdentityOutput.objects.all().delete()
+        # BlockScan.objects.all().delete()
+
         LOGGER.info('STARTING RESCANNING OF BLOCKS')
 
         node = BCHN()
@@ -30,16 +33,16 @@ class Command(BaseCommand):
         if scanned_blocks.exists():
             curr_block = scanned_blocks.latest('height').height
             
-        while curr_block < latest_block:
+        while curr_block <= latest_block:
             LOGGER.info(f'Obtaining block data for #{curr_block}...')
             transactions = node.get_block(curr_block)
             total_txs = len(transactions)
             block_scan, _ = BlockScan.objects.get_or_create(
                 height=curr_block,
-                transactions=total_txs,
-                scan_started=timezone.now(),
-                scan_completed=None,
+                transactions=total_txs
             )
+            block_scan.scan_started = timezone.now()
+
             LOGGER.info(f'Block: {curr_block}  |  Transactions: {total_txs}')
 
             for i, txid in enumerate(transactions, 1):

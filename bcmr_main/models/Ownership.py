@@ -9,7 +9,7 @@ class Ownership(models.Model):
         on_delete=models.CASCADE
     )
     address = models.CharField(max_length=70, null=True, blank=True)
-    txid = models.CharField(max_length=70, unique=True)
+    txid = models.CharField(max_length=70)
     index = models.IntegerField(null=True)
     date_acquired = models.DateTimeField(null=True, blank=True)
     spent = models.BooleanField(default=False)
@@ -19,6 +19,10 @@ class Ownership(models.Model):
 
     class Meta:
         ordering = ('-date_acquired',)
+        unique_together = (
+            'txid',
+            'token',
+        )
         indexes = [
             models.Index(fields=['address', 'spent', 'burned'])
         ]
