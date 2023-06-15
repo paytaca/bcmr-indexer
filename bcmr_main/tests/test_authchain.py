@@ -199,14 +199,4 @@ class TestIdentityOutputs:
 
         # Check that there is no valid registry
         registries = Registry.objects.filter(valid=True)
-        assert registries.count() == 0
-
-        # Call revalidation of identities in saved registries
-        for registry in Registry.objects.all():
-            registry
-            registry.revalidate_identities()
-            print('--VALIDITY CHECKS:', registry.publisher.txid, registry.validity_checks)
-
-        # Confirm there is only one valid registry after revalidations
-        registries = Registry.objects.filter(valid=True)
         assert registries.count() == 1

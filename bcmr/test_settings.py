@@ -37,7 +37,7 @@ SECRET_KEY = 'django-insecure-pv!^!=pl^ia3f2rqyua82#&t9j!zk4+7^kqcnw(u)8f4&f8y%h
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEPLOYMENT_INSTANCE = config('DEPLOYMENT_INSTANCE', default='dev')
-NETWORK = config('NETWORK', default='chipnet')
+NETWORK = 'mainnet'  #config('NETWORK', default='mainnet')
 DEBUG = DEPLOYMENT_INSTANCE == 'dev'
 
 ALLOWED_HOSTS = ['*']

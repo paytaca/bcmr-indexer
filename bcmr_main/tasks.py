@@ -3,7 +3,6 @@ from django.conf import settings
 from celery import shared_task
 from django.db.models import Max
 import simplejson as json
-from bcmr_main.authchain import *
 from bcmr_main.op_return import *
 from bcmr_main.bchn import BCHN
 from bcmr_main.models import *
@@ -12,7 +11,6 @@ import logging
 
 
 LOGGER = logging.getLogger(__name__)
-
 
 
 def generate_token_identity(token_data):
@@ -227,30 +225,32 @@ def _get_ancestors(txid, bchn=None, ancestors=[]):
         )
         tx_obj.save()
 
+    if 'coinbase' in tx['vin'][0].keys():
+        return ancestors[::-1]
+
     proceed = True
 
-    if 'blockhash' in tx.keys():
-        block_height = bchn.get_block_height(tx['blockhash'])
-        
-        ct_activation_block = 792773
-        if settings.NETWORK == 'chipnet':
-            ct_activation_block = 120000
-        
-        if block_height < ct_activation_block:
+    # check if it matches a saved identity output
+    identity_output_check = IdentityOutput.objects.filter(txid=txid)
+    if identity_output_check.exists():
+        proceed = False
+    else:
+        # check if tx is a token genesis
+        first_input_txid = tx['vin'][0]['txid']
+        for tx_out in tx['vout']:
+            if 'tokenData' in tx_out.keys():
+                if tx_out['tokenData']['category'] == first_input_txid:
+                    ancestors.append(tx['txid'])
+                    proceed = False
+                    break
 
-            # check if it matches a saved identity output
-            identity_output_check = IdentityOutput.objects.filter(txid=txid)
-            if identity_output_check.exists():
-                proceed = False
-            else:
-                # check if tx is a token genesis
-                first_input_txid = tx['vin'][0]['txid']
-                for tx_out in tx['vout']:
-                    if 'tokenData' in tx_out.keys():
-                        if tx_out['tokenData']['category'] == first_input_txid:
-                            ancestors.append(tx['txid'])
-                            proceed = False
-                            break
+    # Limit recursion to up to 10 ancestors deep only
+    # Anyway, in an exhaustive scan from the block height when cashtokens was
+    # activated we only really need to look for the first ancestor to check
+    # if it spends an identity output. Going 10 ancestors deep is just considered
+    # here just in case the identity outputs are somehow missed.
+    if len(ancestors) >= 10:
+        proceed = False
 
     if proceed:
         for tx_input in tx['vin']:
