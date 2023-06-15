@@ -83,6 +83,7 @@ def save_output(
     authbase=False,
     genesis=False,
     spender=None,
+    identities=None,
     date=None
 ):
     output, created = IdentityOutput.objects.get_or_create(txid=txid)
@@ -92,6 +93,7 @@ def save_output(
     output.address = address
     output.authbase = authbase
     output.genesis = genesis
+    output.identities = identities
     output.date = date
 
     if spender:

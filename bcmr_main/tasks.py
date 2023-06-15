@@ -1,18 +1,16 @@
 from django.db.models import Q
-
+from django.conf import settings
 from celery import shared_task
-
-from bcmr_main.authchain import *
+from django.db.models import Max
+import simplejson as json
 from bcmr_main.op_return import *
 from bcmr_main.bchn import BCHN
 from bcmr_main.models import *
 from bcmr_main.utils import timestamp_to_date
-
 import logging
 
 
 LOGGER = logging.getLogger(__name__)
-
 
 
 def generate_token_identity(token_data):
@@ -23,12 +21,20 @@ def generate_token_identity(token_data):
     return token_identity
 
 
-@shared_task(queue='process_tx')
-def process_tx(tx_hash, block_txns=None):
+def _process_tx(tx_hash, bchn):
     LOGGER.info(f'PROCESSING TX --- {tx_hash}')
 
-    bchn = BCHN()
-    tx = bchn._get_raw_transaction(tx_hash)
+    tx = None
+    try:
+        tx_obj = QueuedTransaction.objects.get(txid=tx_hash)
+        tx = tx_obj.details
+    except QueuedTransaction.DoesNotExist:
+        tx = bchn._get_raw_transaction(tx_hash)
+        tx_obj = QueuedTransaction(
+            txid=tx_hash,
+            details=json.loads(json.dumps(tx))
+        )
+        tx_obj.save()
 
     block = None
     time = None
@@ -94,11 +100,8 @@ def process_tx(tx_hash, block_txns=None):
                 if asm[1] == '1380795202':
                     _hex = scriptPubKey['hex']
                     # TODO: validate hex here
-
                     bcmr_op_ret['txid'] = tx_hash
                     bcmr_op_ret['index'] = index
-                    bcmr_op_ret['encoded_bcmr_json_hash'] = asm[2]
-                    bcmr_op_ret['encoded_bcmr_url'] = asm[3]
 
     # TODO: catch token burning by checking which token identities
     # are present in inputs but not in outputs
@@ -106,12 +109,6 @@ def process_tx(tx_hash, block_txns=None):
         if token_id not in output_token_identities:
             # scenario: token burning
             pass
-
-    if block_txns:
-        ancestor_txns = set(input_txids).intersection(set(block_txns))
-        if ancestor_txns:
-            for ancestor_txn in ancestor_txns:
-                traverse_authchain(tx_hash, ancestor_txn, block_txns)
 
     parents = IdentityOutput.objects.filter(txid__in=input_txids)
 
@@ -152,24 +149,31 @@ def process_tx(tx_hash, block_txns=None):
             date_created=time
         )
 
-    if parents.count() or genesis:
-        if genesis:
-            # save authbase tx
-            authbase_tx = bchn._get_raw_transaction(category)
-            output_data = {}
-            output_data['block'] = block
-            output_data['address'] = authbase_tx['vout'][0]['scriptPubKey']['addresses'][0]
-            output_data['txid'] = category
-            output_data['authbase'] = True
-            output_data['genesis'] = False
-            save_output(**output_data)
+    if genesis:
+        # save authbase tx
+        authbase_tx = bchn._get_raw_transaction(category)
+        output_data = {}
+        output_data['block'] = block
+        output_data['address'] = authbase_tx['vout'][0]['scriptPubKey']['addresses'][0]
+        output_data['txid'] = category
+        output_data['authbase'] = True
+        output_data['genesis'] = False
+        output_data['identities'] = [category]
+        save_output(**output_data)
 
+    if parents.count():
+        print('---PARENTS FOUND:', [x.txid for x in parents])
         # save current identity output
         recipient = ''
         if identity_output['scriptPubKey']['type'] == 'nulldata':
             recipient = 'nulldata'
         else:
             recipient = identity_output['scriptPubKey']['addresses'][0]
+
+        identities = []
+        for _parent in parents:
+            if _parent.identities:
+                identities += list(_parent.identities)
         output_data = {
             'txid': tx_hash,
             'block': block,
@@ -177,6 +181,7 @@ def process_tx(tx_hash, block_txns=None):
             'authbase': False,
             'genesis': genesis,
             'spender': None,
+            'identities': list(set(identities)),
             'date': time
         }
         save_output(**output_data)
@@ -205,6 +210,77 @@ def process_tx(tx_hash, block_txns=None):
         #     commitment=commitment,
         #     capability=capability
         # )
+
+
+def _get_ancestors(txid, bchn=None, ancestors=[]):
+    tx = None
+    try:
+        tx_obj = QueuedTransaction.objects.get(txid=txid)
+        tx = tx_obj.details
+    except QueuedTransaction.DoesNotExist:
+        tx = bchn._get_raw_transaction(txid)
+        tx_obj = QueuedTransaction(
+            txid=txid,
+            details=json.loads(json.dumps(tx))
+        )
+        tx_obj.save()
+
+    if 'coinbase' in tx['vin'][0].keys():
+        return ancestors[::-1]
+
+    proceed = True
+
+    # check if it matches a saved identity output
+    identity_output_check = IdentityOutput.objects.filter(txid=txid)
+    if identity_output_check.exists():
+        proceed = False
+    else:
+        # check if tx is a token genesis
+        first_input_txid = tx['vin'][0]['txid']
+        for tx_out in tx['vout']:
+            if 'tokenData' in tx_out.keys():
+                if tx_out['tokenData']['category'] == first_input_txid:
+                    ancestors.append(tx['txid'])
+                    proceed = False
+                    break
+
+    # Limit recursion to up to 10 ancestors deep only
+    # Anyway, in an exhaustive scan from the block height when cashtokens was
+    # activated we only really need to look for the first ancestor to check
+    # if it spends an identity output. Going 10 ancestors deep is just considered
+    # here just in case the identity outputs are somehow missed.
+    if len(ancestors) >= 10:
+        proceed = False
+
+    if proceed:
+        for tx_input in tx['vin']:
+            if tx_input['vout'] == 0:
+                # this is a potential identity output
+                ancestors.append(tx_input['txid'])
+                return _get_ancestors(
+                    tx_input['txid'],
+                    bchn,
+                    ancestors
+                )
+
+    # return the ancestors list in reverse order
+    return ancestors[::-1]
+
+
+@shared_task(queue='process_tx')
+def process_tx(tx_hash):
+    print('--- PROCESS TX:', tx_hash)
+
+    bchn = BCHN()
+    tx = bchn._get_raw_transaction(tx_hash)
+    if 'coinbase' in tx['vin'][0].keys():
+        return
+
+    ancestor_txs = _get_ancestors(tx_hash, bchn, [])
+    tx_chain = ancestor_txs + [tx_hash]
+    print('-- CHAIN:', tx_chain)
+    for txid in tx_chain:
+        _process_tx(txid, bchn)
 
 
 def record_txn_dates(qs, bchn):

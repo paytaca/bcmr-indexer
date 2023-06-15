@@ -84,6 +84,13 @@ class TestIdentityOutputs:
 
         # Check if identity outputs are saved
         identity_outputs = IdentityOutput.objects.all()
+        for io in identity_outputs:
+            print(
+                'SAVED IDENTITY OUTPUTS:',
+                io.txid,
+                io.authbase,
+                io.genesis
+            )
         assert identity_outputs.count() == 3
 
         registries = Registry.objects.all()
@@ -103,7 +110,7 @@ class TestIdentityOutputs:
         bcmr_update_tx = '66976cd8b18b4faafd7ad7b93540c65257179ed14218decb90c8613cddaf78c1'
         process_tx(bcmr_update_tx)
 
-        registries = Registry.objects.filter(valid=True)
+        registries = Registry.objects.filter(validity_checks__bcmr_hash_match=True)
         assert registries.count() == 1
 
         identity_outputs = IdentityOutput.objects.all()
@@ -145,21 +152,32 @@ class TestIdentityOutputs:
         registries = Registry.objects.filter(valid=True)
         assert registries.count() == 0
 
-        block_txns = [
+        # Third BCMR update
+        bcmr_update_tx = '66976cd8b18b4faafd7ad7b93540c65257179ed14218decb90c8613cddaf78c1'
+        process_tx(bcmr_update_tx)
+
+
+        authchain_txs = [
             'c8d08e34f74a83c470ff35d0bfebab81c5ade5e10df661a555f19b6ee05df01c',
             '963af3f74933e5f5b204671b25a8f467f640bc56e8d3f9104a1ec8e118d7c919'
         ]
-
-        # Third BCMR update
-        bcmr_update_tx = '66976cd8b18b4faafd7ad7b93540c65257179ed14218decb90c8613cddaf78c1'
-        process_tx(bcmr_update_tx, block_txns)
-
-        # Simulate the processing of other txs in the block
-        for txn in block_txns:
-            process_tx(txn, block_txns)
+        for txn in authchain_txs:
+            process_tx(txn)
 
         # Check if 5 identity outputs are saved
         identity_outputs = IdentityOutput.objects.all()
+        for io in identity_outputs:
+            spender = ''
+            if io.spender:
+                spender = io.spender.txid
+            print(
+                f'IDENTITY OUTPUT #{io.id}:',
+                io.txid,
+                io.authbase,
+                io.genesis,
+                f' SPENDER: {spender}',
+                io.identities
+            )
         assert identity_outputs.count() == 5
 
         # Check if spent and spenders are properly populated
@@ -180,13 +198,5 @@ class TestIdentityOutputs:
         assert identity_output.spender == None
 
         # Check that there is no valid registry
-        registries = Registry.objects.filter(valid=True)
-        assert registries.count() == 0
-
-        # Call revalidation of identities in saved registries
-        for registry in Registry.objects.all():
-            registry.revalidate_identities()
-
-        # Confirm there is only one valid registry after revalidations
         registries = Registry.objects.filter(valid=True)
         assert registries.count() == 1
