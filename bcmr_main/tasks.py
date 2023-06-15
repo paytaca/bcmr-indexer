@@ -1,5 +1,5 @@
 from django.db.models import Q
-
+from django.conf import settings
 from celery import shared_task
 from django.db.models import Max
 import simplejson as json
@@ -151,7 +151,6 @@ def _process_tx(tx_hash, bchn):
             date_created=time
         )
 
-
     if genesis:
         # save authbase tx
         authbase_tx = bchn._get_raw_transaction(category)
@@ -229,20 +228,30 @@ def _get_ancestors(txid, bchn=None, ancestors=[]):
         tx_obj.save()
 
     proceed = True
-    
-    # check if it matches a saved identity output
-    identity_output_check = IdentityOutput.objects.filter(txid=txid)
-    if identity_output_check.exists():
-        proceed = False
-    else:
-        # check if tx is a token genesis
-        first_input_txid = tx['vin'][0]['txid']
-        for tx_out in tx['vout']:
-            if 'tokenData' in tx_out.keys():
-                if tx_out['tokenData']['category'] == first_input_txid:
-                    ancestors.append(tx['txid'])
-                    proceed = False
-                    break
+
+    if 'blockhash' in tx.keys():
+        block_height = bchn.get_block_height(tx['blockhash'])
+        
+        ct_activation_block = 792773
+        if settings.NETWORK == 'chipnet':
+            ct_activation_block = 120000
+        
+        if block_height < ct_activation_block:
+
+            # check if it matches a saved identity output
+            identity_output_check = IdentityOutput.objects.filter(txid=txid)
+            if identity_output_check.exists():
+                proceed = False
+            else:
+                # check if tx is a token genesis
+                first_input_txid = tx['vin'][0]['txid']
+                for tx_out in tx['vout']:
+                    if 'tokenData' in tx_out.keys():
+                        if tx_out['tokenData']['category'] == first_input_txid:
+                            ancestors.append(tx['txid'])
+                            proceed = False
+                            break
+
     if proceed:
         for tx_input in tx['vin']:
             if tx_input['vout'] == 0:

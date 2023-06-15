@@ -10,6 +10,11 @@ def generate_token_metadata(registry_obj):
     if registry_obj.publisher:
         publisher_identities = registry_obj.publisher.identities
     matched_identities = set(registry_obj.contents['identities'].keys()).intersection(set(publisher_identities))
+    if matched_identities:
+        validity_checks = registry_obj.validity_checks
+        validity_checks['identities_match'] = True
+        registry_obj.validity_checks = validity_checks
+        registry_obj.save()
 
     # Parse and save metadata regardless if identities are valid or not
     for identity in list(matched_identities):
