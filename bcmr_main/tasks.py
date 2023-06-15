@@ -1,13 +1,13 @@
 from django.db.models import Q
 
 from celery import shared_task
-
+from django.db.models import Max
+import simplejson as json
 from bcmr_main.authchain import *
 from bcmr_main.op_return import *
 from bcmr_main.bchn import BCHN
 from bcmr_main.models import *
 from bcmr_main.utils import timestamp_to_date
-
 import logging
 
 
@@ -23,12 +23,20 @@ def generate_token_identity(token_data):
     return token_identity
 
 
-@shared_task(queue='process_tx')
-def process_tx(tx_hash, block_txns=None):
+def _process_tx(tx_hash, bchn):
     LOGGER.info(f'PROCESSING TX --- {tx_hash}')
 
-    bchn = BCHN()
-    tx = bchn._get_raw_transaction(tx_hash)
+    tx = None
+    try:
+        tx_obj = QueuedTransaction.objects.get(txid=tx_hash)
+        tx = tx_obj.details
+    except QueuedTransaction.DoesNotExist:
+        tx = bchn._get_raw_transaction(tx_hash)
+        tx_obj = QueuedTransaction(
+            txid=tx_hash,
+            details=json.loads(json.dumps(tx))
+        )
+        tx_obj.save()
 
     block = None
     time = None
@@ -106,12 +114,6 @@ def process_tx(tx_hash, block_txns=None):
         if token_id not in output_token_identities:
             # scenario: token burning
             pass
-
-    if block_txns:
-        ancestor_txns = set(input_txids).intersection(set(block_txns))
-        if ancestor_txns:
-            for ancestor_txn in ancestor_txns:
-                traverse_authchain(tx_hash, ancestor_txn, block_txns)
 
     parents = IdentityOutput.objects.filter(txid__in=input_txids)
 
@@ -205,6 +207,58 @@ def process_tx(tx_hash, block_txns=None):
         #     commitment=commitment,
         #     capability=capability
         # )
+
+
+def _get_ancestors(txid, previous_block, bchn=None, ancestors=[]):
+    tx = None
+    try:
+        tx_obj = QueuedTransaction.objects.get(txid=txid)
+        tx = tx_obj.details
+    except QueuedTransaction.DoesNotExist:
+        tx = bchn._get_raw_transaction(txid)
+        tx_obj = QueuedTransaction(
+            txid=txid,
+            details=json.loads(json.dumps(tx))
+        )
+        tx_obj.save()
+    
+    proceed = False
+    if 'blockhash' in tx.keys():
+        tx_block = bchn.get_block_height(tx['blockhash'])
+        if tx_block >= previous_block:
+            proceed = True
+    else:
+        proceed = True
+    
+    if proceed:
+        parsed_tx = bchn._parse_transaction(tx, include_outputs=False)
+        for tx_input in parsed_tx['inputs']:
+            ancestors += [tx_input['txid']]
+            return _get_ancestors(
+                tx_input['txid'],
+                previous_block,
+                bchn,
+                ancestors
+            )
+    
+    return ancestors
+
+
+@shared_task(queue='process_tx')
+def process_tx(tx_hash, source=None, block=None):
+    print('--- PROCESS TX:', tx_hash)
+    if source == 'mempool':
+        block_max = BlockScan.objects.aggregate(Max('height'))
+        previous_block = block_max['height__max']
+    else:
+        if block:
+            previous_block = block - 1
+    bchn = BCHN()
+    ancestor_txs = _get_ancestors(tx_hash, previous_block, bchn, [])
+    tx_chain = ancestor_txs + [tx_hash]
+    print('-- CHAIN:', tx_chain)
+    for txid in tx_chain:
+        _process_tx(txid, bchn)
 
 
 def record_txn_dates(qs, bchn):
