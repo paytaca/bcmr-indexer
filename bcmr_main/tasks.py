@@ -102,11 +102,8 @@ def _process_tx(tx_hash, bchn):
                 if asm[1] == '1380795202':
                     _hex = scriptPubKey['hex']
                     # TODO: validate hex here
-
                     bcmr_op_ret['txid'] = tx_hash
                     bcmr_op_ret['index'] = index
-                    bcmr_op_ret['encoded_bcmr_json_hash'] = asm[2]
-                    bcmr_op_ret['encoded_bcmr_url'] = asm[3]
 
     # TODO: catch token burning by checking which token identities
     # are present in inputs but not in outputs
@@ -154,24 +151,32 @@ def _process_tx(tx_hash, bchn):
             date_created=time
         )
 
-    if parents.count() or genesis:
-        if genesis:
-            # save authbase tx
-            authbase_tx = bchn._get_raw_transaction(category)
-            output_data = {}
-            output_data['block'] = block
-            output_data['address'] = authbase_tx['vout'][0]['scriptPubKey']['addresses'][0]
-            output_data['txid'] = category
-            output_data['authbase'] = True
-            output_data['genesis'] = False
-            save_output(**output_data)
 
+    if genesis:
+        # save authbase tx
+        authbase_tx = bchn._get_raw_transaction(category)
+        output_data = {}
+        output_data['block'] = block
+        output_data['address'] = authbase_tx['vout'][0]['scriptPubKey']['addresses'][0]
+        output_data['txid'] = category
+        output_data['authbase'] = True
+        output_data['genesis'] = False
+        output_data['identities'] = [category]
+        save_output(**output_data)
+
+    if parents.count():
+        print('---PARENTS FOUND:', [x.txid for x in parents])
         # save current identity output
         recipient = ''
         if identity_output['scriptPubKey']['type'] == 'nulldata':
             recipient = 'nulldata'
         else:
             recipient = identity_output['scriptPubKey']['addresses'][0]
+
+        identities = []
+        for _parent in parents:
+            if _parent.identities:
+                identities += list(_parent.identities)
         output_data = {
             'txid': tx_hash,
             'block': block,
@@ -179,8 +184,10 @@ def _process_tx(tx_hash, bchn):
             'authbase': False,
             'genesis': genesis,
             'spender': None,
+            'identities': list(set(identities)),
             'date': time
         }
+        print(output_data)
         save_output(**output_data)
 
         # set parent output as spent and spent by this current output

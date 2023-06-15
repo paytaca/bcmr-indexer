@@ -84,6 +84,13 @@ class TestIdentityOutputs:
 
         # Check if identity outputs are saved
         identity_outputs = IdentityOutput.objects.all()
+        for io in identity_outputs:
+            print(
+                'SAVED IDENTITY OUTPUTS:',
+                io.txid,
+                io.authbase,
+                io.genesis
+            )
         assert identity_outputs.count() == 3
 
         registries = Registry.objects.all()
@@ -103,7 +110,7 @@ class TestIdentityOutputs:
         bcmr_update_tx = '66976cd8b18b4faafd7ad7b93540c65257179ed14218decb90c8613cddaf78c1'
         process_tx(bcmr_update_tx, block=793663)
 
-        registries = Registry.objects.filter(valid=True)
+        registries = Registry.objects.filter(validity_checks__bcmr_hash_match=True)
         assert registries.count() == 1
 
         identity_outputs = IdentityOutput.objects.all()
@@ -196,7 +203,9 @@ class TestIdentityOutputs:
 
         # Call revalidation of identities in saved registries
         for registry in Registry.objects.all():
+            registry
             registry.revalidate_identities()
+            print('--VALIDITY CHECKS:', registry.publisher.txid, registry.validity_checks)
 
         # Confirm there is only one valid registry after revalidations
         registries = Registry.objects.filter(valid=True)

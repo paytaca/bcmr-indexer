@@ -39,8 +39,6 @@ class TestOpReturnValidation:
         validity_checks, decoded_bcmr_url = process_op_return(
             txid,
             0,
-            encoded_bcmr_json_hash,
-            encoded_bcmr_url,
             op_return,
             None,
             date
