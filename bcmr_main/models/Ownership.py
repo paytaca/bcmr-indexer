@@ -11,6 +11,8 @@ class Ownership(models.Model):
     address = models.CharField(max_length=70, null=True, blank=True)
     txid = models.CharField(max_length=70)
     index = models.IntegerField(null=True)
+    amount = models.BigIntegerField(null=True, blank=True)
+    value = models.BigIntegerField(null=True, blank=True)
     date_acquired = models.DateTimeField(null=True, blank=True)
     spent = models.BooleanField(default=False)
     spender = models.CharField(max_length=70, null=True)
@@ -18,10 +20,10 @@ class Ownership(models.Model):
     burner = models.CharField(max_length=70, null=True)
 
     class Meta:
-        ordering = ('-date_acquired',)
+        ordering = ('-date_acquired', )
         unique_together = (
             'txid',
-            'token',
+            'index',
         )
         indexes = [
             models.Index(fields=['address', 'spent', 'burned'])

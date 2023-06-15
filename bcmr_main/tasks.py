@@ -47,16 +47,20 @@ def process_tx(tx_hash, block_txns=None):
 
     parsed_tx = bchn._parse_transaction(tx, include_outputs=False)
     input_token_identities = []
-    input_txids = []
+    zeroth_input_txids = []
+    token_input_txids = []
+    token_input_indices = []
 
     for tx_input in parsed_tx['inputs']:
         # get a list of input txids that are potential identity outputs spends
         if tx_input['spent_index'] == 0:
-            input_txids.append(tx_input['txid'])
+            zeroth_input_txids.append(tx_input['txid'])
         
         # track token identities in inputs for saving token ownership transfers
         token_data = tx_input['token_data']
         if token_data:
+            token_input_indices.append(tx_input['spent_index'])
+            token_input_txids.append(tx_input['txid'])
             token_identity = generate_token_identity(token_data)
             input_token_identities.append(token_identity)
     
@@ -93,20 +97,14 @@ def process_tx(tx_hash, block_txns=None):
                     bcmr_op_ret['encoded_bcmr_json_hash'] = asm[2]
                     bcmr_op_ret['encoded_bcmr_url'] = asm[3]
 
-    # TODO: catch token burning by checking which token identities
-    # are present in inputs but not in outputs
-    for token_id in input_token_identities:
-        if token_id not in output_token_identities:
-            # scenario: token burning
-            pass
 
     if block_txns:
-        ancestor_txns = set(input_txids).intersection(set(block_txns))
+        ancestor_txns = set(zeroth_input_txids).intersection(set(block_txns))
         if ancestor_txns:
             for ancestor_txn in ancestor_txns:
                 traverse_authchain(tx_hash, ancestor_txn, block_txns)
 
-    parents = IdentityOutput.objects.filter(txid__in=input_txids)
+    parents = IdentityOutput.objects.filter(txid__in=zeroth_input_txids)
 
     # detect genesis
     genesis = False
@@ -146,26 +144,36 @@ def process_tx(tx_hash, block_txns=None):
             date_created=time
         )
 
-        token_identity = generate_token_identity(token_data)
+        # save ownership records
+        ownership, _ = Ownership.objects.get_or_create(
+            txid=tx_hash,
+            token=cashtoken,
+            index=obj['n']
+        )
+        ownership.amount = amount
+        ownership.value = obj['value'] * (10 ** 8)
+        ownership.address = obj['scriptPubKey']['addresses'][0]
+        ownership.date_acquired = time
+        ownership.save()
+        
+        
+    previous_ownerships = Ownership.objects.filter(
+        txid__in=token_input_txids,
+        index__in=token_input_indices
+    )
+    previous_ownerships.update(spent=True, spender=tx_hash)
 
-        # TODO: save ownership records
-        # TODO: add ownerships to fetching of null time in recheck_unconfirmed_txn_details task
-        if token_identity in input_token_identities:
-            # scenario: token transfer
-            ownership, _ = Ownership.objects.get_or_create(
-                txid=tx_hash,
-                token=cashtoken
+    # scenario: token burning
+    for idx, token_id in enumerate(input_token_identities):
+        if token_id not in output_token_identities:
+            burned_identities = Ownership.objects.filter(
+                txid=token_input_txids[idx],
+                index=token_input_indices[idx]
             )
-            ownership.address = obj['scriptPubKey']['addresses'][0]
-            ownership.index = obj['n']
-            ownership.date_acquired = time
-            ownership.save()
-
-            previous_ownerships = Ownership.objects.filter(txid__in=input_txids)
-            previous_ownerships.update(spent=True, spender=tx_hash)
-        else:
-            # scenario: token minting or mutation
-            pass
+            burned_identities.update(
+                burned=True,
+                burner=tx_hash
+            )
 
 
     if parents.count() or genesis:
@@ -229,6 +237,8 @@ def record_txn_dates(qs, bchn):
                 time = timestamp_to_date(tx['time'])
                 if isinstance(element, Registry) or isinstance(element, Token):
                     element.date_created = time
+                elif isinstance(element, Ownership):
+                    element.date_acquired = time
                 element.save()
 
 
@@ -241,9 +251,11 @@ def recheck_unconfirmed_txn_details():
         Q(block__isnull=True) |
         Q(date__isnull=True)
     )
+    ownerships = Ownership.objects.filter(date_acquired__isnull=True)
     tokens = Token.objects.filter(date_created__isnull=True)
     registries = Registry.objects.filter(date_created__isnull=True)
 
+    record_txn_dates(ownerships, bchn)
     record_txn_dates(tokens, bchn)
     record_txn_dates(registries, bchn)
 

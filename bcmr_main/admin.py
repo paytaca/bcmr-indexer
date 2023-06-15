@@ -114,8 +114,27 @@ class BlockScanAdmin(admin.ModelAdmin):
     ]
 
 
+class OwnershipAdmin(admin.ModelAdmin):
+
+    search_fields = [
+        'address',
+        'txid',
+        'token__category',
+    ]
+
+    list_display = [
+        'address',
+        'txid',
+        'index',
+        'spent',
+        'burned',
+        'date_acquired',
+    ]
+
+
 admin.site.register(Token, TokenAdmin)
 admin.site.register(TokenMetadata, TokenMetadataAdmin)
 admin.site.register(Registry, RegistryAdmin)
 admin.site.register(IdentityOutput, IdentityOutputAdmin)
 admin.site.register(BlockScan, BlockScanAdmin)
+admin.site.register(Ownership, OwnershipAdmin)

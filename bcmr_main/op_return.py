@@ -52,7 +52,12 @@ def process_op_return(
     if decoded_bcmr_url.startswith('ipfs://'):
         response = download_ipfs_bcmr_data(decoded_bcmr_url)
     else:
-        response = requests.get(decoded_bcmr_url)
+        try:
+            response = requests.get(decoded_bcmr_url)
+        except requests.exceptions.InvalidURL:
+            response = None
+        except requests.exceptions.ConnectionError:
+            response = None
 
     if not response:
         return False, decoded_bcmr_url
