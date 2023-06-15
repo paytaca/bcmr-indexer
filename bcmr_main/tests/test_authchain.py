@@ -16,7 +16,7 @@ class TestIdentityOutputs:
 
         # process a non-authbase tx
         authbase_tx = '07275f68d14780c737279898e730cec3a7b189a761caf43b4197b60a7c891a97'
-        process_tx(authbase_tx)
+        process_tx(authbase_tx, block=793231)
 
         # Check if identity output is not saved
         identity_outputs = IdentityOutput.objects.all()
@@ -24,7 +24,7 @@ class TestIdentityOutputs:
 
         # process a genesis tx
         genesis_tx = 'd5721db8841ecb61ec73daeb2df7df88b180d5029061d4845efc7cb29c42183b'
-        process_tx(genesis_tx)
+        process_tx(genesis_tx, block=793237)
 
         # Check if identity output is saved
         identity_outputs = IdentityOutput.objects.all()
@@ -72,7 +72,7 @@ class TestIdentityOutputs:
 
         # Use the Emerald DAO as test where the token genesis did not immediately contain the BCMR update
         genesis_tx = '00003c40fa202816c357350eaa2e7ec2b47766209604941789ecf814f98ba4a6'
-        process_tx(genesis_tx)
+        process_tx(genesis_tx, block=792773)
 
         # Check if the token record was saved
         tokens = Token.objects.all()
@@ -80,7 +80,7 @@ class TestIdentityOutputs:
 
         # First BCMR update
         bcmr_update_tx = '963af3f74933e5f5b204671b25a8f467f640bc56e8d3f9104a1ec8e118d7c919'
-        process_tx(bcmr_update_tx)
+        process_tx(bcmr_update_tx, block=792773)
 
         # Check if identity outputs are saved
         identity_outputs = IdentityOutput.objects.all()
@@ -101,14 +101,14 @@ class TestIdentityOutputs:
 
         # Second BCMR update
         bcmr_update_tx = 'c8d08e34f74a83c470ff35d0bfebab81c5ade5e10df661a555f19b6ee05df01c'
-        process_tx(bcmr_update_tx)
+        process_tx(bcmr_update_tx, block=792788)
 
         registries = Registry.objects.filter(valid=True)
         assert registries.count() == 0
 
         # Third BCMR update
         bcmr_update_tx = '66976cd8b18b4faafd7ad7b93540c65257179ed14218decb90c8613cddaf78c1'
-        process_tx(bcmr_update_tx)
+        process_tx(bcmr_update_tx, block=793663)
 
         registries = Registry.objects.filter(validity_checks__bcmr_hash_match=True)
         assert registries.count() == 1
@@ -138,7 +138,7 @@ class TestIdentityOutputs:
 
         # Use the Emerald DAO as test where the token genesis did not immediately contain the BCMR update
         genesis_tx = '00003c40fa202816c357350eaa2e7ec2b47766209604941789ecf814f98ba4a6'
-        process_tx(genesis_tx)
+        process_tx(genesis_tx, block=792773)
 
         # Check if the token record was saved
         tokens = Token.objects.all()
@@ -152,21 +152,32 @@ class TestIdentityOutputs:
         registries = Registry.objects.filter(valid=True)
         assert registries.count() == 0
 
-        block_txns = [
-            'c8d08e34f74a83c470ff35d0bfebab81c5ade5e10df661a555f19b6ee05df01c',
-            '963af3f74933e5f5b204671b25a8f467f640bc56e8d3f9104a1ec8e118d7c919'
-        ]
-
         # Third BCMR update
         bcmr_update_tx = '66976cd8b18b4faafd7ad7b93540c65257179ed14218decb90c8613cddaf78c1'
-        process_tx(bcmr_update_tx, block_txns)
+        process_tx(bcmr_update_tx, block=793663)
 
-        # Simulate the processing of other txs in the block
-        for txn in block_txns:
-            process_tx(txn, block_txns)
+
+        authchain_txs = [
+            ('c8d08e34f74a83c470ff35d0bfebab81c5ade5e10df661a555f19b6ee05df01c', 792788),
+            ('963af3f74933e5f5b204671b25a8f467f640bc56e8d3f9104a1ec8e118d7c919', 792773)
+        ]
+        for txn, _block in authchain_txs:
+            process_tx(txn, block=_block)
 
         # Check if 5 identity outputs are saved
         identity_outputs = IdentityOutput.objects.all()
+        for io in identity_outputs:
+            spender = ''
+            if io.spender:
+                spender = io.spender.txid
+            print(
+                f'IDENTITY OUTPUT #{io.id}:',
+                io.txid,
+                io.authbase,
+                io.genesis,
+                f' SPENDER: {spender}',
+                io.identities
+            )
         assert identity_outputs.count() == 5
 
         # Check if spent and spenders are properly populated
