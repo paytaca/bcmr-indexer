@@ -187,7 +187,6 @@ def _process_tx(tx_hash, bchn):
             'identities': list(set(identities)),
             'date': time
         }
-        print(output_data)
         save_output(**output_data)
 
         # set parent output as spent and spent by this current output
@@ -216,7 +215,7 @@ def _process_tx(tx_hash, bchn):
         # )
 
 
-def _get_ancestors(txid, previous_block, bchn=None, ancestors=[]):
+def _get_ancestors(txid, bchn=None, ancestors=[]):
     tx = None
     try:
         tx_obj = QueuedTransaction.objects.get(txid=txid)
@@ -228,40 +227,47 @@ def _get_ancestors(txid, previous_block, bchn=None, ancestors=[]):
             details=json.loads(json.dumps(tx))
         )
         tx_obj.save()
+
+    proceed = True
     
-    proceed = False
-    if 'blockhash' in tx.keys():
-        tx_block = bchn.get_block_height(tx['blockhash'])
-        if tx_block >= previous_block:
-            proceed = True
+    # check if it matches a saved identity output
+    identity_output_check = IdentityOutput.objects.filter(txid=txid)
+    if identity_output_check.exists():
+        proceed = False
     else:
-        proceed = True
-    
+        # check if tx is a token genesis
+        first_input_txid = tx['vin'][0]['txid']
+        for tx_out in tx['vout']:
+            if 'tokenData' in tx_out.keys():
+                if tx_out['tokenData']['category'] == first_input_txid:
+                    ancestors.append(tx['txid'])
+                    proceed = False
+                    break
     if proceed:
-        parsed_tx = bchn._parse_transaction(tx, include_outputs=False)
-        for tx_input in parsed_tx['inputs']:
-            ancestors += [tx_input['txid']]
-            return _get_ancestors(
-                tx_input['txid'],
-                previous_block,
-                bchn,
-                ancestors
-            )
-    
-    return ancestors
+        for tx_input in tx['vin']:
+            if tx_input['vout'] == 0:
+                # this is a potential identity output
+                ancestors.append(tx_input['txid'])
+                return _get_ancestors(
+                    tx_input['txid'],
+                    bchn,
+                    ancestors
+                )
+
+    # return the ancestors list in reverse order
+    return ancestors[::-1]
 
 
 @shared_task(queue='process_tx')
-def process_tx(tx_hash, source=None, block=None):
+def process_tx(tx_hash):
     print('--- PROCESS TX:', tx_hash)
-    if source == 'mempool':
-        block_max = BlockScan.objects.aggregate(Max('height'))
-        previous_block = block_max['height__max']
-    else:
-        if block:
-            previous_block = block - 1
+
     bchn = BCHN()
-    ancestor_txs = _get_ancestors(tx_hash, previous_block, bchn, [])
+    tx = bchn._get_raw_transaction(tx_hash)
+    if 'coinbase' in tx['vin'][0].keys():
+        return
+
+    ancestor_txs = _get_ancestors(tx_hash, bchn, [])
     tx_chain = ancestor_txs + [tx_hash]
     print('-- CHAIN:', tx_chain)
     for txid in tx_chain:

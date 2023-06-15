@@ -6,7 +6,6 @@ def traverse_authchain(txid, ancestor_tx, block_txns, outputs_ids=[]):
     """
     Traverse the authchain in the transactions in this block
     """
-    print('--- TRAVERSE:', txid)
     tx_obj, _ = IdentityOutput.objects.get_or_create(txid=txid)
     ancestor_obj, _ = IdentityOutput.objects.get_or_create(txid=ancestor_tx)
     ancestor_obj.spent = True

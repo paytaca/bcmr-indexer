@@ -28,8 +28,6 @@ class TestOpReturnValidation:
     @pytest.mark.parametrize("txid, op_return, date, bcmr_url", VALID_OP_RETURNS)
     def test_op_return_validation(self, txid, op_return, date, bcmr_url):
         date = timestamp_to_date(date)
-        encoded_bcmr_json_hash = op_return.split(' ')[2]
-        encoded_bcmr_url = op_return.split(' ')[3]
 
         # Check if registry table is empty
         registries = Registry.objects.all()

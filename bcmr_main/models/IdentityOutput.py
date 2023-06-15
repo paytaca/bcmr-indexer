@@ -38,13 +38,10 @@ class IdentityOutput(models.Model):
                 for child in identities_check:
                     identities += child.identities
             else:
-                print('-- I was here X', [x.txid for x in parents])
                 authbases1 = parents.filter(authbase=True)
                 ancestors = IdentityOutput.objects.filter(spender__in=parents)
-                print('--- ANCESTORS:', [x.txid for x in ancestors])
                 authbases2 = ancestors.filter(authbase=True)
                 authbases = authbases1 | authbases2
-                print('-- AUTHBASES:', [x.txid for x in authbases])
                 identities += [x.txid for x in authbases]
                 _parents = ancestors.filter(authbase=False)
             return self._retrieve_identities(_parents, identities)

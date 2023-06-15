@@ -102,8 +102,6 @@ def save_output(
 
     output.save()
 
-    print('--SAVED OUTPUT:', txid, output.identities)
-
 
 def parse_token_info(category, type_key=None):
     info = {
