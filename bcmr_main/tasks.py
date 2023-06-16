@@ -16,11 +16,16 @@ LOGGER = logging.getLogger(__name__)
 
 
 def generate_token_identity(token_data):
-    token_identity = ''
-    token_identity += token_data.get('category', '')
-    token_identity += token_data.get('nft', {}).get('capability', '')
-    token_identity += token_data.get('nft', {}).get('commitment', '')
-    return token_identity
+    token_identity = []
+    token_identity.append(token_data.get('category', ''))
+    token_identity.append(token_data.get('nft', {}).get('capability', ''))
+    token_identity.append(token_data.get('nft', {}).get('commitment', ''))
+    return '|'.join(token_identity)
+
+
+def generate_burn_basis_id(token_identity):
+    splitted_ids = token_identity.split('|')
+    return ''.join(splitted_ids[:-1])
 
 
 @shared_task(queue='process_tx')
@@ -50,8 +55,11 @@ def process_tx(tx_hash, block_txns=None):
     zeroth_input_txids = []
     token_input_txids = []
     token_input_indices = []
+    input_txids = []
 
     for tx_input in parsed_tx['inputs']:
+        input_txids.append(tx_input['txid'])
+
         # get a list of input txids that are potential identity outputs spends
         if tx_input['spent_index'] == 0:
             zeroth_input_txids.append(tx_input['txid'])
@@ -63,7 +71,7 @@ def process_tx(tx_hash, block_txns=None):
             token_input_txids.append(tx_input['txid'])
             token_identity = generate_token_identity(token_data)
             input_token_identities.append(token_identity)
-    
+
     # collect token outputs, and BCMR output
     token_outputs = []
     bcmr_op_ret = {}
@@ -163,17 +171,35 @@ def process_tx(tx_hash, block_txns=None):
     )
     previous_ownerships.update(spent=True, spender=tx_hash)
 
-    # scenario: token burning
+    _output_token_ids = list(map(generate_burn_basis_id, output_token_identities))
+    _input_token_ids = list(map(generate_burn_basis_id, input_token_identities))
+
     for idx, token_id in enumerate(input_token_identities):
         if token_id not in output_token_identities:
-            burned_identities = Ownership.objects.filter(
-                txid=token_input_txids[idx],
-                index=token_input_indices[idx]
-            )
-            burned_identities.update(
-                burned=True,
-                burner=tx_hash
-            )
+            # A token present in the inputs and missing on the outputs
+            # doesnt always indicate burning. It can be a mutated minting/mutable NFT.
+
+            # To identify between the two:
+            # 1) We map the output and input token identities from "category + capability + commitment" to "category + capability"
+            #    = this is done to not immediately consider the token as burned due to commitment inclusion when checking token id
+            #      between outputs and inputs
+            # 2) Next is to count the "category + capability" token on both the mapped inputs and outputs
+            # 3) If outputs token identity count is greater than or equal to the inputs token identity count:
+            #    = it is a mutation
+            #    = otherwise, its a burn
+
+            burn_basis_id = generate_burn_basis_id(token_id)
+            is_mutation = _input_token_ids.count(burn_basis_id) <= _output_token_ids.count(burn_basis_id)
+
+            if not is_mutation:
+                burned_identities = Ownership.objects.filter(
+                    txid=token_input_txids[idx],
+                    index=token_input_indices[idx]
+                )
+                burned_identities.update(
+                    burned=True,
+                    burner=tx_hash
+                )
 
 
     if parents.count() or genesis:
