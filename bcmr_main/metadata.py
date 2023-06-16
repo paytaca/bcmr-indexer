@@ -1,7 +1,7 @@
 from operator import itemgetter
 from django.utils import timezone
 from dateutil.parser import parse as parse_datetime
-from bcmr_main.models import Token, TokenMetadata, IdentityOutput
+from bcmr_main.models import *
 
 
 def generate_token_metadata(registry_obj):
@@ -39,7 +39,7 @@ def generate_token_metadata(registry_obj):
                             # TODO: Refactor this later to support parseable NFTs. For now,
                             # this only works for NFTs with type key equal to commitment.
                             commitment=nft_type_key,
-                            capability=None
+                            capability='none'
                         )
                         if nft_token_check.exists():
                             nft_token = nft_token_check.last()
@@ -60,3 +60,4 @@ def generate_token_metadata(registry_obj):
                     token_metadata.contents=registry_obj.contents['identities'][identity][latest_key],
                     token_metadata.date_created=history_date
                     token_metadata.save()
+
