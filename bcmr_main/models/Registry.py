@@ -30,13 +30,13 @@ class Registry(models.Model):
             'publisher'
         ]
 
-    def revalidate_identities(self):
-        validity_checks = self.validity_checks
-        publisher_identities = self.publisher.get_identities()
-        matched_identities = set(self.contents['identities'].keys()).intersection(set(publisher_identities))
-        if matched_identities:
-            validity_checks['identities_match'] = True
-        is_valid = list(validity_checks.values()).count(True) == len(validity_checks.keys())
-        self.valid = is_valid
-        self.validity_checks = validity_checks
-        self.save()
+    # def revalidate_identities(self):
+    #     validity_checks = self.validity_checks
+    #     publisher_identities = self.publisher.identities
+    #     matched_identities = set(self.contents['identities'].keys()).intersection(set(publisher_identities))
+    #     if matched_identities:
+    #         validity_checks['identities_match'] = True
+    #     is_valid = list(validity_checks.values()).count(True) == len(validity_checks.keys())
+    #     self.valid = is_valid
+    #     self.validity_checks = validity_checks
+    #     self.save()

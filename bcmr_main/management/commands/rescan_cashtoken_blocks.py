@@ -48,7 +48,7 @@ class Command(BaseCommand):
             for i, txid in enumerate(transactions, 1):
                 try:
                     LOGGER.info(f'    {curr_block} | {txid} | {i} of {total_txs}')
-                    process_tx(txid, block_txns=transactions)
+                    process_tx(txid)
                 except Exception as exc:
                     LOGGER.error(f'Error processing txid: {txid}')
                     raise exc
