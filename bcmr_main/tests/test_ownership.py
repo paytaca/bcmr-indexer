@@ -78,6 +78,32 @@ class TestOwnership:
         assert spent_ownerships.count() == 4
         assert tokens.count() == 4
 
+        Token.objects.all().delete()
+        Ownership.objects.all().delete()
+
+        # unordered relative txns of same block
+        child_tx = '528f240b27e1e17a221bb9c1de3e81ad756495a653e8cf2d45ac0b9eb36a302e'
+        process_tx(child_tx)
+
+        ownerships = Ownership.objects.all()
+        spent_ownerships = Ownership.objects.filter(spent=True)
+        tokens = Token.objects.all()
+
+        assert ownerships.count() == 5
+        assert spent_ownerships.count() == 0
+        assert tokens.count() == 4
+
+        parent_tx = 'f4d4cabb9aa5669f041efc216f3bfb0f1b72e72cb97a5e147273b0cef3f91c4c'
+        process_tx(parent_tx)
+
+        ownerships = Ownership.objects.all()
+        spent_ownerships = Ownership.objects.filter(spent=True, spender=child_tx)
+        tokens = Token.objects.all()
+
+        assert ownerships.count() == 10
+        assert spent_ownerships.count() == 4
+        assert tokens.count() == 4
+
     
     def test_token_mutation(self):
         # sequential relative txn processing

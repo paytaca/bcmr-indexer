@@ -55,6 +55,7 @@ def process_tx(tx_hash, block_txns=None):
     zeroth_input_txids = []
     token_input_txids = []
     token_input_indices = []
+    token_inputs = []
     input_txids = []
 
     for tx_input in parsed_tx['inputs']:
@@ -67,8 +68,14 @@ def process_tx(tx_hash, block_txns=None):
         # track token identities in inputs for saving token ownership transfers
         token_data = tx_input['token_data']
         if token_data:
-            token_input_indices.append(tx_input['spent_index'])
-            token_input_txids.append(tx_input['txid'])
+            txid = tx_input['txid']
+            spent_index = tx_input['spent_index']
+            token_input = f'{txid}|{spent_index}'
+
+            token_inputs.append(token_input)
+            token_input_indices.append(spent_index)
+            token_input_txids.append(txid)
+
             token_identity = generate_token_identity(token_data)
             input_token_identities.append(token_identity)
 
@@ -152,16 +159,30 @@ def process_tx(tx_hash, block_txns=None):
             date_created=time
         )
 
+        index = obj['n']
+
         # save ownership records
         ownership, _ = Ownership.objects.get_or_create(
             txid=tx_hash,
             token=cashtoken,
-            index=obj['n']
+            index=index
         )
         ownership.amount = amount
+        ownership.token_input_identities = token_inputs
         ownership.value = obj['value'] * (10 ** 8)
         ownership.address = obj['scriptPubKey']['addresses'][0]
         ownership.date_acquired = time
+
+        # for unordered related transactions of same block
+        output_identity = f'{tx_hash}|{index}'
+        spenders = Ownership.objects.filter(
+            token_input_identities__contains=[output_identity]
+        )
+        if spenders.exists():
+            spender = spenders.first()
+            ownership.spent = True
+            ownership.spender = spender.txid
+
         ownership.save()
         
         

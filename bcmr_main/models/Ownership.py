@@ -1,4 +1,6 @@
 from django.db import models
+from django.contrib.postgres.fields import ArrayField
+
 from bcmr_main.models import Token
 
 
@@ -18,6 +20,11 @@ class Ownership(models.Model):
     spender = models.CharField(max_length=70, null=True)
     burned = models.BooleanField(default=False)
     burner = models.CharField(max_length=70, null=True)
+    # array of all of its input's "txid + index"
+    token_input_identities = ArrayField(
+        models.CharField(max_length=100),
+        default=list
+    )
 
     class Meta:
         ordering = ('-date_acquired', )
