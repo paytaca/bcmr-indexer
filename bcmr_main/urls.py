@@ -9,7 +9,7 @@ app_name = "bcmr_main"
 
 router = routers.DefaultRouter()
 
-# router.register("tokens", views.TokenViewSet)
+router.register("ownerships", views.OwnershipViewSet)
 
 
 urlpatterns = router.urls
