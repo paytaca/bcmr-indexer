@@ -62,11 +62,14 @@ def process_op_return(
 
     print('--URL:', decoded_bcmr_url)
 
-    if decoded_bcmr_url.startswith('ipfs://'):
-        response = download_ipfs_bcmr_data(decoded_bcmr_url)
-    else:
-        response = requests.get(decoded_bcmr_url)
-
+    response = None
+    try:
+        if decoded_bcmr_url.startswith('ipfs://'):
+            response = download_ipfs_bcmr_data(decoded_bcmr_url)
+        else:
+            response = requests.get(decoded_bcmr_url)
+    except requests.exceptions.ConnectionError:
+        pass
     if not response:
         validity_checks['bcmr_file_accessible'] = False
         registry_obj.validity_checks = validity_checks
