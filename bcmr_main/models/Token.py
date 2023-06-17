@@ -32,7 +32,14 @@ class Token(models.Model):
             'capability',
         )
         indexes = [
-            models.Index(fields=['category', 'commitment', 'capability', 'is_nft'])
+            models.Index(
+                fields=[
+                    'category',
+                    'commitment',
+                    'capability',
+                    'is_nft'
+                ]
+            )
         ]
 
     def __str__(self):
@@ -73,3 +80,11 @@ class TokenMetadata(models.Model):
     class Meta:
         verbose_name_plural = 'Token metadata'
         get_latest_by = 'date_created'
+        indexes = [
+            models.Index(
+                fields=[
+                    'metadata_type',
+                    'date_created'
+                ]
+            )
+        ]
