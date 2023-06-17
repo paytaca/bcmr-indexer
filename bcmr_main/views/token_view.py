@@ -35,8 +35,6 @@ class TokenView(APIView):
             token_metadata = TokenMetadata.objects.filter(token=token).order_by('date_created').last()
             if token_metadata:
                 response = token_metadata.contents
-                if isinstance(response, list):
-                    response = response[0]
 
         if response:
             return JsonResponse(response)
