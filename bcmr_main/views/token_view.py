@@ -11,7 +11,6 @@ class TokenView(APIView):
         category = kwargs.get('category', '')
         type_key = kwargs.get('type_key', '')
         token = None
-        response = None
         try:
             if type_key:
                 token = Token.objects.get(
@@ -26,13 +25,18 @@ class TokenView(APIView):
                     is_nft=False
                 )
         except Token.DoesNotExist:
-            token = Token.objects.filter(
-                category=category,
-                is_nft=True
-            ).first()
+            pass
 
+        response = None
         if token:
             token_metadata = TokenMetadata.objects.filter(token=token).order_by('date_created').last()
+            if token_metadata:
+                response = token_metadata.contents
+        else:
+            token_metadata = TokenMetadata.objects.filter(
+                token__category=category,
+                metadata_type='category'
+            ).order_by('date_created').last()
             if token_metadata:
                 response = token_metadata.contents
 

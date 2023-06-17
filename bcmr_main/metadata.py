@@ -67,6 +67,10 @@ def generate_token_metadata(registry_obj):
                                 )
                                 nft_token_metadata.save()
                     # Save the generic NFT category metadata on the first token of this category ever created
+                    try:
+                        del _metadata['type_metadata']
+                    except KeyError:
+                        pass
                     token = token_check.filter(is_nft=True).first()
                     token_metadata = TokenMetadata(
                         token=token,
