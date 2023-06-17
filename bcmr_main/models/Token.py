@@ -41,6 +41,11 @@ class Token(models.Model):
 
 
 class TokenMetadata(models.Model):
+
+    class MetadataType(models.TextChoices):
+        CATEGORY = 'category'
+        TYPE = 'type'
+
     token = models.ForeignKey(
         'Token',
         related_name='metadata',
@@ -55,6 +60,12 @@ class TokenMetadata(models.Model):
         'Registry',
         related_name='token_metadata',
         on_delete=models.CASCADE
+    )
+    metadata_type = models.CharField(
+        max_length=20,
+        choices=MetadataType.choices,
+        null=True,
+        blank=True
     )
     contents = models.JSONField(null=True, blank=True)
     date_created = models.DateTimeField(null=True)
