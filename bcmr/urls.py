@@ -17,8 +17,10 @@ from django.contrib import admin
 from django.urls import path, include
 
 from bcmr_main.urls import urlpatterns as bcmr_main_urls
+from bcmr_main.views import home_page
 
 urlpatterns = [
+    path('', home_page),
     path('admin/', admin.site.urls),
     path('api/', include(bcmr_main_urls)),
 ]
