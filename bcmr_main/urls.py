@@ -14,6 +14,7 @@ router = routers.DefaultRouter()
 
 urlpatterns = router.urls
 urlpatterns += [
+    re_path(r"^status/latest-block/$", views.LatestBlockView.as_view(), name='latest-block-info'),
     re_path(r"^tokens/(?P<category>[\w+:]+)/$", views.TokenView.as_view(), name='token-info'),
     re_path(r"^tokens/(?P<category>[\w+:]+)/(?P<type_key>[\w+:]+)/$", views.TokenView.as_view(), name='token-type-info'),
     re_path(r"^registries/(?P<category>[\w+:]+)/latest/$", views.RegistryView.as_view(), name='latest-token-registry'),

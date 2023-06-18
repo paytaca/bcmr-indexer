@@ -27,20 +27,30 @@ class TokenView(APIView):
         except Token.DoesNotExist:
             pass
 
-        response = None
+        metadata = None
         if token:
             token_metadata = TokenMetadata.objects.filter(token=token).order_by('date_created').last()
             if token_metadata:
-                response = token_metadata.contents
+                metadata = token_metadata.contents
         else:
             token_metadata = TokenMetadata.objects.filter(
                 token__category=category,
                 metadata_type='category'
             ).order_by('date_created').last()
             if token_metadata:
-                response = token_metadata.contents
+                metadata = token_metadata.contents
 
-        if response:
-            return JsonResponse(response)
+        if metadata:
+            return JsonResponse(metadata)
+
+        category_check = Token.objects.filter(category=category)
+        if category_check.exists():
+            response = {
+                'category': category,
+                'error': 'no valid metadata found'
+            }
         else:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            response = {
+                'error': 'category not found'
+            }
+        return JsonResponse(response)
