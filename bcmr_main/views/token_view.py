@@ -46,7 +46,7 @@ class TokenView(APIView):
         category_check = Token.objects.filter(category=category)
         if category_check.exists():
             response = {
-                'category': category_check,
+                'category': category,
                 'error': 'no valid metadata found'
             }
             return JsonResponse(response)
