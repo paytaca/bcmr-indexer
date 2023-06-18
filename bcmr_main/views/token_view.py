@@ -49,5 +49,8 @@ class TokenView(APIView):
                 'category': category,
                 'error': 'no valid metadata found'
             }
-            return JsonResponse(response)
-        return Response(status=status.HTTP_404_NOT_FOUND)
+        else:
+            response = {
+                'error': 'category not found'
+            }
+        return JsonResponse(response)
