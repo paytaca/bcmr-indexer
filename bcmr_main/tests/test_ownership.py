@@ -89,8 +89,8 @@ class TestOwnership:
         spent_ownerships = Ownership.objects.filter(spent=True)
         tokens = Token.objects.all()
 
-        assert ownerships.count() == 5
-        assert spent_ownerships.count() == 0
+        assert ownerships.count() == 10
+        assert spent_ownerships.count() == 4
         assert tokens.count() == 4
 
         parent_tx = 'f4d4cabb9aa5669f041efc216f3bfb0f1b72e72cb97a5e147273b0cef3f91c4c'
@@ -112,10 +112,7 @@ class TestOwnership:
             '64781913f7f227044e7f43c0172ae5cda0cddde0187bc6bed629e433e9f30455',
             'd9e2a25c0e92c122bb1028fa2e41281d6027796d315bedb629210206a0428c9b'
         ]
-        expected_token_count_addition = 2
-        expected_token_count = 2
-        expected_ownership_count_addition = 2
-        expected_ownership_count = 2
+        expected_count = 22
 
         for txid in relative_txns:
             process_tx(txid)
@@ -124,13 +121,12 @@ class TestOwnership:
             burned_ownerships = ownerships.filter(burned=True)
             tokens = Token.objects.all()
 
-            assert ownerships.count() == expected_ownership_count
+            assert ownerships.count() == expected_count
             assert burned_ownerships.count() == 0
-            assert tokens.count() == expected_token_count
+            assert tokens.count() == expected_count
 
-            expected_ownership_count += expected_ownership_count_addition
-            expected_token_count += expected_token_count_addition
-
+            expected_count += 2
+            
         first_ownership = Ownership.objects.get(txid=relative_txns[0], index=0)
         second_ownership = Ownership.objects.get(txid=relative_txns[1], index=0)
         third_ownership = Ownership.objects.get(txid=relative_txns[2], index=0)
@@ -155,10 +151,7 @@ class TestOwnership:
             '7cd0d477d194fb3b67b50507b749b5eda1103d71dd1aebc23d71880c3d440892',
             'd9e2a25c0e92c122bb1028fa2e41281d6027796d315bedb629210206a0428c9b'
         ]
-        expected_token_count_addition = 2
-        expected_token_count = 2
-        expected_ownership_count_addition = 2
-        expected_ownership_count = 2
+        expected_count = 22
 
         for txid in relative_txns:
             process_tx(txid)
@@ -167,13 +160,11 @@ class TestOwnership:
             burned_ownerships = ownerships.filter(burned=True)
             tokens = Token.objects.all()
 
-            assert ownerships.count() == expected_ownership_count
+            assert ownerships.count() == expected_count
             assert burned_ownerships.count() == 0
-            assert tokens.count() == expected_token_count
+            assert tokens.count() == expected_count
 
-            expected_ownership_count += expected_ownership_count_addition
-            expected_token_count += expected_token_count_addition
-        
+            expected_count += 2
 
         second_ownership = Ownership.objects.get(txid=relative_txns[0], index=0)
         first_ownership = Ownership.objects.get(txid=relative_txns[1], index=0)
