@@ -13,7 +13,10 @@ def generate_token_metadata(registry_obj):
     publisher_identities = []
     if registry_obj.publisher:
         publisher_identities = registry_obj.publisher.identities
-    matched_identities = set(registry_obj.contents['identities'].keys()).intersection(set(publisher_identities))
+    try:
+        matched_identities = set(registry_obj.contents['identities'].keys()).intersection(set(publisher_identities))
+    except KeyError:
+        return
     if matched_identities:
         validity_checks = registry_obj.validity_checks
         validity_checks['identities_match'] = True
