@@ -180,6 +180,22 @@ class TestOwnership:
         assert first_ownership.spent == True
 
 
-    # TODO: find a transaction containing a burn
     def test_token_burning(self):
-        pass
+        burned_tx = '360ffbaa1f9665a6d013bcfdb35e15fea523736eefd924ddbba7879c7887bce1'
+        burner_tx = '312ef8524b7fa1ecbe748de7431953108a683a2a5e16a53273a1e5aa05aeb2d9'
+
+        process_tx(burned_tx)
+        
+        ownerships = Ownership.objects.all()
+        burned_ownerships = ownerships.filter(burned=True)
+
+        assert ownerships.count() == 1
+        assert burned_ownerships.count() == 0
+
+        process_tx(burner_tx)
+
+        ownerships = Ownership.objects.all()
+        burned_ownerships = ownerships.filter(burned=True, burner=burner_tx)
+
+        assert ownerships.count() == 2
+        assert burned_ownerships.count() == 1
