@@ -312,12 +312,12 @@ def _get_ancestors(txid, bchn=None, ancestors=[]):
                     proceed = False
                     break
 
-    # Limit recursion to up to 10 ancestors deep only
+    # Limit recursion to up to 7 ancestors deep only
     # Anyway, in an exhaustive scan from the block height when cashtokens was
     # activated we only really need to look for the first ancestor to check
-    # if it spends an identity output. Going 10 ancestors deep is just considered
-    # here just in case the identity outputs are somehow missed.
-    if len(ancestors) >= 10:
+    # if it spends an identity output. Going 7 ancestors deep is just considered
+    # here just in case any authbase identity outputs are somehow missed.
+    if len(ancestors) >= 7:
         proceed = False
 
     if proceed:
