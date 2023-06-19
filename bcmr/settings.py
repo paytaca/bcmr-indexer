@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',
     'rest_framework',
     'corsheaders',
     'django_filters',
@@ -270,7 +271,12 @@ REST_FRAMEWORK = {
 
 RPC_USER = decipher(config('RPC_USER'))
 BCHN_RPC_PASSWORD = decipher(config('BCHN_RPC_PASSWORD'))
-BCHN_NODE = f'http://{RPC_USER}:{BCHN_RPC_PASSWORD}@bchn:8332'
+
+BCH_HOST = config('BCHN_CHIPNET_HOST', 'bchn')
+if NETWORK == 'mainnet':
+    BCH_HOST = config('BCHN_MAINNET_HOST', 'bchn')
+
+BCHN_NODE = f'http://{RPC_USER}:{BCHN_RPC_PASSWORD}@{BCH_HOST}:8332'
 
 
 # Watchtower webhook

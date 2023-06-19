@@ -22,7 +22,7 @@ class Registry(models.Model):
         verbose_name_plural = 'Registries'
         ordering = ('-date_created', )
         indexes = [
-            models.Index(fields=['txid', 'index', 'valid'])
+            models.Index(fields=['txid', 'index', 'valid', 'date_created'])
         ]
         unique_together = [
             'txid',

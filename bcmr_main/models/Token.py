@@ -32,7 +32,14 @@ class Token(models.Model):
             'capability',
         )
         indexes = [
-            models.Index(fields=['category', 'commitment', 'capability', 'is_nft'])
+            models.Index(
+                fields=[
+                    'category',
+                    'commitment',
+                    'capability',
+                    'is_nft'
+                ]
+            )
         ]
 
     def __str__(self):
@@ -41,6 +48,11 @@ class Token(models.Model):
 
 
 class TokenMetadata(models.Model):
+
+    class MetadataType(models.TextChoices):
+        CATEGORY = 'category'
+        TYPE = 'type'
+
     token = models.ForeignKey(
         'Token',
         related_name='metadata',
@@ -56,8 +68,23 @@ class TokenMetadata(models.Model):
         related_name='token_metadata',
         on_delete=models.CASCADE
     )
+    metadata_type = models.CharField(
+        max_length=20,
+        choices=MetadataType.choices,
+        null=True,
+        blank=True
+    )
     contents = models.JSONField(null=True, blank=True)
     date_created = models.DateTimeField(null=True)
 
     class Meta:
         verbose_name_plural = 'Token metadata'
+        get_latest_by = 'date_created'
+        indexes = [
+            models.Index(
+                fields=[
+                    'metadata_type',
+                    'date_created'
+                ]
+            )
+        ]
