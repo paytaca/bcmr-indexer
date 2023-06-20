@@ -81,14 +81,24 @@ class BCHN(object):
         transaction['inputs'] = []
 
         for tx_input in txn['vin']:
-            value = int(float(tx_input['value'] * (10 ** 8)))
             input_txid = tx_input['txid']
 
             if 'prevout' in tx_input.keys():
                 prevout = tx_input['prevout']
-                input_token_data = prevout['tokenData']
-                input_address = prevout['scriptPubKey']['address']
+                value = prevout['value']
+                input_token_data = None
+                scriptPubKey = prevout['scriptPubKey']
+
+                if 'address' in scriptPubKey.keys():
+                    input_address = scriptPubKey['address']
+                else:
+                    # for multisig input prevouts (no address given on data)
+                    input_address = self.get_input_address(input_txid, tx_input['vout'])
+
+                if 'tokenData' in prevout.keys():
+                    input_token_data = prevout['tokenData']
             else:
+                value = int(float(tx_input['value'] * (10 ** 8)))
                 input_token_data = self.get_input_token_data(input_txid, tx_input['vout'])
                 input_address = self.get_input_address(input_txid, tx_input['vout'])
 
