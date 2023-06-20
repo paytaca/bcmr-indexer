@@ -91,16 +91,17 @@ def _process_tx(tx, bchn):
                     pass
         
         elif output_type == 'nulldata':
-            asm = scriptPubKey['asm']
-            op_ret_str = asm
-            asm = asm.split(' ')
+            if not bcmr_op_ret:
+                asm = scriptPubKey['asm']
+                asm = asm.split(' ')
 
-            if len(asm) >= 4:
-                if asm[1] == '1380795202':
-                    _hex = scriptPubKey['hex']
-                    # TODO: validate hex here
-                    bcmr_op_ret['txid'] = tx_hash
-                    bcmr_op_ret['index'] = index
+                if len(asm) >= 4:
+                    if asm[1] == '1380795202':
+                        op_ret_str = scriptPubKey['asm']
+                        _hex = scriptPubKey['hex']
+                        # TODO: validate hex here
+                        bcmr_op_ret['txid'] = tx_hash
+                        bcmr_op_ret['index'] = index
 
     # TODO: catch token burning by checking which token identities
     # are present in inputs but not in outputs
