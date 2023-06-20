@@ -21,15 +21,14 @@ def generate_token_identity(token_data):
     return token_identity
 
 
-def _process_tx(tx_hash, bchn):
+def _process_tx(tx, bchn):
+    tx_hash = tx['txid']
     LOGGER.info(f'PROCESSING TX --- {tx_hash}')
 
-    tx = None
     try:
         tx_obj = QueuedTransaction.objects.get(txid=tx_hash)
         tx = tx_obj.details
     except QueuedTransaction.DoesNotExist:
-        tx = bchn._get_raw_transaction(tx_hash)
         tx_obj = QueuedTransaction(
             txid=tx_hash,
             details=json.loads(json.dumps(tx))
@@ -212,13 +211,12 @@ def _process_tx(tx_hash, bchn):
         # )
 
 
-def _get_ancestors(txid, bchn=None, ancestors=[]):
-    tx = None
+def _get_ancestors(tx, bchn=None, ancestors=[]):
+    txid = tx['txid']
     try:
         tx_obj = QueuedTransaction.objects.get(txid=txid)
         tx = tx_obj.details
     except QueuedTransaction.DoesNotExist:
-        tx = bchn._get_raw_transaction(txid)
         tx_obj = QueuedTransaction(
             txid=txid,
             details=json.loads(json.dumps(tx))
@@ -240,7 +238,7 @@ def _get_ancestors(txid, bchn=None, ancestors=[]):
         for tx_out in tx['vout']:
             if 'tokenData' in tx_out.keys():
                 if tx_out['tokenData']['category'] == first_input_txid:
-                    ancestors.append(tx['txid'])
+                    ancestors.append(tx)
                     proceed = False
                     break
 
@@ -256,9 +254,10 @@ def _get_ancestors(txid, bchn=None, ancestors=[]):
         for tx_input in tx['vin']:
             if tx_input['vout'] == 0:
                 # this is a potential identity output
-                ancestors.append(tx_input['txid'])
+                raw_tx_input = bchn._get_raw_transaction(tx_input['txid'])
+                ancestors.append(raw_tx_input)
                 return _get_ancestors(
-                    tx_input['txid'],
+                    raw_tx_input,
                     bchn,
                     ancestors
                 )
@@ -268,19 +267,20 @@ def _get_ancestors(txid, bchn=None, ancestors=[]):
 
 
 @shared_task(queue='process_tx')
-def process_tx(tx_hash):
+def process_tx(tx):
+    tx_hash = tx['txid']
     print('--- PROCESS TX:', tx_hash)
 
-    bchn = BCHN()
-    tx = bchn._get_raw_transaction(tx_hash)
     if 'coinbase' in tx['vin'][0].keys():
         return
 
-    ancestor_txs = _get_ancestors(tx_hash, bchn, [])
-    tx_chain = ancestor_txs + [tx_hash]
-    print('-- CHAIN:', tx_chain)
-    for txid in tx_chain:
-        _process_tx(txid, bchn)
+    bchn = BCHN()
+    ancestor_txs = _get_ancestors(tx, bchn, [])
+    tx_chain = ancestor_txs + [tx]
+    print('-- CHAIN:', len(tx_chain))
+
+    for txn in tx_chain:
+        _process_tx(txn, bchn)
 
 
 def record_txn_dates(qs, bchn):

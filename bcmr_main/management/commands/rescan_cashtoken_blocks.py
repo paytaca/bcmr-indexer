@@ -42,10 +42,11 @@ class Command(BaseCommand):
             )
             LOGGER.info(f'Block: {curr_block}  |  Transactions: {total_txs}')
 
-            for i, txid in enumerate(transactions, 1):
+            for i, tx in enumerate(transactions, 1):
+                txid = tx['txid']
                 try:
                     LOGGER.info(f'    {curr_block} | {txid} | {i} of {total_txs}')
-                    process_tx(txid)
+                    process_tx(tx)
                 except Exception as exc:
                     LOGGER.error(f'Error processing txid: {txid}')
                     raise exc
