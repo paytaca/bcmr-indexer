@@ -59,6 +59,9 @@ class Command(BaseCommand):
             block_scan.scanned = True
             block_scan.save()
 
+            # clear the queued transactions table
+            QueuedTransaction.objects.all().delete()
+
             curr_block += 1
 
         LOGGER.info('Rescanning block tasks queued!')
