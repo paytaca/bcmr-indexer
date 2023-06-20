@@ -17,6 +17,10 @@ class Command(BaseCommand):
         # Token.objects.all().delete()
         # Registry.objects.all().delete()
         # IdentityOutput.objects.all().delete()
+        # TokenMetadata.objects.all().delete()
+        # BlockScan.objects.all().delete()
+        # QueuedTransaction.objects.all().delete()
+
         LOGGER.info('STARTING RESCANNING OF BLOCKS')
 
         node = BCHN()

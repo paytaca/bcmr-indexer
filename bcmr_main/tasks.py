@@ -31,7 +31,7 @@ def _process_tx(tx, bchn):
     except QueuedTransaction.DoesNotExist:
         tx_obj = QueuedTransaction(
             txid=tx_hash,
-            details=json.loads(json.dumps(tx))
+            details=tx
         )
         tx_obj.save()
 
@@ -220,7 +220,7 @@ def _get_ancestors(tx, bchn=None, ancestors=[]):
     except QueuedTransaction.DoesNotExist:
         tx_obj = QueuedTransaction(
             txid=txid,
-            details=json.loads(json.dumps(tx))
+            details=tx
         )
         tx_obj.save()
 
