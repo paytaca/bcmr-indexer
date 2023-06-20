@@ -18,6 +18,8 @@ def decode_str(encoded_string):
         return bytearray.fromhex(encoded_string).decode()
     except UnicodeDecodeError as ude:
         return ''
+    except ValueError:
+        return ''
 
 
 def encode_str(raw_string):

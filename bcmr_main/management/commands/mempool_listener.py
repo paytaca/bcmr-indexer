@@ -47,6 +47,7 @@ class ZMQHandler():
         except KeyboardInterrupt:
             zmqContext.destroy()
 
+
 class Command(BaseCommand):
     help = "Start mempool tracker using ZMQ"
 

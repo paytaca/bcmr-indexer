@@ -143,8 +143,16 @@ class BlockScanAdmin(admin.ModelAdmin):
         'transactions',
         'scanned',
         'scan_started',
-        'scan_completed'
+        'scan_completed',
+        'speed'
     ]
+
+    def speed(self, obj):
+        if obj.scan_completed:
+            diff = obj.scan_completed - obj.scan_started
+            diff_seconds = diff.total_seconds()
+            tx_per_second = obj.transactions / diff_seconds
+            return round(tx_per_second, 2)
 
 
 admin.site.register(Token, TokenAdmin)

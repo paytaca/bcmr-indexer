@@ -9,7 +9,6 @@ RUN apt-get -y install build-essential sudo postgresql libpq-dev postgresql-clie
 
 RUN pip install --upgrade pip
 COPY ./requirements.txt requirements.txt
-# RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install -r requirements.txt
 
 COPY . /code
@@ -18,8 +17,7 @@ WORKDIR /code
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
 
-# comment out comments to when running locally
-
+# comment out when running locally
 # EXPOSE 8000
 ENTRYPOINT [ "sh", "entrypoint.sh" ]
 # CMD [ "supervisord", "-c", "/code/supervisord.conf", "--nodaemon" ]

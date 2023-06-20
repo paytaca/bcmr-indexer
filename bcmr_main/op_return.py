@@ -70,6 +70,9 @@ def process_op_return(
             response = requests.get(decoded_bcmr_url)
     except requests.exceptions.ConnectionError:
         pass
+    except requests.exceptions.InvalidURL:
+        pass
+        
     if not response:
         validity_checks['bcmr_file_accessible'] = False
         registry_obj.validity_checks = validity_checks
