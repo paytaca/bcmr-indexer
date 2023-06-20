@@ -13,7 +13,6 @@ fabric==2.5.0
 gevent==21.1.2
 gunicorn==20.0.4
 psycopg2-binary==2.8.6
-python-bitcoinrpc==1.0
 python-decouple==3.3
 python-dateutil==2.8.2
 pyzmq==25.0.0
@@ -23,3 +22,4 @@ whitenoise==5.1.0
 pytest-django==4.5.2
 simplejson==3.19.1
 ipython
+git+https://github.com/paytaca/python-bitcoinrpc
