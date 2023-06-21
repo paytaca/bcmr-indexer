@@ -296,7 +296,7 @@ def record_txn_dates(qs, bchn):
                 element.save()
 
 
-@shared_task(queue='recheck_unconfirmed_txn_details')
+@shared_task(queue='celery_periodic_tasks')
 def recheck_unconfirmed_txn_details():
     LOGGER.info('RECHECKING UNSAVED INFO OF UNCONFIRMED TXNS')
     
@@ -322,3 +322,13 @@ def recheck_unconfirmed_txn_details():
             output.date = timestamp_to_date(tx['time'])
 
         output.save()
+
+
+@shared_task(queue='celery_periodic_tasks')
+def resolve_metadata():
+    registries = Registry.objects.filter(generated_metadata__isnull=True).order_by('date_created')
+    for registry in registries:
+        LOGGER.info(f'GENERATING METADATA FOR REGISRTY ID #{registry.id}')
+        generate_token_metadata(registry)
+        registry.generated_metadata = timezone.now()
+        registry.save()

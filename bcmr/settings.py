@@ -206,6 +206,10 @@ CELERY_BEAT_SCHEDULE = {
     'recheck-unconfirmed-txn-details': {
         'task': 'bcmr_main.tasks.recheck_unconfirmed_txn_details',
         'schedule': 120
+    },
+    'resolve-metadata': {
+        'task': 'bcmr_main.tasks.resolve_metadata',
+        'schedule': 120
     }
 }
 

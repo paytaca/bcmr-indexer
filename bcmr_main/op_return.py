@@ -109,8 +109,4 @@ def process_op_return(
     registry_obj.validity_checks = validity_checks
     registry_obj.save()
 
-    if contents:
-        # Generate token metadata
-        generate_token_metadata(registry_obj)
-
     return validity_checks, decoded_bcmr_url

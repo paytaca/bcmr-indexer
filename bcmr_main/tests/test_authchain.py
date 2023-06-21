@@ -6,6 +6,7 @@ from unittest.mock import patch
 from bcmr_main.tasks import process_tx
 from bcmr_main.models import IdentityOutput, Token, Registry
 from bcmr_main.bchn import BCHN
+from bcmr_main.tasks import resolve_metadata
 
 
 bchn = BCHN()
@@ -211,6 +212,8 @@ class TestIdentityOutputs:
         assert identity_output.spent == False
         assert identity_output.spender == None
 
-        # Check that there is no valid registry
+        resolve_metadata()
+
+        # Check that there is 1 valid registry
         registries = Registry.objects.filter(valid=True)
         assert registries.count() == 1

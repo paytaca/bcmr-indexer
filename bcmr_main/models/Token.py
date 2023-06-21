@@ -80,6 +80,12 @@ class TokenMetadata(models.Model):
     class Meta:
         verbose_name_plural = 'Token metadata'
         get_latest_by = 'date_created'
+        unique_together = (
+            'token',
+            'identity',
+            'registry',
+            'metadata_type'
+        )
         indexes = [
             models.Index(
                 fields=[

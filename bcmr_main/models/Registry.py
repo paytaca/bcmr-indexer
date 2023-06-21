@@ -17,26 +17,22 @@ class Registry(models.Model):
     bcmr_request_status = models.IntegerField(null=True, blank=True)
     validity_checks = models.JSONField(null=True, blank=True)
     date_created = models.DateTimeField(null=True, blank=True)
+    generated_metadata = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name_plural = 'Registries'
         ordering = ('-date_created', )
         indexes = [
-            models.Index(fields=['txid', 'index', 'valid', 'date_created'])
+            models.Index(fields=[
+                'txid',
+                'index',
+                'valid',
+                'date_created',
+                'generated_metadata'
+            ])
         ]
         unique_together = [
             'txid',
             'index',
             'publisher'
         ]
-
-    # def revalidate_identities(self):
-    #     validity_checks = self.validity_checks
-    #     publisher_identities = self.publisher.identities
-    #     matched_identities = set(self.contents['identities'].keys()).intersection(set(publisher_identities))
-    #     if matched_identities:
-    #         validity_checks['identities_match'] = True
-    #     is_valid = list(validity_checks.values()).count(True) == len(validity_checks.keys())
-    #     self.valid = is_valid
-    #     self.validity_checks = validity_checks
-    #     self.save()
