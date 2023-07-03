@@ -80,24 +80,28 @@ def generate_token_metadata(registry_obj):
                         except KeyError:
                             pass
                         token = token_check.filter(is_nft=True, capability='minting').order_by('date_created', 'id').last()
-                        token_metadata, _ = TokenMetadata.objects.get_or_create(
-                            token=token,
-                            registry=registry_obj,
-                            identity=IdentityOutput.objects.get(txid=identity),
-                            metadata_type='category'
-                        )
-                        token_metadata.contents = _metadata
-                        token_metadata.date_created = history_date
-                        token_metadata.save()
+                        if token:
+                            token_metadata, _ = TokenMetadata.objects.get_or_create(
+                                token=token,
+                                registry=registry_obj,
+                                identity=IdentityOutput.objects.get(txid=identity),
+                                metadata_type='category'
+                            )
+                            token_metadata.contents = _metadata
+                            token_metadata.date_created = history_date
+                            token_metadata.save()
                     else:
-                        token = Token.objects.get(category=token_data['category'], is_nft=False)
-                        _metadata = registry_obj.contents['identities'][identity][latest_key]
-                        token_metadata, _ = TokenMetadata.objects.get_or_create(
-                            token=token,
-                            registry=registry_obj,
-                            identity=IdentityOutput.objects.get(txid=identity),
-                            metadata_type='category'
-                        )
-                        token_metadata.contents = _metadata
-                        token_metadata.date_created = history_date
-                        token_metadata.save()
+                        try:
+                            token = Token.objects.get(category=token_data['category'], is_nft=False)
+                            _metadata = registry_obj.contents['identities'][identity][latest_key]
+                            token_metadata, _ = TokenMetadata.objects.get_or_create(
+                                token=token,
+                                registry=registry_obj,
+                                identity=IdentityOutput.objects.get(txid=identity),
+                                metadata_type='category'
+                            )
+                            token_metadata.contents = _metadata
+                            token_metadata.date_created = history_date
+                            token_metadata.save()
+                        except Token.DoesNotExist:
+                            pass
