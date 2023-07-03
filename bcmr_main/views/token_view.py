@@ -42,6 +42,11 @@ class TokenView(APIView):
                 metadata = token_metadata.contents
 
         if metadata:
+            # Check if token is NFT or not
+            token_check = Token.objects.filter(category=category)
+            if token_check.exists():
+                token = token_check.first()
+                metadata['is_nft'] = token.is_nft
             return JsonResponse(metadata)
 
         category_check = Token.objects.filter(category=category)
