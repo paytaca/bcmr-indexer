@@ -4,7 +4,7 @@ from picklefield.fields import PickledObjectField
 
 
 class QueuedTransaction(models.Model):
-    txid = models.CharField(max_length=70, db_index=True, unique=True)
+    txid = models.CharField(max_length=100, db_index=True, unique=True)
     details = PickledObjectField()
 
     class Meta:

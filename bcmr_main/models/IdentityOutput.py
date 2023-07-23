@@ -3,9 +3,9 @@ from django.contrib.postgres.fields import ArrayField
 
 
 class IdentityOutput(models.Model):
-    txid = models.CharField(max_length=70, unique=True)
+    txid = models.CharField(max_length=100, unique=True)
     block = models.PositiveIntegerField(null=True, blank=True)
-    address = models.CharField(max_length=70, null=True, blank=True)
+    address = models.CharField(max_length=128, null=True, blank=True)
     authbase = models.BooleanField(default=False)
     genesis = models.BooleanField(default=False)
     spent = models.BooleanField(default=False)
