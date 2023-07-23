@@ -97,6 +97,7 @@ def process_op_return(
         else:
             validity_checks['bcmr_hash_match'] = False
             log_invalid_op_return(txid, encoded_response_json_hash, [decoded_bcmr_json_hash, encoded_bcmr_json_hash])
+            
         try:
             contents = response.json()
             registry_obj.contents = contents

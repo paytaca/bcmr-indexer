@@ -19,6 +19,7 @@ class Command(BaseCommand):
         # Registry.objects.all().delete()
         # IdentityOutput.objects.all().delete()
         # BlockScan.objects.all().delete()
+        # Ownership.objects.all().delete()
 
         LOGGER.info('STARTING RESCANNING OF BLOCKS')
 

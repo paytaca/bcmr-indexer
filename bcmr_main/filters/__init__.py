@@ -1,1 +1,1 @@
-from bcmr_main.filters.token_filter import *
+from bcmr_main.filters.ownership_filter import *
