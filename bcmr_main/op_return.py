@@ -113,7 +113,7 @@ def process_op_return(
         publisher_identities = []
 
         if publisher:
-            publisher_identities = publisher.get_identities(save=True)
+            publisher_identities = publisher.get_identities()
 
         matched_identities = set(contents['identities'].keys()).intersection(set(publisher_identities))        
         if matched_identities:

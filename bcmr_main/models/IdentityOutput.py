@@ -66,5 +66,5 @@ class IdentityOutput(models.Model):
         # save identities
         for identity in identities:
             identity_obj = IdentityOutput.objects.get(txid=identity)
-            self.identities.add(identity_obj)
+            identities.append(identity_obj)
         return identities
