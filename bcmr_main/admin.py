@@ -153,6 +153,17 @@ class BlockScanAdmin(admin.ModelAdmin):
             diff_seconds = diff.total_seconds()
             tx_per_second = obj.transactions / diff_seconds
             return round(tx_per_second, 2)
+        
+
+class OwnershipAdmin(admin.ModelAdmin):
+    
+    list_display = [
+        'token',
+        'address',
+        'txid',
+        'date_acquired',
+        'burned'
+    ]
 
 
 admin.site.register(Token, TokenAdmin)
@@ -160,3 +171,4 @@ admin.site.register(TokenMetadata, TokenMetadataAdmin)
 admin.site.register(Registry, RegistryAdmin)
 admin.site.register(IdentityOutput, IdentityOutputAdmin)
 admin.site.register(BlockScan, BlockScanAdmin)
+admin.site.register(Ownership, OwnershipAdmin)
