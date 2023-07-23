@@ -62,12 +62,6 @@ def _process_tx(tx, bchn):
     token_input_indices = []
     token_inputs = []
     input_txids = []
-<<<<<<< HEAD
-=======
-
-    for tx_input in parsed_tx['inputs']:
-        input_txids.append(tx_input['txid'])
->>>>>>> 3716934ffd9307f126eed886cb726f10cd84fb4c
 
     for tx_input in parsed_tx['inputs']:
         # get a list of input txids that are potential identity outputs spends
@@ -374,13 +368,16 @@ def _get_ancestors(tx, bchn=None, ancestors=[]):
 
 @shared_task(queue='process_tx')
 def process_tx(tx):
+    bchn = BCHN()
+    if isinstance(tx, str):
+        tx = bchn._get_raw_transaction(tx)
+
     tx_hash = tx['txid']
     print('--- PROCESS TX:', tx_hash)
 
     if 'coinbase' in tx['vin'][0].keys():
         return
 
-    bchn = BCHN()
     ancestor_txs = _get_ancestors(tx, bchn, [])
     tx_chain = ancestor_txs + [tx]
     print('-- CHAIN:', len(tx_chain))
