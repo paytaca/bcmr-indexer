@@ -7,8 +7,8 @@ class Token(models.Model):
         MUTABLE = 'mutable'
         NONE = 'none'
 
-    category = models.CharField(max_length=70)
-    debut_txid = models.CharField(max_length=70, null=True, blank=True)
+    category = models.CharField(max_length=100)
+    debut_txid = models.CharField(max_length=100, null=True, blank=True)
     amount = models.BigIntegerField(null=True)
     is_nft = models.BooleanField(default=False)
     commitment = models.CharField(
