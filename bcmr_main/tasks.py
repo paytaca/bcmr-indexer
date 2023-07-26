@@ -71,24 +71,23 @@ def _process_tx(tx, bchn):
     op_ret_str = ''
     output_token_identities = []
     for index, output in enumerate(outputs):
+        output['_event'] = ''
         scriptPubKey = output['scriptPubKey']
         output_type = scriptPubKey['type']
 
         if output_type in ['pubkeyhash', 'scripthash']:
             if 'tokenData' in output.keys():
-                token_outputs.append(output)
 
                 token_data = output['tokenData']
                 token_identity = generate_token_identity(token_data)
+                output['_identity'] = token_identity
                 output_token_identities.append(token_identity)
                 
-                # TODO: save ownership records
                 if token_identity in input_token_identities:
-                    # scenario: token transfer
-                    pass
-                else:
-                    # scenario: token minting or mutation
-                    pass
+                    output['_event'] = 'transfer'
+
+                token_outputs.append(output)
+
         
         elif output_type == 'nulldata':
             if not bcmr_op_ret:
@@ -103,12 +102,13 @@ def _process_tx(tx, bchn):
                         bcmr_op_ret['txid'] = tx_hash
                         bcmr_op_ret['index'] = index
 
-    # TODO: catch token burning by checking which token identities
+    # Catch token burning by checking which token identities
     # are present in inputs but not in outputs
-    for token_id in input_token_identities:
-        if token_id not in output_token_identities:
+    burned_tokens = []
+    for token_identity in input_token_identities:
+        if token_identity not in output_token_identities:
             # scenario: token burning
-            pass
+            burned_tokens.append(token_identity)
 
     parents = IdentityOutput.objects.filter(txid__in=input_txids)
 
@@ -139,7 +139,7 @@ def _process_tx(tx, bchn):
         if token_data['amount']:
             amount = int(token_data['amount'])
 
-        save_token(
+        token, created = save_token(
             tx_hash,
             category,
             amount,
@@ -148,6 +148,32 @@ def _process_tx(tx, bchn):
             is_nft=is_nft,
             date_created=time
         )
+
+        if created or obj['_event'] == 'transfer':
+            # update/create ownership records
+            if obj['_event'] == 'transfer':
+                latest_ownership = Ownership.objects.get(token=token, spent=False, burned=False)
+                latest_ownership.spent = True
+                latest_ownership.spender_txid = tx_hash
+                latest_ownership.save()
+
+            _address = obj['scriptPubKey']['addresses'][0]
+            ownership = Ownership(
+                token=token,
+                address=_address,
+                amount=amount,
+                txid=tx_hash,
+                index=obj['n'],
+                date_acquired=timezone.now(),
+            )
+            ownership.save()
+
+        if obj['_identity'] in burned_tokens:
+            latest_ownership = Ownership.objects.get(token=token, spent=False, burned=False)
+            latest_ownership.spent = True
+            latest_ownership.spender_txid = tx_hash
+            latest_ownership.burned = True
+            latest_ownership.save()
 
     if genesis:
         # save authbase tx

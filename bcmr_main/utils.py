@@ -77,6 +77,8 @@ def save_token(
         token.is_nft = is_nft
     token.save()
 
+    return token, created
+
 
 def save_output(
     txid,
@@ -103,12 +105,3 @@ def save_output(
         output.spent = True
 
     output.save()
-
-def save_ownership(
-    category,
-    txid,
-    address,
-    amount,
-    spends
-):
-    pass
