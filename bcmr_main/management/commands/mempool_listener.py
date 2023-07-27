@@ -43,9 +43,9 @@ class ZMQHandler():
                     if 'coinbase' in inputs[0].keys():
                         continue
                     
-                    process_tx.delay(tx_hash, source='mempool')
+                    process_tx.delay(tx_hash, self.BCHN)
         except KeyboardInterrupt:
-            zmqContext.destroy()
+            self.zmqContext.destroy()
 
 
 class Command(BaseCommand):

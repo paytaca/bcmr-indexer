@@ -148,22 +148,25 @@ def _process_tx(tx, bchn):
             is_nft=is_nft,
             date_created=time
         )
+        print('XXXXXX', token, created)
 
         if created or obj['_event'] == 'transfer':
             # update/create ownership records
             if obj['_event'] == 'transfer':
-                latest_ownership = Ownership.objects.get(token=token, spent=False, burned=False)
-                latest_ownership.spent = True
-                latest_ownership.spender_txid = tx_hash
-                latest_ownership.save()
+                ownership_check = Ownership.objects.filter(token=token, spent=False, burned=False)
+                if ownership_check.exists():
+                    latest_ownership = ownership_check.last()
+                    latest_ownership.spent = True
+                    latest_ownership.spender_txid = tx_hash
+                    latest_ownership.save()
 
             _address = obj['scriptPubKey']['addresses'][0]
             ownership = Ownership(
                 token=token,
-                address=_address,
-                amount=amount,
                 txid=tx_hash,
                 index=obj['n'],
+                address=_address,
+                amount=amount,
                 date_acquired=timezone.now(),
             )
             ownership.save()
