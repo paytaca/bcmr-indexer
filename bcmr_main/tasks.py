@@ -162,13 +162,16 @@ def _process_tx(tx, bchn):
                     latest_ownership.save()
 
             _address = obj['scriptPubKey']['addresses'][0]
+            time = None
+            if 'time' in tx.keys():
+                time = timestamp_to_date(tx['time'])
             ownership = Ownership(
                 token=token,
                 txid=tx_hash,
                 index=obj['n'],
                 address=_address,
                 amount=amount,
-                date_acquired=timezone.now(),
+                date_acquired=time,
                 acquired_via=acquisition_type
             )
             ownership.save()

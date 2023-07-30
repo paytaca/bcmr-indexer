@@ -3,9 +3,6 @@ from bcmr_main.models import Token
 
 
 class Ownership(models.Model):
-    # ACQUISITION_METHODS = [
-    #     ('minting', 'MINTING')
-    # ]
 
     class AcquisitionMethod(models.TextChoices):
         TRANSFER = 'transfer'
