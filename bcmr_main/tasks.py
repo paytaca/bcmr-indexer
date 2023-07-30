@@ -148,11 +148,12 @@ def _process_tx(tx, bchn):
             is_nft=is_nft,
             date_created=time
         )
-        print('XXXXXX', token, created)
 
         if created or obj['_event'] == 'transfer':
+            acquisition_type = 'minting'
             # update/create ownership records
             if obj['_event'] == 'transfer':
+                acquisition_type = 'transfer'
                 ownership_check = Ownership.objects.filter(token=token, spent=False, burned=False)
                 if ownership_check.exists():
                     latest_ownership = ownership_check.last()
@@ -168,6 +169,7 @@ def _process_tx(tx, bchn):
                 address=_address,
                 amount=amount,
                 date_acquired=timezone.now(),
+                acquired_via=acquisition_type
             )
             ownership.save()
 
@@ -231,14 +233,6 @@ def _process_tx(tx, bchn):
                 'publisher': current_output,
                 'date': time
             })
-        
-        # send_webhook_token_update(
-        #     category,
-        #     index,
-        #     tx_hash,
-        #     commitment=commitment,
-        #     capability=capability
-        # )
 
 
 def _get_ancestors(tx, bchn=None, ancestors=[]):
