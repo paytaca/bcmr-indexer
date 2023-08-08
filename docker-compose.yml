@@ -1,7 +1,7 @@
 version: "3"
 services:
   postgres:
-    image: "postgres:11.1-alpine"
+    image: "postgres:15"
     ports:
       - 5432:5432
     env_file:
@@ -32,7 +32,11 @@ services:
     
 volumes:
   pgdata:
-    external: true
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/bcmr/data
+      o: bind
 
 networks:
   bcmr-network: {}
