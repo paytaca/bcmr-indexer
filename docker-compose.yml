@@ -35,7 +35,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: /home/bcmr/data
+      device: /var/lib/bcmr-pgdata
       o: bind
 
 networks:
