@@ -79,7 +79,7 @@ def generate_token_metadata(registry_obj):
                             del _metadata['type_metadata']
                         except KeyError:
                             pass
-                        token = token_check.filter(is_nft=True, capability='minting').order_by('date_created', 'id').last()
+                        token = token_check.filter(is_nft=True).order_by('date_created', 'id').last()
                         if token:
                             token_metadata, _ = TokenMetadata.objects.get_or_create(
                                 token=token,
