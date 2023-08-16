@@ -21,7 +21,7 @@ class BitcoinCashMetadataRegistry:
     self.authchainIdentity = b.get('authchainIdentity')
 
   def get_identity_history_timestamp(self):
-    list(self.identities[self.registryIdentity].keys())[-1]
+    return list(self.identities[self.registryIdentity].keys())[-1]
 
   def get_identity_snapshot(self):
     # onchain registry 
