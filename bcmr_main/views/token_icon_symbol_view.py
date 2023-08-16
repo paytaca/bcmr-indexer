@@ -27,13 +27,13 @@ class TokenIconSymbolView(APIView):
             token_metadata = TokenMetadata.objects.filter(token=token).order_by('date_created', 'registry_id').last()
             if token_metadata:
                 contents = token_metadata.contents
-
-        bcmr = BitcoinCashMetadataRegistry(contents)
-        try:
-          bcmr.validate()
-          response = { 'category': category, 'icon_uri': bcmr.get_icon_uri(), 'symbol': bcmr.get_symbol()}
-        except ValidationError:
-          # TODO check if we can still return the icon or symbol even if bcmr fails validation 
-          response = {'error': 'bcmr is invalid'}
+        if contents:
+          bcmr = BitcoinCashMetadataRegistry(contents)
+          try:
+            bcmr.validate()
+            response = { 'category': category, 'icon_uri': bcmr.get_icon_uri(), 'symbol': bcmr.get_symbol()}
+          except ValidationError:
+            # TODO check if we can still return the icon or symbol even if bcmr fails validation 
+            response = {'error': 'bcmr is invalid'}
 
         return JsonResponse(response)
