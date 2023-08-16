@@ -6,19 +6,17 @@ from jsonschema import validate
 class BitcoinCashMetadataRegistry:
   def __init__(self, contents:Dict) -> None:
     self.contents = contents
-    self.validate(contents)
-    b = contents
-    self._schema = b.get('schema')
-    self.version = b.get('version')
-    self.latestRevision = b.get('latestRevision')
-    self.registryIdentity = b.get('registryIdentity')
-    self.identities = b.get('identities')
-    self.tags = b.get('tags')
-    self.defaultChain = b.get('defaultChain')
-    self.chains = b.get('chains')
-    self.license = b.get('license')
-    self.extensions = b.get('extensions')
-    self.authchainIdentity = b.get('authchainIdentity')
+    self._schema = contents.get('schema')
+    self.version = contents.get('version')
+    self.latestRevision = contents.get('latestRevision')
+    self.registryIdentity = contents.get('registryIdentity')
+    self.identities = contents.get('identities')
+    self.tags = contents.get('tags')
+    self.defaultChain = contents.get('defaultChain')
+    self.chains = contents.get('chains')
+    self.license = contents.get('license')
+    self.extensions = contents.get('extensions')
+    self.authchainIdentity = contents.get('authchainIdentity')
 
   def get_identity_history_timestamp(self):
     return list(self.identities[self.registryIdentity].keys())[-1]
