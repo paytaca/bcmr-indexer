@@ -10,6 +10,7 @@ from bcmr_main.metadata import generate_token_metadata
 # from datetime import datetime
 # from dateutil.parser import parse as parse_datetime
 # from operator import itemgetter
+from urllib3.exceptions import LocationParseError
 import requests
 import logging
 
@@ -71,6 +72,8 @@ def process_op_return(
     except requests.exceptions.ConnectionError:
         pass
     except requests.exceptions.InvalidURL:
+        pass
+    except LocationParseError:
         pass
         
     if not response:
