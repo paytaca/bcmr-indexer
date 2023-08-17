@@ -21,5 +21,6 @@ supervisor==4.2.1
 whitenoise==5.1.0
 pytest-django==4.5.2
 simplejson==3.19.1
+jsonschema==4.19.0
 ipython
 git+https://github.com/paytaca/python-bitcoinrpc
