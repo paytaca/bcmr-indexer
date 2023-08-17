@@ -2,7 +2,7 @@ from django.db import models
 
 
 class Registry(models.Model):
-    txid = models.CharField(max_length=70)
+    txid = models.CharField(max_length=100)
     index = models.IntegerField()
     publisher = models.ForeignKey(
         'IdentityOutput',

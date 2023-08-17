@@ -8,14 +8,14 @@ class Ownership(models.Model):
         related_name='ownership_history',
         on_delete=models.CASCADE
     )
-    address = models.CharField(max_length=70, null=True, blank=True)
-    txid = models.CharField(max_length=70, unique=True)
+    address = models.CharField(max_length=128, null=True, blank=True)
+    txid = models.CharField(max_length=100, unique=True)
     index = models.IntegerField(null=True)
     date_acquired = models.DateTimeField(null=True, blank=True)
     spent = models.BooleanField(default=False)
-    spender = models.CharField(max_length=70, null=True)
+    spender = models.CharField(max_length=128, null=True)
     burned = models.BooleanField(default=False)
-    burner = models.CharField(max_length=70, null=True)
+    burner = models.CharField(max_length=128, null=True)
 
     class Meta:
         ordering = ('-date_acquired',)
