@@ -13,7 +13,7 @@ class RegistryView(APIView):
             token_metadata = TokenMetadata.objects.filter(
                 token__category=category,
                 metadata_type='category'
-            ).latest('date_created')
+            ).latest('id')
             if token_metadata:
                 registry = token_metadata.registry
                 metadata = registry.contents
