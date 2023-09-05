@@ -40,10 +40,10 @@ class BitcoinCashMetadataRegistry:
       return self.get_token().get('symbol')
   
   def validate(self):
-    BitcoinCashMetadataRegistry.validate(self.contents)
+    BitcoinCashMetadataRegistry.validate_contents(self.contents)
 
   @staticmethod
-  def validate(contents):
+  def validate_contents(contents):
     with open('./bcmr-schema-v2.json', 'r') as bcmr_schema_file:
       bcmr_schema = json.load(bcmr_schema_file)
       validate(instance=contents, schema=bcmr_schema)
