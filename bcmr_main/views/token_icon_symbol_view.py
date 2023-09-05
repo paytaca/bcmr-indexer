@@ -30,7 +30,7 @@ class TokenIconSymbolView(APIView):
         if contents:
           bcmr = BitcoinCashMetadataRegistry(contents)
           try:
-            bcmr.validate()
+            bcmr.validate(contents)
             response = { 'category': category, 'icon_uri': bcmr.get_icon_uri(), 'symbol': bcmr.get_symbol()}
           except ValidationError:
             # TODO check if we can still return the icon or symbol even if bcmr fails validation 
