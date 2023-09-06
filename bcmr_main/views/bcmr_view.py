@@ -10,11 +10,19 @@ from bcmr_main.app.BitcoinCashMetadataRegistry import BitcoinCashMetadataRegistr
 
 @api_view(['GET'])
 def get_token(request, category):
-    registry = Registry.objects.filter(
-                contents__contains={'registryIdentity': category}
-            ).latest('id').first()
-    if registry.contents:
-        bcmr = BitcoinCashMetadataRegistry(registry.contents)
-        return JsonResponse(bcmr.get_token())
-    return JsonResponse(status=404)
+    try:
+        registry = Registry.objects.filter(
+                    contents__contains={'registryIdentity': category}
+                ).latest('id')
+        if registry.contents:
+            bcmr = BitcoinCashMetadataRegistry(registry.contents)
+            return JsonResponse(bcmr.get_token())
+        else: 
+            return JsonResponse({'error': 'Registry identity found, but with no contents'}, status=404)
+    
+    except Registry.DoesNotExist:
+        return JsonResponse(status=404)
+    except:
+        return JsonResponse(status=400)
+    
 
