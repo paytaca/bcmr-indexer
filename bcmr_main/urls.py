@@ -22,6 +22,8 @@ urlpatterns += [
     re_path(r"^authchain/(?P<category>[\w+:]+)/head/$", views.AuthchainHeadView.as_view(), name='authchain-head'),
     re_path(r"^bcmr/(?P<category>[\w+:]+)/$", views.get_contents, name='bcmr-get-contents'),
     re_path(r"^bcmr/(?P<category>[\w+:]+)/token/$", views.get_token, name='bcmr-get-token'),
+    re_path(r"^bcmr/(?P<category>[\w+:]+)/token/nfts/(?P<commitment>[\w+:]+)/$", views.get_token_nft, name='bcmr-get-token-nft'),
     re_path(r"^bcmr/(?P<category>[\w+:]+)/uris/$", views.get_uris, name='bcmr-get-uris'),
-    re_path(r"^bcmr/(?P<category>[\w+:]+)/uris/icon$", views.get_icon_uri, name='bcmr-get-icon-uri')
+    re_path(r"^bcmr/(?P<category>[\w+:]+)/uris/icon$", views.get_icon_uri, name='bcmr-get-icon-uri'),
+    
 ]
