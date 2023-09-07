@@ -31,7 +31,7 @@ def get_token(request, category):
                 ).latest('id')
         if registry.contents:
             bcmr = BitcoinCashMetadataRegistry(registry.contents)
-            return JsonResponse(bcmr.get_token())
+            return JsonResponse(bcmr.get_token() or {})
         else: 
             return JsonResponse({'error': 'Registry identity found, but with no contents'}, status=404)
     
@@ -48,7 +48,7 @@ def get_uris(request, category):
                 ).latest('id')
         if registry.contents:
             bcmr = BitcoinCashMetadataRegistry(registry.contents)
-            return JsonResponse(bcmr.get_uris())
+            return JsonResponse(bcmr.get_uris() or {})
         else: 
             return JsonResponse({'error': 'Registry identity found, but with no contents'}, status=404)
     
@@ -88,7 +88,7 @@ def get_token_nft(request, category):
         if registry.contents:
             bcmr = BitcoinCashMetadataRegistry(registry.contents)
             if bcmr.get_nft(commitment):
-                return JsonResponse(bcmr.get_nft(commitment))
+                return JsonResponse(bcmr.get_nft(commitment) or {})
             else:
                 return JsonResponse({'error': f'Nft with commitment {commitment} not found'}, status=404)
         else: 
