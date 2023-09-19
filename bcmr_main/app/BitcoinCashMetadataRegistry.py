@@ -32,7 +32,12 @@ class BitcoinCashMetadataRegistry:
       return self.get_identity_snapshot().get('uris')
 
   def get_icon_uri(self):
-    self.get_uris().get('icon')
+    try:
+      return self.get_uris().get('icon')
+    except AttributeError:
+      pass
+
+    
     
   def get_token(self):
     if self.get_identity_snapshot():

@@ -18,9 +18,9 @@ def get_contents(request, category):
             return JsonResponse({'error': 'Registry identity found, but with no contents'}, status=404)
     
     except Registry.DoesNotExist:
-        return JsonResponse(status=404)
+        return JsonResponse({'error': 'Registry not found'}, status=404)
     except:
-        return JsonResponse(status=400)
+        return JsonResponse({'error': 'Bad request'}, status=400)
 
 
 @api_view(['GET'])
@@ -39,9 +39,9 @@ def get_token(request, category):
             return JsonResponse({'error': 'Registry identity found, but with no contents'}, status=404)
     
     except Registry.DoesNotExist:
-        return JsonResponse(status=404)
+        return JsonResponse({'error': 'Registry not found'}, status=404)
     except:
-        return JsonResponse(status=400)
+        return JsonResponse({'error': 'Bad request'}, status=400)
 
 @api_view(['GET'])
 def get_uris(request, category):
@@ -59,9 +59,9 @@ def get_uris(request, category):
             return JsonResponse({'error': 'Registry identity found, but with no contents'}, status=404)
     
     except Registry.DoesNotExist:
-        return JsonResponse(status=404)
+        return JsonResponse({'error': 'Registry not found'}, status=404)
     except:
-        return JsonResponse(status=400)
+        return JsonResponse({'error': 'Bad request'}, status=400)
     
 @api_view(['GET'])
 def get_icon_uri(request, category):
@@ -80,9 +80,9 @@ def get_icon_uri(request, category):
             return JsonResponse({'error': 'Registry identity found, but with no contents'}, status=404)
     
     except Registry.DoesNotExist:
-        return JsonResponse(status=404)
+        return JsonResponse({'error': 'Registry not found'}, status=404)
     except:
-        return JsonResponse(status=400)
+        return JsonResponse({'error': 'Bad request'}, status=400)
     
 @api_view(['GET'])
 def get_token_nft(request, category, commitment):
