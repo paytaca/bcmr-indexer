@@ -104,4 +104,27 @@ def get_token_nft(request, category, commitment):
         return JsonResponse({'error': 'Category not found'}, status=404)
     except:
         return JsonResponse({'error': 'Bad request'}, status=400)
+
+@api_view(['GET'])
+def get_published_url(request, category):
+    """
+    The url published on the op_return
+    """
+    try:
+        registry = Registry.objects.filter(
+                    contents__contains={'registryIdentity': category}
+                ).latest('id')
+        
+        if registry.contents:
+            if registry.bcmr_url:
+                return JsonResponse({'url': registry.bcmr_url})
+            else:
+                return JsonResponse({'url': ''})
+        else: 
+            return JsonResponse({'error': 'Registry identity found, but with no contents'}, status=404)
     
+    except Registry.DoesNotExist:
+        return JsonResponse({'error': 'Category not found'}, status=404)
+    except:
+        return JsonResponse({'error': 'Bad request'}, status=400)
+

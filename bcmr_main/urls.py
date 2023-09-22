@@ -25,5 +25,6 @@ urlpatterns += [
     re_path(r"^bcmr/(?P<category>[\w+:]+)/token/nfts/(?P<commitment>[\w+:]+)/$", views.get_token_nft, name='bcmr-get-token-nft'),
     re_path(r"^bcmr/(?P<category>[\w+:]+)/uris/$", views.get_uris, name='bcmr-get-uris'),
     re_path(r"^bcmr/(?P<category>[\w+:]+)/uris/icon$", views.get_icon_uri, name='bcmr-get-icon-uri'),
+    re_path(r"^bcmr/(?P<category>[\w+:]+)/uris/published-url$", views.get_published_url, name='bcmr-get-published-uri'),
     
 ]
