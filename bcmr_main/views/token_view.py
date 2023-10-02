@@ -29,7 +29,16 @@ class TokenView(APIView):
 
         metadata = None
         if token:
-            token_metadata = TokenMetadata.objects.filter(token=token).order_by('date_created', 'registry_id').last()
+            if type_key:
+                token_metadata = TokenMetadata.objects.filter(
+                    token=token,
+                    metadata_type='type'
+                ).order_by('date_created', 'registry_id').last()
+            else:
+                token_metadata = TokenMetadata.objects.filter(
+                    token=token,
+                    metadata_type='category'
+                ).order_by('date_created', 'registry_id').last()  
             if token_metadata:
                 metadata = token_metadata.contents
         
