@@ -49,7 +49,7 @@ class BitcoinCashMetadataRegistry:
     
   def get_nft(self, commitment):
     try:
-      return self.get_token().get('nfts').get('types').get(commitment)
+      return self.get_token().get('nfts').get('parse').get('types').get(commitment)
     except AttributeError:
       pass
 
