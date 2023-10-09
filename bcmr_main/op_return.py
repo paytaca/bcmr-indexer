@@ -89,23 +89,28 @@ def process_op_return(
     contents = None
 
     validity_checks['bcmr_file_accessible'] = status_code == 200
+    proceed = False
     if status_code == 200:
-        encoded_response_json_hash = encode_str(response.text)
-        # if (
-        #     decoded_bcmr_json_hash == encoded_response_json_hash or  # bitcats (encoded before being hashed)
-        #     encoded_bcmr_json_hash == encoded_response_json_hash     # matthieu wallet (simple hash of BCMR json, no prior encoding)
-        # ):
-        if encoded_response_json_hash in [decoded_bcmr_json_hash, encoded_bcmr_json_hash]:
-            validity_checks['bcmr_hash_match'] = True
-        else:
-            validity_checks['bcmr_hash_match'] = False
-            log_invalid_op_return(txid, encoded_response_json_hash, [decoded_bcmr_json_hash, encoded_bcmr_json_hash])
-        try:
-            contents = response.json()
-            registry_obj.contents = contents
-            registry_obj.save()
-        except requests.exceptions.JSONDecodeError:
-            pass
+        if registry_obj.allow_hash_mismatch:
+            proceed = True
+
+        if proceed:
+            encoded_response_json_hash = encode_str(response.text)
+            # if (
+            #     decoded_bcmr_json_hash == encoded_response_json_hash or  # bitcats (encoded before being hashed)
+            #     encoded_bcmr_json_hash == encoded_response_json_hash     # matthieu wallet (simple hash of BCMR json, no prior encoding)
+            # ):
+            if encoded_response_json_hash in [decoded_bcmr_json_hash, encoded_bcmr_json_hash]:
+                validity_checks['bcmr_hash_match'] = True
+            else:
+                validity_checks['bcmr_hash_match'] = False
+                log_invalid_op_return(txid, encoded_response_json_hash, [decoded_bcmr_json_hash, encoded_bcmr_json_hash])
+            try:
+                contents = response.json()
+                registry_obj.contents = contents
+                registry_obj.save()
+            except requests.exceptions.JSONDecodeError:
+                pass
     else:
         LOGGER.info(f'Something\'s wrong in fetching BCMR --- {decoded_bcmr_url} - {status_code}')
 

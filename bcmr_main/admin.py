@@ -92,6 +92,7 @@ class RegistryAdmin(admin.ModelAdmin):
         'txid',
         'index',
         'valid',
+        'allow_hash_mismatch',
         'date_created',
     ]
 

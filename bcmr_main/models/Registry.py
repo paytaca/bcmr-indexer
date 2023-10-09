@@ -16,6 +16,7 @@ class Registry(models.Model):
     bcmr_url = models.TextField(default='')
     bcmr_request_status = models.IntegerField(null=True, blank=True)
     validity_checks = models.JSONField(null=True, blank=True)
+    allow_hash_mismatch = models.BooleanField(default=False)
     date_created = models.DateTimeField(null=True, blank=True)
     generated_metadata = models.DateTimeField(null=True, blank=True)
 
