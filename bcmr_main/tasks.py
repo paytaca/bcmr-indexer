@@ -332,3 +332,18 @@ def resolve_metadata():
         generate_token_metadata(registry)
         registry.generated_metadata = timezone.now()
         registry.save()
+
+
+@shared_task(queue='celery_periodic_tasks')
+def watch_registry_changes():
+    registries = Registry.objects.filter(watch_for_changes=True)
+    for registry in registries:
+        process_op_return(
+            registry.txid,
+            registry.index,
+            registry.op_return,
+            registry.publisher,
+            registry.date_created
+        )
+
+        generate_token_metadata(registry)

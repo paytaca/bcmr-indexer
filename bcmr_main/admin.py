@@ -93,6 +93,7 @@ class RegistryAdmin(admin.ModelAdmin):
         'index',
         'valid',
         'allow_hash_mismatch',
+        'watch_for_changes',
         'date_created',
     ]
 
