@@ -324,9 +324,12 @@ def recheck_unconfirmed_txn_details():
         output.save()
 
 
-@shared_task(queue='celery_periodic_tasks')
-def resolve_metadata():
-    registries = Registry.objects.filter(generated_metadata__isnull=True).order_by('date_created')
+@shared_task(queue='resolve_metadata')
+def resolve_metadata(registry_id=None):
+    if registry_id:
+        registries = Registry.objects.filter(id=registry_id)
+    else:
+        registries = Registry.objects.filter(generated_metadata__isnull=True).order_by('date_created')
     for registry in registries:
         LOGGER.info(f'GENERATING METADATA FOR REGISRTY ID #{registry.id}')
         generate_token_metadata(registry)
@@ -334,7 +337,7 @@ def resolve_metadata():
         registry.save()
 
 
-@shared_task(queue='celery_periodic_tasks')
+@shared_task(queue='watch_registry_changes')
 def watch_registry_changes():
     registries = Registry.objects.filter(watch_for_changes=True)
     for registry in registries:
@@ -346,4 +349,5 @@ def watch_registry_changes():
             registry.date_created
         )
 
-        generate_token_metadata(registry)
+        resolve_metadata.delay(registry.id)
+        # generate_token_metadata(registry)
