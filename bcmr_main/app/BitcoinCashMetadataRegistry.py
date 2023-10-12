@@ -27,9 +27,17 @@ class BitcoinCashMetadataRegistry:
       if self.identities:
         return self.identities.get(self.registryIdentity).get(self.get_identity_history_timestamp())
 
-  def get_icon_uri(self):
+  def get_uris(self):
     if self.get_identity_snapshot():
-      return self.get_identity_snapshot().get('uris').get('icon')
+      return self.get_identity_snapshot().get('uris')
+
+  def get_icon_uri(self):
+    try:
+      return self.get_uris().get('icon')
+    except AttributeError:
+      pass
+
+    
     
   def get_token(self):
     if self.get_identity_snapshot():
@@ -38,7 +46,13 @@ class BitcoinCashMetadataRegistry:
   def get_symbol(self):
     if self.get_token():
       return self.get_token().get('symbol')
-  
+    
+  def get_nft(self, commitment):
+    try:
+      return self.get_token().get('nfts').get('parse').get('types').get(commitment)
+    except AttributeError:
+      pass
+
   def validate(self):
     BitcoinCashMetadataRegistry.validate_contents(self.contents)
 

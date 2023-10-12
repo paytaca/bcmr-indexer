@@ -11,8 +11,7 @@ class TokenIconSymbolView(APIView):
     def get(self, request, *args, **kwargs):
         category = kwargs.get('category', '')
         token = None
-
-        
+        response = {}
         try:
           token = Token.objects.get(
             category=category
