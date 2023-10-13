@@ -26,6 +26,8 @@ class BitcoinCashMetadataRegistry:
     if self.registryIdentity and type(self.registryIdentity) == str:
       if self.identities:
         return self.identities.get(self.registryIdentity).get(self.get_identity_history_timestamp())
+    else:
+      self.registryIdentity
 
   def get_uris(self):
     if self.get_identity_snapshot():
@@ -36,8 +38,6 @@ class BitcoinCashMetadataRegistry:
       return self.get_uris().get('icon')
     except AttributeError:
       pass
-
-    
     
   def get_token(self):
     if self.get_identity_snapshot():
