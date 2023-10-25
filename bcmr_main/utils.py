@@ -31,10 +31,16 @@ def encode_str(raw_string):
 
 def decode_url(encoded_url):
     decoded_bcmr_url = decode_str(encoded_url)
-    if not decoded_bcmr_url.startswith('ipfs://'):
-        decoded_bcmr_url = 'https://' + decoded_bcmr_url.strip()
-        if not decoded_bcmr_url.endswith('.json'):
-            decoded_bcmr_url = decoded_bcmr_url.rstrip('/') + '/.well-known/bitcoin-cash-metadata-registry.json'
+    if '.' in decoded_bcmr_url:
+        if not decoded_bcmr_url.startswith('https://'):
+            decoded_bcmr_url = 'https://' + decoded_bcmr_url
+    else:
+        if not decoded_bcmr_url.startswith('ipfs://'):
+            decoded_bcmr_url = 'ipfs://' + decoded_bcmr_url
+    # if not decoded_bcmr_url.startswith('ipfs://'):
+    #     decoded_bcmr_url = 'https://' + decoded_bcmr_url.strip()
+    #     if not decoded_bcmr_url.endswith('.json'):
+    #         decoded_bcmr_url = decoded_bcmr_url.rstrip('/') + '/.well-known/bitcoin-cash-metadata-registry.json'
     return decoded_bcmr_url
 
 
