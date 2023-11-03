@@ -1,17 +1,87 @@
+
+
+import time
+import logging
+import simplejson as json
 from django.db.models import Q
 from django.conf import settings
+from bcmr_main.app.BitcoinCashMetadataRegistry import BitcoinCashMetadataRegistry
 from celery import shared_task
 from django.db.models import Max
-import simplejson as json
+from jsonschema import ValidationError
 from bcmr_main.op_return import *
 from bcmr_main.bchn import BCHN
 from bcmr_main.models import *
 from bcmr_main.utils import timestamp_to_date
-import logging
-
+from bitcoinrpc.authproxy import AuthServiceProxy
 
 LOGGER = logging.getLogger(__name__)
 
+def load_registry(txid, op_return_output):
+    """
+    Load the decoded op_return output to the Registry table
+    """
+    compute_hash = encode_str
+    if Registry.objects.filter(txid=txid).exists():
+        return
+    if op_return_output['scriptPubKey']['type'] == 'nulldata' and op_return_output['scriptPubKey']['asm'].startswith('OP_RETURN'):
+        asm_arr = op_return_output['scriptPubKey'].get('asm').split(' ') 
+        if len(asm_arr) >= 4:  
+            published_content_hash_hex = asm_arr[2]
+            published_uris_hex = asm_arr[3]
+            published_uris_string = bytes.fromhex(published_uris_hex).decode('utf-8')
+            published_uris_string = published_uris_string.split(';')
+            registry_contents = None
+            published_uri = None
+            response = None
+            for uri in published_uris_string:
+                LOGGER.info(msg=f'Found {uri}')
+                if '.' in uri:
+                    if not uri.startswith('https://'):
+                        uri = 'https://' + uri
+                    LOGGER.info(msg=f'Requesting registry from {uri}')
+                    response = requests.get(uri)
+                else:
+                    if not uri.startswith('ipfs://'):
+                        uri = 'ipfs://' + uri
+                    LOGGER.info(msg=f'Requesting registry from {uri}')
+                    response = download_ipfs_bcmr_data(uri)    
+                if response.status_code == 200:
+                    LOGGER.info(msg=f'Requesting success from {uri}')
+                    registry_contents = response.text
+                    published_uri = uri
+                    break
+            
+            if registry_contents:
+                published_content_hash = bytes.fromhex(published_content_hash_hex).decode() 
+                dns_resolved_content_hash = compute_hash(registry_contents)
+                validity_checks = {
+                    'bcmr_file_accessible': True,
+                    'bcmr_hash_match': published_content_hash == dns_resolved_content_hash,
+                    'identities_match': None
+                }
+                try:
+                    BitcoinCashMetadataRegistry.validate_contents(registry_contents)
+                except ValidationError: 
+                    pass 
+                try:
+                    Registry.objects.get_or_create(
+                        txid=txid,
+                        op_return=op_return_output['scriptPubKey'].get('asm'),
+                        defaults={
+                            'txid': txid,
+                            'index': op_return_output['n'],
+                            'validity_checks': validity_checks,
+                            'op_return': op_return_output['scriptPubKey'].get('asm'),
+                            'bcmr_url': published_uri,
+                            'contents': json.loads(registry_contents),
+                            'bcmr_request_status': response.status_code
+                        }
+                    )
+                except Exception as e:
+                    LOGGER.info(msg='Registry get_or_create error')
+                    LOGGER.info(msg=e)
+           
 
 def generate_token_identity(token_data):
     token_identity = ''
@@ -351,3 +421,27 @@ def watch_registry_changes():
 
         resolve_metadata.delay(registry.id)
         # generate_token_metadata(registry)
+
+@shared_task(queue='mempool_worker_queue')
+def process_op_return_from_mempool(raw_tx_hex:str):
+    rpc_connection = AuthServiceProxy(settings.BCHN_NODE)
+    max_retries = 20
+    retries = 0
+    decoded_txn = None
+    while retries < max_retries:
+        try:
+            LOGGER.info(f'@process_op_return_from_mempool: Trying to decode raw transaction')
+            decoded_txn = rpc_connection.decoderawtransaction(raw_tx_hex)
+            break
+        except Exception as exception:
+            retries += 1
+            if retries >= max_retries:
+                LOGGER.info(f'@process_op_return_from_mempool: Error decoding raw hex tx')
+                raise exception
+            time.sleep(1)
+    
+    if decoded_txn:
+        outputs = decoded_txn.get('vout')
+        for output in outputs:
+            if output['scriptPubKey']['type'] == 'nulldata' and output['scriptPubKey']['asm'].startswith('OP_RETURN'):
+                load_registry(decoded_txn['txid'], output)

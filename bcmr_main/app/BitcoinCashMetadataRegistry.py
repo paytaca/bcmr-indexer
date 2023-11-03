@@ -2,7 +2,7 @@
 import json
 from typing import Dict
 from jsonschema import validate
-
+from django.conf import settings
 class BitcoinCashMetadataRegistry:
   def __init__(self, contents:Dict) -> None:
     self.contents = contents
@@ -68,7 +68,7 @@ class BitcoinCashMetadataRegistry:
 
   @staticmethod
   def validate_contents(contents):
-    with open('./bcmr-schema-v2.json', 'r') as bcmr_schema_file:
+    with open(f'{settings.BASE_DIR}/bcmr_main/app/bcmr-schema-v2.json', 'r') as bcmr_schema_file:
       bcmr_schema = json.load(bcmr_schema_file)
       validate(instance=contents, schema=bcmr_schema)
     
