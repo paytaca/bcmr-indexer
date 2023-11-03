@@ -16,6 +16,7 @@ from bcmr_main.app.BitcoinCashMetadataRegistry import BitcoinCashMetadataRegistr
 
 import logging
 from bcmr_main.utils import encode_str
+from bcmr_main.tasks import process_op_return_from_mempool
 import zmq
 from bitcoinrpc.authproxy import AuthServiceProxy
 
@@ -103,14 +104,15 @@ class ZMQHandler():
                 body = msg[1]
                 if topic == "rawtx":
                     try:
-                        decoded = self.rpc_connection.decoderawtransaction(body.hex())
-                        outputs = decoded.get('vout')
-                        for output in outputs:
-                            if output['scriptPubKey']['type'] == 'nulldata' and output['scriptPubKey']['asm'].startswith('OP_RETURN'):
-                                t = threading.Thread(target=load_registry, args=(decoded['txid'],output))
-                                t.start()
+                        process_op_return_from_mempool.delay(body.hex())
+                        # decoded = self.rpc_connection.decoderawtransaction(body.hex())
+                        # outputs = decoded.get('vout')
+                        # for output in outputs:
+                        #     if output['scriptPubKey']['type'] == 'nulldata' and output['scriptPubKey']['asm'].startswith('OP_RETURN'):
+                        #         t = threading.Thread(target=load_registry, args=(decoded['txid'],output))
+                        #         t.start()
                     except Exception as e:
-                        LOGGER.info(msg='Error decoding raw transaction')
+                        LOGGER.info(msg='Error processing op_return from mempool')
                 
         except KeyboardInterrupt:
             self.zmqContext.destroy()
