@@ -13,16 +13,6 @@ services:
       - /home/ubuntu/paytaca-bcmr/compose/.env_mainnet
     expose:
       - "5432"
-  zmq:
-    image: cagataygurturk/docker-ssh-tunnel
-    volumes:
-      - /home/ubuntu/.ssh:/root/ssh:ro
-    environment:
-      SSH_DEBUG: "-v"
-      TUNNEL_HOST: bchn-mainnet
-      REMOTE_HOST: "${BCHN_MAINNET_HOST}"
-      LOCAL_PORT: 28332
-      REMOTE_PORT: 28332
   redis:
     image: "redis:alpine"
     env_file:
