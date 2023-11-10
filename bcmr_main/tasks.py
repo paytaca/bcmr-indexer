@@ -182,45 +182,41 @@ def _process_tx(tx, bchn):
 
     parents = IdentityOutput.objects.filter(txid__in=input_txids)
 
-    # detect genesis
-    genesis = False
-    category = None
-    input_zero_txid = inputs[0].get('txid')
-    if token_outputs:
-        token_categories = list(map(lambda x: x['tokenData']['category'], token_outputs))
-        genesis = input_zero_txid in token_categories
-        if genesis:
-            category = input_zero_txid
-
-    # parse and save tokens
+    # detect token genesis
+    input_txids = [x.get('txid') for x in inputs if x.get('txid')]
+    tokens_created = []  # list of category IDs
     for obj in token_outputs:
         token_data = obj['tokenData']
         category = token_data['category']
-        capability = None
-        commitment = None
-        is_nft = 'nft' in token_data.keys()
 
-        if is_nft:
-            nft_data = token_data['nft']
-            commitment = nft_data['commitment']
-            capability = nft_data['capability']
-        
-        amount = None
-        if token_data['amount']:
-            amount = int(token_data['amount'])
+        if category in input_txids:
+            tokens_created.append(category)
+            
+            capability = None
+            commitment = None
+            is_nft = 'nft' in token_data.keys()
 
-        save_token(
-            tx_hash,
-            category,
-            amount,
-            commitment=commitment,
-            capability=capability,
-            is_nft=is_nft,
-            date_created=time
-        )
+            if is_nft:
+                nft_data = token_data['nft']
+                commitment = nft_data['commitment']
+                capability = nft_data['capability']
+            
+            amount = None
+            if token_data['amount']:
+                amount = int(token_data['amount'])
 
-    if genesis:
-        # save authbase tx
+            save_token(
+                tx_hash,
+                category,
+                amount,
+                commitment=commitment,
+                capability=capability,
+                is_nft=is_nft,
+                date_created=time
+            )
+
+    # save authbase tx
+    if tokens_created:
         authbase_tx = bchn._get_raw_transaction(category)
         output_data = {}
         output_data['block'] = block
@@ -228,8 +224,59 @@ def _process_tx(tx, bchn):
         output_data['txid'] = category
         output_data['authbase'] = True
         output_data['genesis'] = False
-        output_data['identities'] = [category]
+        output_data['identities'] = tokens_created
         save_output(**output_data)
+
+    # # detect genesis
+    # genesis = False
+    # category = None
+    # input_txids = [x.get('txid') for x in inputs if x.get('txid')]
+    # input_zero_txid = inputs[0].get('txid')
+    # # if token_outputs:
+    # #     token_categories = list(map(lambda x: x['tokenData']['category'], token_outputs))
+    # #     genesis = input_zero_txid in token_categories
+    # #     if genesis:
+    # #         category = input_zero_txid
+
+    # # parse and save tokens
+    # identities = []
+    # for obj in token_outputs:
+    #     token_data = obj['tokenData']
+    #     category = token_data['category']
+    #     capability = None
+    #     commitment = None
+    #     is_nft = 'nft' in token_data.keys()
+
+    #     if is_nft:
+    #         nft_data = token_data['nft']
+    #         commitment = nft_data['commitment']
+    #         capability = nft_data['capability']
+        
+    #     amount = None
+    #     if token_data['amount']:
+    #         amount = int(token_data['amount'])
+
+    #     save_token(
+    #         tx_hash,
+    #         category,
+    #         amount,
+    #         commitment=commitment,
+    #         capability=capability,
+    #         is_nft=is_nft,
+    #         date_created=time
+    #     )
+
+    # if genesis:
+    #     # save authbase tx
+    #     authbase_tx = bchn._get_raw_transaction(category)
+    #     output_data = {}
+    #     output_data['block'] = block
+    #     output_data['address'] = authbase_tx['vout'][0]['scriptPubKey']['addresses'][0]
+    #     output_data['txid'] = category
+    #     output_data['authbase'] = True
+    #     output_data['genesis'] = False
+    #     output_data['identities'] = [category]
+    #     save_output(**output_data)
 
     if parents.count():
         print('---PARENTS FOUND:', [x.txid for x in parents])
@@ -240,18 +287,18 @@ def _process_tx(tx, bchn):
         else:
             recipient = identity_output['scriptPubKey']['addresses'][0]
 
-        identities = []
+        parent_identities = []
         for _parent in parents:
             if _parent.identities:
-                identities += list(_parent.identities)
+                parent_identities += list(_parent.identities)
         output_data = {
             'txid': tx_hash,
             'block': block,
             'address': recipient,
             'authbase': False,
-            'genesis': genesis,
+            'genesis': len(tokens_created) > 0,
             'spender': None,
-            'identities': list(set(identities)),
+            'identities': list(set(parent_identities)),
             'date': time
         }
         save_output(**output_data)
@@ -272,14 +319,6 @@ def _process_tx(tx, bchn):
                 'publisher': current_output,
                 'date': time
             })
-        
-        # send_webhook_token_update(
-        #     category,
-        #     index,
-        #     tx_hash,
-        #     commitment=commitment,
-        #     capability=capability
-        # )
 
 
 def _get_ancestors(tx, bchn=None, ancestors=[]):
