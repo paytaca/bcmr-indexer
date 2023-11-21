@@ -68,7 +68,7 @@ def generate_token_metadata(registry_obj):
                                     nft_token_metadata, _ = TokenMetadata.objects.get_or_create(
                                         token=nft_token,
                                         registry=registry_obj,
-                                        identity=IdentityOutput.objects.get(txid=identity),
+                                        identity=registry_obj.publisher,
                                         metadata_type='type'
                                     )
                                     nft_token_metadata.contents = _metadata
@@ -84,7 +84,7 @@ def generate_token_metadata(registry_obj):
                             token_metadata, _ = TokenMetadata.objects.get_or_create(
                                 token=token,
                                 registry=registry_obj,
-                                identity=IdentityOutput.objects.get(txid=identity),
+                                identity=registry_obj.publisher,
                                 metadata_type='category'
                             )
                             token_metadata.contents = _metadata
@@ -97,7 +97,7 @@ def generate_token_metadata(registry_obj):
                             token_metadata, _ = TokenMetadata.objects.get_or_create(
                                 token=token,
                                 registry=registry_obj,
-                                identity=IdentityOutput.objects.get(txid=identity),
+                                identity=registry_obj.publisher,
                                 metadata_type='category'
                             )
                             token_metadata.contents = _metadata
