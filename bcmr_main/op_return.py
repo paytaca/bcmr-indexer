@@ -117,8 +117,10 @@ def process_op_return(
                     LOGGER.info(f'Saving content for registry ID # {registry_obj.id}')
                     contents = copy.deepcopy(response.text)
                     registry_obj.contents = json.loads(contents)
-                except requests.exceptions.JSONDecodeError:
+                except json.decoder.JSONDecodeError:
                     pass
+                # except requests.exceptions.JSONDecodeError:
+                #     pass
         else:
             LOGGER.info(f'Something\'s wrong in fetching BCMR --- {decoded_bcmr_url} - {status_code}')
 
