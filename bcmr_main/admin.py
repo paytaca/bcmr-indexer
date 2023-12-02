@@ -31,7 +31,8 @@ _regenerate_metadata.short_description = "Re-generate metadata"
 class TokenMetadataAdmin(admin.ModelAdmin):
 
     search_fields = [
-        'token__category'
+        'token__category',
+        'token__commitment'
     ]
 
     list_display = [

@@ -58,6 +58,9 @@ def process_op_return(
             'identities_match': None
         }
 
+        if not decoded_bcmr_url.endswith('.json'):
+            decoded_bcmr_url = decoded_bcmr_url.rstrip('/') + '/.well-known/bitcoin-cash-metadata-registry.json'
+
         registry_obj.date_created = date
         registry_obj.op_return = op_return
         registry_obj.bcmr_url = decoded_bcmr_url
@@ -119,8 +122,6 @@ def process_op_return(
                     registry_obj.contents = json.loads(contents)
                 except json.decoder.JSONDecodeError:
                     pass
-                # except requests.exceptions.JSONDecodeError:
-                #     pass
         else:
             LOGGER.info(f'Something\'s wrong in fetching BCMR --- {decoded_bcmr_url} - {status_code}')
 
