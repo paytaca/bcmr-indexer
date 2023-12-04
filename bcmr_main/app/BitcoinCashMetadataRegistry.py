@@ -31,7 +31,7 @@ class BitcoinCashMetadataRegistry:
       # but the value of identities is set
       # like bitcats and cashninjas
       if len(self.identities.keys()) > 0:
-        authbase = list(self.identities.values())
+        authbase = list(self.identities.keys())
         if authbase:
           authbase = authbase[0]
           identity_history_timestamp = list(self.identities[authbase].keys())[-1]

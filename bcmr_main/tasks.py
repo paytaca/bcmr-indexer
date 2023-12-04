@@ -192,28 +192,28 @@ def _process_tx(tx, bchn):
         if category in input_txids:
             tokens_created.append(category)
             
-            capability = None
-            commitment = None
-            is_nft = 'nft' in token_data.keys()
+        capability = None
+        commitment = None
+        is_nft = 'nft' in token_data.keys()
 
-            if is_nft:
-                nft_data = token_data['nft']
-                commitment = nft_data['commitment']
-                capability = nft_data['capability']
-            
-            amount = None
-            if token_data['amount']:
-                amount = int(token_data['amount'])
+        if is_nft:
+            nft_data = token_data['nft']
+            commitment = nft_data['commitment']
+            capability = nft_data['capability']
+        
+        amount = None
+        if token_data['amount']:
+            amount = int(token_data['amount'])
 
-            save_token(
-                tx_hash,
-                category,
-                amount,
-                commitment=commitment,
-                capability=capability,
-                is_nft=is_nft,
-                date_created=time
-            )
+        save_token(
+            tx_hash,
+            category,
+            amount,
+            commitment=commitment,
+            capability=capability,
+            is_nft=is_nft,
+            date_created=time
+        )
 
     # save authbase tx
     if tokens_created:
@@ -377,14 +377,17 @@ def _get_ancestors(tx, bchn=None, ancestors=[]):
 
 
 @shared_task(queue='process_tx')
-def process_tx(tx):
-    tx_hash = tx['txid']
+def process_tx(tx=None, tx_hash=None):
+    bchn = BCHN()
+    if tx_hash:
+        tx = bchn._get_raw_transaction(tx_hash)
+    else:
+        tx_hash = tx['txid']
     print('--- PROCESS TX:', tx_hash)
 
     if 'coinbase' in tx['vin'][0].keys():
         return
 
-    bchn = BCHN()
     ancestor_txs = _get_ancestors(tx, bchn, [])
     tx_chain = ancestor_txs + [tx]
     print('-- CHAIN:', len(tx_chain))
