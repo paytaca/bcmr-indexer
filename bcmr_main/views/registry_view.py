@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from bcmr_main.models import TokenMetadata
+from urllib.parse import urlparse
 
 
 class RegistryView(APIView):
@@ -19,8 +20,10 @@ class RegistryView(APIView):
                 registry = token_metadata.registry
                 if registry.allow_hash_mismatch and registry.watch_for_changes:
                     url = registry.bcmr_url
-                    if not url.endswith('.json'):
-                        url = url.rstrip('/') + '/.well-known/bitcoin-cash-metadata-registry.json'
+                    parsed_url = urlparse(url)
+                    if parsed_url.scheme == 'https' and parsed_url.path == '':
+                        if 'ipfs.nftstorage.link' not in url:
+                            url = url.rstrip('/') + '/.well-known/bitcoin-cash-metadata-registry.json'
                     return redirect(url)
                 else:
                     registry = token_metadata.registry

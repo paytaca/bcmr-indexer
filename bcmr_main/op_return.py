@@ -12,6 +12,7 @@ from bcmr_main.metadata import generate_token_metadata
 # from dateutil.parser import parse as parse_datetime
 # from operator import itemgetter
 from urllib3.exceptions import LocationParseError
+from urllib.parse import urlparse
 import requests
 import logging
 import copy
@@ -58,8 +59,10 @@ def process_op_return(
             'identities_match': None
         }
 
-        if not decoded_bcmr_url.endswith('.json'):
-            decoded_bcmr_url = decoded_bcmr_url.rstrip('/') + '/.well-known/bitcoin-cash-metadata-registry.json'
+        parsed_url = urlparse(decoded_bcmr_url)
+        if parsed_url.scheme == 'https' and parsed_url.path == '':
+            if 'ipfs.nftstorage.link' not in decoded_bcmr_url:
+                decoded_bcmr_url = decoded_bcmr_url.rstrip('/') + '/.well-known/bitcoin-cash-metadata-registry.json'
 
         registry_obj.date_created = date
         registry_obj.op_return = op_return
