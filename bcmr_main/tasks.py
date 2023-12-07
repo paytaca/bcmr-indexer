@@ -11,7 +11,7 @@ from django.db.models import Max
 from jsonschema import ValidationError
 from bcmr_main.op_return import *
 from bcmr_main.bchn import BCHN
-from bcmr_main.models import *
+from bcmr_main.models import
 from bcmr_main.utils import timestamp_to_date
 from bitcoinrpc.authproxy import AuthServiceProxy
 
@@ -53,7 +53,14 @@ def load_registry(txid, op_return_output):
                     break
             
             if registry_contents:
-                published_content_hash = bytes.fromhex(published_content_hash_hex).decode() 
+                # published_content_hash = ''
+                # try:
+                #     published_content_hash = bytes.fromhex(published_content_hash_hex).decode() 
+                # except UnicodeDecodeError as e:
+                #     published_content_hash = published_content_hash_hex.hex()
+                ## for older bcmr publications
+
+                published_content_hash = published_content_hash_hex.hex()
                 dns_resolved_content_hash = compute_hash(registry_contents)
                 validity_checks = {
                     'bcmr_file_accessible': True,
