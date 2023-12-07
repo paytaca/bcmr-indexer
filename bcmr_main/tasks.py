@@ -11,7 +11,7 @@ from django.db.models import Max
 from jsonschema import ValidationError
 from bcmr_main.op_return import *
 from bcmr_main.bchn import BCHN
-from bcmr_main.models import
+from bcmr_main.models import *
 from bcmr_main.utils import timestamp_to_date
 from bitcoinrpc.authproxy import AuthServiceProxy
 
