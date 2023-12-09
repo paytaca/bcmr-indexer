@@ -102,6 +102,8 @@ DATABASES = {
         'PORT': config('POSTGRES_PORT', default=5432, cast=int),
         'USER': config('POSTGRES_USER', default='postgres'),
         'PASSWORD': config('POSTGRES_PASSWORD', default='badpassword'),
+        'CONN_MAX_AGE': None,
+        'CONN_HEALTH_CHECKS': True,
         'OPTIONS': {
             'isolation_level': psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE,
         }
