@@ -87,6 +87,7 @@ class RegistryAdmin(admin.ModelAdmin):
 
     search_fields = [
         'txid',
+        'publisher__identities'
     ]
 
     list_display = [
