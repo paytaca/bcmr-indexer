@@ -494,3 +494,41 @@ def process_op_return_from_mempool(raw_tx_hex:str):
         for output in outputs:
             if output['scriptPubKey']['type'] == 'nulldata' and output['scriptPubKey']['asm'].startswith('OP_RETURN'):
                 load_registry(decoded_txn['txid'], output)
+
+
+def _get_spender_tx(txid, index):
+    url = 'https://watchtower.cash/api/transaction/spender/'
+    resp = requests.post(url, json={'txid': txid, 'index': index})
+    if resp.status_code == 200:
+        data = resp.json()
+        if data['tx_found']:
+            if data['spent']:
+                return data['spender']
+    return None
+
+
+@shared_task(queue='process_tx')
+def retrace_authchain(token_id):
+    LOGGER.info(f'CATEGORY: {token_id}')
+    token_check = Token.objects.filter(category=token_id)
+    if token_check.exists():
+        token = token_check.earliest('id')
+        txid = None
+        try:
+            LOGGER.info(f'GENESIS: {token.debut_txid}')
+            identity_output = IdentityOutput.objects.get(txid=token.debut_txid, genesis=True)
+            if identity_output.spender:
+                LOGGER.info(f' |-- {identity_output.spender.txid}')
+                txid = identity_output.spender.txid
+                while txid:
+                    txid = _get_spender_tx(txid, 0)
+                    if txid:
+                        LOGGER.info(f' |-- {txid}')
+                        process_tx(tx_hash=txid)
+                    else:
+                        LOGGER.info('-- auth head reached --')
+
+        except IdentityOutput.DoesNotExist:
+            LOGGER.info('Identity output not found')
+    else:
+        LOGGER.info('Token not found')
