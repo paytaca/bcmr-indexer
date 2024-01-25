@@ -7,20 +7,22 @@ class Token(models.Model):
         MUTABLE = 'mutable'
         NONE = 'none'
 
-    category = models.CharField(max_length=100)
+    category = models.CharField(max_length=100, db_index=True)
     debut_txid = models.CharField(max_length=100, null=True, blank=True)
     amount = models.BigIntegerField(null=True)
-    is_nft = models.BooleanField(default=False)
+    is_nft = models.BooleanField(default=False, db_index=True)
     commitment = models.CharField(
         max_length=255,
         null=True,
-        blank=True
+        blank=True,
+        db_index=True
     )
     capability = models.CharField(
         max_length=20,
         choices=Capability.choices,
         null=True,
-        blank=True
+        blank=True,
+        db_index=True
     )
     date_created = models.DateTimeField(null=True, blank=True)
 
@@ -31,16 +33,16 @@ class Token(models.Model):
             'commitment',
             'capability',
         )
-        indexes = [
-            models.Index(
-                fields=[
-                    'category',
-                    'commitment',
-                    'capability',
-                    'is_nft'
-                ]
-            )
-        ]
+        # indexes = [
+        #     models.Index(
+        #         fields=[
+        #             'category',
+        #             'commitment',
+        #             'capability',
+        #             'is_nft'
+        #         ]
+        #     )
+        # ]
 
     def __str__(self):
         fields = [self.category, self.commitment, self.capability]
@@ -72,10 +74,11 @@ class TokenMetadata(models.Model):
         max_length=20,
         choices=MetadataType.choices,
         null=True,
-        blank=True
+        blank=True,
+        db_index=True
     )
     contents = models.JSONField(null=True, blank=True)
-    date_created = models.DateTimeField(null=True)
+    date_created = models.DateTimeField(null=True, db_index=True)
 
     class Meta:
         verbose_name_plural = 'Token metadata'
@@ -86,11 +89,11 @@ class TokenMetadata(models.Model):
             'registry',
             'metadata_type'
         )
-        indexes = [
-            models.Index(
-                fields=[
-                    'metadata_type',
-                    'date_created'
-                ]
-            )
-        ]
+        # indexes = [
+        #     models.Index(
+        #         fields=[
+        #             'metadata_type',
+        #             'date_created'
+        #         ]
+        #     )
+        # ]

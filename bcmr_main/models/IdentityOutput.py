@@ -3,12 +3,12 @@ from django.contrib.postgres.fields import ArrayField
 
 
 class IdentityOutput(models.Model):
-    txid = models.CharField(max_length=100, unique=True)
+    txid = models.CharField(max_length=100, unique=True, db_index=True)
     block = models.PositiveIntegerField(null=True, blank=True)
     address = models.CharField(max_length=128, null=True, blank=True)
-    authbase = models.BooleanField(default=False)
+    authbase = models.BooleanField(default=False, db_index=True)
     genesis = models.BooleanField(default=False)
-    spent = models.BooleanField(default=False)
+    spent = models.BooleanField(default=False, db_index=True)
     spender = models.ForeignKey(
         'self',
         on_delete=models.CASCADE,
@@ -24,9 +24,9 @@ class IdentityOutput(models.Model):
     class Meta:
         verbose_name_plural = 'Identity Outputs'
         ordering = ('-id', )
-        indexes = [
-            models.Index(fields=['txid', 'spent', 'authbase'])
-        ]
+        # indexes = [
+        #     models.Index(fields=['txid', 'spent', 'authbase'])
+        # ]
 
     def _retrieve_identities(self, parents, identities=[]):
         _parents = []

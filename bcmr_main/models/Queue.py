@@ -10,10 +10,10 @@ class QueuedTransaction(models.Model):
     class Meta:
         verbose_name_plural = 'Queued transactions'
         get_latest_by = 'date_created'
-        indexes = [
-            models.Index(
-                fields=[
-                    'txid'
-                ]
-            )
-        ]
+        # indexes = [
+        #     models.Index(
+        #         fields=[
+        #             'txid'
+        #         ]
+        #     )
+        # ]

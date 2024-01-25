@@ -234,59 +234,8 @@ def _process_tx(tx, bchn):
         output_data['identities'] = tokens_created
         save_output(**output_data)
 
-    # # detect genesis
-    # genesis = False
-    # category = None
-    # input_txids = [x.get('txid') for x in inputs if x.get('txid')]
-    # input_zero_txid = inputs[0].get('txid')
-    # # if token_outputs:
-    # #     token_categories = list(map(lambda x: x['tokenData']['category'], token_outputs))
-    # #     genesis = input_zero_txid in token_categories
-    # #     if genesis:
-    # #         category = input_zero_txid
-
-    # # parse and save tokens
-    # identities = []
-    # for obj in token_outputs:
-    #     token_data = obj['tokenData']
-    #     category = token_data['category']
-    #     capability = None
-    #     commitment = None
-    #     is_nft = 'nft' in token_data.keys()
-
-    #     if is_nft:
-    #         nft_data = token_data['nft']
-    #         commitment = nft_data['commitment']
-    #         capability = nft_data['capability']
-        
-    #     amount = None
-    #     if token_data['amount']:
-    #         amount = int(token_data['amount'])
-
-    #     save_token(
-    #         tx_hash,
-    #         category,
-    #         amount,
-    #         commitment=commitment,
-    #         capability=capability,
-    #         is_nft=is_nft,
-    #         date_created=time
-    #     )
-
-    # if genesis:
-    #     # save authbase tx
-    #     authbase_tx = bchn._get_raw_transaction(category)
-    #     output_data = {}
-    #     output_data['block'] = block
-    #     output_data['address'] = authbase_tx['vout'][0]['scriptPubKey']['addresses'][0]
-    #     output_data['txid'] = category
-    #     output_data['authbase'] = True
-    #     output_data['genesis'] = False
-    #     output_data['identities'] = [category]
-    #     save_output(**output_data)
-
     if parents.count():
-        print('---PARENTS FOUND:', [x.txid for x in parents])
+        LOGGER.info(f'---PARENTS FOUND: {str([x.txid for x in parents])}')
         # save current identity output
         recipient = ''
         if identity_output['scriptPubKey']['type'] == 'nulldata':
@@ -359,12 +308,11 @@ def _get_ancestors(tx, bchn=None, ancestors=[]):
                     proceed = False
                     break
 
-    # Limit recursion to up to 2 ancestors deep only
-    # Anyway, in an exhaustive scan from the block height when cashtokens was
+    # In an exhaustive scan from the block height when cashtokens was
     # activated we only really need to look for the first ancestor to check
-    # if it spends an identity output. Going 2 ancestors deep is just considered
-    # here just in case any authbase identity outputs are somehow missed.
-    if len(ancestors) >= 2:
+    # if it spends an identity output. Going 2 or more ancestors deep is just considered
+    # in case any authbase identity outputs are somehow missed.
+    if len(ancestors) >= 1:
         proceed = False
 
     if proceed:
@@ -390,15 +338,12 @@ def process_tx(tx=None, tx_hash=None):
         tx = bchn._get_raw_transaction(tx_hash)
     else:
         tx_hash = tx['txid']
-    print('--- PROCESS TX:', tx_hash)
 
     if 'coinbase' in tx['vin'][0].keys():
         return
 
     ancestor_txs = _get_ancestors(tx, bchn, [])
     tx_chain = ancestor_txs + [tx]
-    print('-- CHAIN:', len(tx_chain))
-
     for txn in tx_chain:
         _process_tx(txn, bchn)
 

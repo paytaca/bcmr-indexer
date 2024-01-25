@@ -2,7 +2,7 @@ from django.db import models
 
 
 class BlockScan(models.Model):
-    height = models.IntegerField(default=1)
+    height = models.IntegerField(default=1, db_index=True)
     transactions = models.IntegerField(default=0)
     scan_started = models.DateTimeField(null=True)
     scan_completed = models.DateTimeField(null=True)
