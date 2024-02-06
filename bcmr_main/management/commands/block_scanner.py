@@ -20,7 +20,8 @@ class Command(BaseCommand):
 
         ct_activation_block = 792773
         if settings.NETWORK == 'chipnet':
-            ct_activation_block = 120000
+            # ct_activation_block = 120000
+            ct_activation_block = 186438
             
         while True:
             latest_block = node.get_latest_block()

@@ -68,7 +68,29 @@ class BitcoinCashMetadataRegistry:
 
   @staticmethod
   def validate_contents(contents):
+    
     with open(f'{settings.BASE_DIR}/bcmr_main/app/bcmr-schema-v2.json', 'r') as bcmr_schema_file:
       bcmr_schema = json.load(bcmr_schema_file)
-      validate(instance=contents, schema=bcmr_schema)
+      validate(instance=json.loads(contents) if type(contents) == str else contents, schema=bcmr_schema)
+
+  @staticmethod
+  def get_token_categories(contents) -> [str]:
+    """
+    Returns all the token categories on the registry
+    return: 
+    """
+
+    BitcoinCashMetadataRegistry.validate_contents(contents)
+
+    registry = json.loads(contents) if type(contents) == str else contents
+    
+    token_categories = []
+    identities = list(registry.get('identities').keys())
+    for identity in identities:
+      identity_histories = registry['identities'][identity].keys()
+      for timestamp in identity_histories:
+        token_categories.append(registry['identities'][identity][timestamp]['token'].get('category'))
+    return token_categories
+
+
     

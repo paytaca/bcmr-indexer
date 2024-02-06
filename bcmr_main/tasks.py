@@ -22,6 +22,7 @@ def load_registry(txid, op_return_output):
     Load the decoded op_return output to the Registry table
     """
     compute_hash = encode_str
+    LOGGER.info('LOADING REGISTRY')
     if Registry.objects.filter(txid=txid).exists():
         return
     if op_return_output['scriptPubKey']['type'] == 'nulldata' and op_return_output['scriptPubKey']['asm'].startswith('OP_RETURN'):
@@ -60,7 +61,7 @@ def load_registry(txid, op_return_output):
                 #     published_content_hash = published_content_hash_hex.hex()
                 ## for older bcmr publications
 
-                published_content_hash = published_content_hash_hex.hex()
+                published_content_hash = published_content_hash_hex
                 dns_resolved_content_hash = compute_hash(registry_contents)
                 validity_checks = {
                     'bcmr_file_accessible': True,
@@ -69,8 +70,12 @@ def load_registry(txid, op_return_output):
                 }
                 try:
                     BitcoinCashMetadataRegistry.validate_contents(registry_contents)
+                    LOGGER.info('TOKEN CATEGORIESS')
+                    
                 except ValidationError: 
-                    pass 
+                    LOGGER.info('Validation Error')
+
+                LOGGER.info(BitcoinCashMetadataRegistry.get_token_categories(registry_contents))
                 try:
                     Registry.objects.get_or_create(
                         txid=txid,
@@ -418,6 +423,31 @@ def watch_registry_changes():
 
 @shared_task(queue='mempool_worker_queue')
 def process_op_return_from_mempool(raw_tx_hex:str):
+    chaingraph_url = 'https://gql.chaingraph.pat.mn/v1/graphql'
+    authhead_query_template = """
+        query {
+        transaction(where: {
+            hash: {
+            _eq: "\\\\x%s"
+            }
+        }) {
+            hash
+            authchains {
+            authhead {
+                hash, identity_output {
+                fungible_token_amount
+                }
+            },
+            authchain_length
+            }
+        } 
+
+        }
+        """
+
+
+    # x=requests.post('https://gql.chaingraph.pat.mn/v1/graphql', json={"query": body})
+
     rpc_connection = AuthServiceProxy(settings.BCHN_NODE)
     max_retries = 20
     retries = 0
@@ -426,6 +456,8 @@ def process_op_return_from_mempool(raw_tx_hex:str):
         try:
             LOGGER.info(f'@process_op_return_from_mempool: Trying to decode raw transaction')
             decoded_txn = rpc_connection.decoderawtransaction(raw_tx_hex)
+            LOGGER.info('DECODED TRANSACTION')
+            LOGGER.info(decoded_txn)
             break
         except Exception as exception:
             retries += 1
