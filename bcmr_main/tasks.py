@@ -2,6 +2,7 @@
 
 import time
 import logging
+import requests
 import simplejson as json
 from django.db.models import Q
 from django.conf import settings
@@ -17,7 +18,72 @@ from bitcoinrpc.authproxy import AuthServiceProxy
 
 LOGGER = logging.getLogger(__name__)
 
-def load_registry(txid, op_return_output):
+def validate_authhead(token_id, authhead_txid):
+    chaingraph_url = 'https://gql.chaingraph.pat.mn/v1/graphql'
+    authhead_query_template = """
+        query {
+        transaction(where: {
+            hash: {
+            _eq: "\\\\x%s"
+            }
+        }) {
+            hash
+            authchains {
+            authhead {
+                hash, identity_output {
+                fungible_token_amount
+                }
+            },
+            authchain_length
+            }
+        } 
+
+        }
+        """ % token_id
+    
+    retries = 0
+    query_response = None
+    time.sleep(1)
+    while (retries < 3):
+        res = requests.post(chaingraph_url, json={ 'query': authhead_query_template })
+        if res.status_code == 200:
+            LOGGER.info('JSON')
+            LOGGER.info(res.json())
+            query_response = res.json()
+            return True
+        retries += 1
+        time.sleep(1)
+    return False
+
+    # {'data': {'transaction': [{'hash': '\\x60768cf071bacde07470b5b281b96d4fd98a94d9cbb90252a2a3c5ce78b056b2', 'authchains': [{'authhead': {'hash': '\\xf2813865b9865c763e361cc5a8828d2cf0579f68eaf3b3b3c335e73d3088d044', 'identity_output': [{'fungible_token_amount': '0'}]}, 'authchain_length': 16}]}]}}
+    if query_response:
+        transaction = query_response['data']['transaction']
+        if transaction:
+            authchains = transaction[0].get('authchains')
+            if authchains:
+                authhead = authchains[0].get('authhead').get('hash')
+                if authhead:
+                    LOGGER.info('AUTHHEAD')
+                    LOGGER.info(authhead.replace('\\x',''))
+                    return authhead_txid == authhead.replace('\\x','')
+    return False
+
+def extract_registry_pub_data(op_return_decoded_output: dict):
+    """ 
+    Extract registry publication data from the OP_RETURN 
+    """
+    if op_return_decoded_output['scriptPubKey']['type'] == 'nulldata' and op_return_decoded_output['scriptPubKey']['asm'].startswith('OP_RETURN'):
+        asm_arr = op_return_decoded_output['scriptPubKey'].get('asm').split(' ') 
+        
+        if len(asm_arr) >= 4:  
+            published_uris_string = bytes.fromhex(asm_arr[3]).decode('utf-8')
+            return {
+                'content_hash': asm_arr[2],
+                'uris': published_uris_string.split(';')
+            }
+            
+
+def load_registry(txid, decoded_txn, op_return_output):
     """
     Load the decoded op_return output to the Registry table
     """
@@ -25,75 +91,82 @@ def load_registry(txid, op_return_output):
     LOGGER.info('LOADING REGISTRY')
     if Registry.objects.filter(txid=txid).exists():
         return
-    if op_return_output['scriptPubKey']['type'] == 'nulldata' and op_return_output['scriptPubKey']['asm'].startswith('OP_RETURN'):
-        asm_arr = op_return_output['scriptPubKey'].get('asm').split(' ') 
-        if len(asm_arr) >= 4:  
-            published_content_hash_hex = asm_arr[2]
-            published_uris_hex = asm_arr[3]
-            published_uris_string = bytes.fromhex(published_uris_hex).decode('utf-8')
-            published_uris_string = published_uris_string.split(';')
-            registry_contents = None
-            published_uri = None
-            response = None
-            for uri in published_uris_string:
-                LOGGER.info(msg=f'Found {uri}')
-                if '.' in uri:
-                    if not uri.startswith('https://'):
-                        uri = 'https://' + uri
-                    LOGGER.info(msg=f'Requesting registry from {uri}')
-                    response = requests.get(uri)
-                else:
-                    if not uri.startswith('ipfs://'):
-                        uri = 'ipfs://' + uri
-                    LOGGER.info(msg=f'Requesting registry from {uri}')
-                    response = download_ipfs_bcmr_data(uri)    
-                if response.status_code == 200:
-                    LOGGER.info(msg=f'Requesting success from {uri}')
-                    registry_contents = response.text
-                    published_uri = uri
-                    break
+    
+    published_uris_and_content_hash = extract_registry_pub_data(op_return_output)
+    LOGGER.info(published_uris_and_content_hash)
+    if published_uris_and_content_hash:
+        content_hash, uris = published_uris_and_content_hash.values()
+        LOGGER.info(content_hash)
+        LOGGER.info(uris)
+        registry_contents = None
+        published_uri = None
+        response = None
+        for uri in uris:
+            LOGGER.info(msg=f'Found {uri}')
+            if '.' in uri:
+                if not uri.startswith('https://'):
+                    uri = 'https://' + uri
+                LOGGER.info(msg=f'Requesting registry from {uri}')
+                response = requests.get(uri)
+            else:
+                if not uri.startswith('ipfs://'):
+                    uri = 'ipfs://' + uri
+                LOGGER.info(msg=f'Requesting registry from {uri}')
+                response = download_ipfs_bcmr_data(uri)    
+            if response.status_code == 200:
+                LOGGER.info(msg=f'Requesting success from {uri}')
+                registry_contents = response.text
+                published_uri = uri
+                break
+        
+        if registry_contents:
+            # published_content_hash = ''
+            # try:
+            #     published_content_hash = bytes.fromhex(published_content_hash_hex).decode() 
+            # except UnicodeDecodeError as e:
+            #     published_content_hash = published_content_hash_hex.hex()
+            ## for older bcmr publications
+
+            validity_checks = {
+                'bcmr_file_accessible': True,
+                'bcmr_hash_match': content_hash == compute_hash(registry_contents),
+                'identities_match': None
+            }
+            try:
+                BitcoinCashMetadataRegistry.validate_contents(registry_contents)
+                LOGGER.info('TOKEN CATEGORIESS')
+                
+            except ValidationError: 
+                LOGGER.info('Validation Error')
+
             
-            if registry_contents:
-                # published_content_hash = ''
-                # try:
-                #     published_content_hash = bytes.fromhex(published_content_hash_hex).decode() 
-                # except UnicodeDecodeError as e:
-                #     published_content_hash = published_content_hash_hex.hex()
-                ## for older bcmr publications
-
-                published_content_hash = published_content_hash_hex
-                dns_resolved_content_hash = compute_hash(registry_contents)
-                validity_checks = {
-                    'bcmr_file_accessible': True,
-                    'bcmr_hash_match': published_content_hash == dns_resolved_content_hash,
-                    'identities_match': None
-                }
-                try:
-                    BitcoinCashMetadataRegistry.validate_contents(registry_contents)
-                    LOGGER.info('TOKEN CATEGORIESS')
+            token_ids = BitcoinCashMetadataRegistry.get_token_categories(registry_contents)
+            LOGGER.info('TOKEN IDS')
+            LOGGER.info(token_ids)
+            
+            
+            try:
+                for token_id in token_ids:
+                    if not validate_authhead(token_id, txid):
+                        raise Exception(f'{txid} is not the authhead of {token_id}')
                     
-                except ValidationError: 
-                    LOGGER.info('Validation Error')
-
-                LOGGER.info(BitcoinCashMetadataRegistry.get_token_categories(registry_contents))
-                try:
-                    Registry.objects.get_or_create(
-                        txid=txid,
-                        op_return=op_return_output['scriptPubKey'].get('asm'),
-                        defaults={
-                            'txid': txid,
-                            'index': op_return_output['n'],
-                            'validity_checks': validity_checks,
-                            'op_return': op_return_output['scriptPubKey'].get('asm'),
-                            'bcmr_url': published_uri,
-                            'contents': json.loads(registry_contents),
-                            'bcmr_request_status': response.status_code
-                        }
-                    )
-                except Exception as e:
-                    LOGGER.info(msg='Registry get_or_create error')
-                    LOGGER.info(msg=e)
-           
+                Registry.objects.get_or_create(
+                    txid=txid,
+                    op_return=op_return_output['scriptPubKey'].get('asm'),
+                    defaults={
+                        'txid': txid,
+                        'index': op_return_output['n'],
+                        'validity_checks': validity_checks,
+                        'op_return': op_return_output['scriptPubKey'].get('asm'),
+                        'bcmr_url': published_uri,
+                        'contents': json.loads(registry_contents),
+                        'bcmr_request_status': response.status_code
+                    }
+                )
+            except Exception as e:
+                LOGGER.info(msg='Registry get_or_create error')
+                LOGGER.info(msg=e)
+        
 
 def generate_token_identity(token_data):
     token_identity = ''
@@ -423,28 +496,7 @@ def watch_registry_changes():
 
 @shared_task(queue='mempool_worker_queue')
 def process_op_return_from_mempool(raw_tx_hex:str):
-    chaingraph_url = 'https://gql.chaingraph.pat.mn/v1/graphql'
-    authhead_query_template = """
-        query {
-        transaction(where: {
-            hash: {
-            _eq: "\\\\x%s"
-            }
-        }) {
-            hash
-            authchains {
-            authhead {
-                hash, identity_output {
-                fungible_token_amount
-                }
-            },
-            authchain_length
-            }
-        } 
-
-        }
-        """
-
+    
 
     # x=requests.post('https://gql.chaingraph.pat.mn/v1/graphql', json={"query": body})
 
@@ -470,8 +522,9 @@ def process_op_return_from_mempool(raw_tx_hex:str):
         outputs = decoded_txn.get('vout')
         for output in outputs:
             if output['scriptPubKey']['type'] == 'nulldata' and output['scriptPubKey']['asm'].startswith('OP_RETURN'):
-                load_registry(decoded_txn['txid'], output)
+                # load_registry(decoded_txn['txid'], output)
 
+                load_registry(decoded_txn['txid'], decoded_txn, output)
 
 def _get_spender_tx(txid, index):
     url = 'https://watchtower.cash/api/transaction/spender/'
