@@ -18,7 +18,36 @@ from bitcoinrpc.authproxy import AuthServiceProxy
 
 LOGGER = logging.getLogger(__name__)
 
-def validate_authhead(token_id, authhead_txid):
+def validate_authhead(token_id, authhead_used):
+    
+    time.sleep(1) # Let's give watchtower and chaingraph a little bit of time
+
+    retries = 0    
+    query_response = None
+
+    #try watchtower
+    watchtower_url = f'https://watchtower.cash/api/cts/authhead/?authbase={token_id}'
+    if settings.NETWORK == 'chipnet':
+        watchtower_url =  f'https://chipnet.watchtower.cash/api/cts/authhead/?authbase={token_id}'
+    
+    while (retries < 3):
+        query_response = requests.get(watchtower_url)
+        if query_response.status_code == 200:
+            query_response = query_response.json()
+            if query_response:
+                expected_authhead_txid = query_response.get('authhead').get('txid')
+                LOGGER.info('EXPECTED AUTHHEAD')
+                LOGGER.info(expected_authhead_txid)
+                LOGGER.info('AUTHHEAD USED')
+                LOGGER.info(authhead_used)
+                if expected_authhead_txid and authhead_used == expected_authhead_txid:
+                    return True
+        retries += 1
+        time.sleep(.5)
+
+    # allow to fallback to chaingraph if auth fails in watchtower
+
+    # try chaingraph
     chaingraph_url = 'https://gql.chaingraph.pat.mn/v1/graphql'
     authhead_query_template = """
         query {
@@ -43,17 +72,16 @@ def validate_authhead(token_id, authhead_txid):
     
     retries = 0
     query_response = None
-    time.sleep(1)
+    
     while (retries < 3):
         res = requests.post(chaingraph_url, json={ 'query': authhead_query_template })
         if res.status_code == 200:
             LOGGER.info('JSON')
             LOGGER.info(res.json())
             query_response = res.json()
-            return True
+            break
         retries += 1
         time.sleep(1)
-    return False
 
     # {'data': {'transaction': [{'hash': '\\x60768cf071bacde07470b5b281b96d4fd98a94d9cbb90252a2a3c5ce78b056b2', 'authchains': [{'authhead': {'hash': '\\xf2813865b9865c763e361cc5a8828d2cf0579f68eaf3b3b3c335e73d3088d044', 'identity_output': [{'fungible_token_amount': '0'}]}, 'authchain_length': 16}]}]}}
     if query_response:
@@ -61,11 +89,12 @@ def validate_authhead(token_id, authhead_txid):
         if transaction:
             authchains = transaction[0].get('authchains')
             if authchains:
-                authhead = authchains[0].get('authhead').get('hash')
-                if authhead:
+                expected_authhead_txid = authchains[0].get('authhead').get('hash')
+                if expected_authhead_txid:
                     LOGGER.info('AUTHHEAD')
-                    LOGGER.info(authhead.replace('\\x',''))
-                    return authhead_txid == authhead.replace('\\x','')
+                    LOGGER.info(authhead_used)
+                    LOGGER.info(expected_authhead_txid.replace('\\x',''))
+                    return authhead_used == expected_authhead_txid.replace('\\x','')
     return False
 
 def extract_registry_pub_data(op_return_decoded_output: dict):
@@ -150,6 +179,7 @@ def load_registry(txid, decoded_txn, op_return_output):
                     if not validate_authhead(token_id, txid):
                         raise Exception(f'{txid} is not the authhead of {token_id}')
                     
+                LOGGER.info('CREATING REGISTRY')
                 Registry.objects.get_or_create(
                     txid=txid,
                     op_return=op_return_output['scriptPubKey'].get('asm'),
