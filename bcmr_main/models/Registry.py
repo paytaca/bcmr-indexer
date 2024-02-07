@@ -81,7 +81,6 @@ class Registry(models.Model):
                     id,
                     authbase,
                     identity_history,
-                    jsonb_object_keys(contents->'identities') AS identities,
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'symbol') AS symbol,
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'decimal') AS decimals,
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS category
@@ -141,6 +140,90 @@ class Registry(models.Model):
                 'authbase': r[0].authbase.replace('"',''),
                 'identity_history': r[0].identity_history.replace('"',''),
                 'identity_snapshot': r[0].identity_snapshot,
+            }
+        
+    def get_nft_category(self, category):
+        """
+        Returns the NftCategory
+        """
+        # TODO: handle if registry does not contain NftCategory or NftType(s)
+        query = f"""
+            SELECT 
+                id, 
+                category,
+                authbase, 
+                identity_history, 
+                nft_category,
+                nft,
+                commitment
+            FROM (
+                SELECT
+                    id,
+                    authbase,
+                    identity_history,
+                    commitment,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'nfts') AS nft_category,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'nfts', 'parse', 'types', commitment ) AS nft,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS category
+                FROM
+                    bcmr_main_registry,
+                    jsonb_object_keys(contents -> 'identities') AS authbase,
+                    LATERAL jsonb_object_keys(contents->'identities'->authbase) AS identity_history,
+                    LATERAL jsonb_object_keys(contents->'identities'->authbase->identity_history->'token'->'nfts'->'parse'->'types') AS commitment
+            ) AS subquery
+            
+            WHERE category = '"{category}"'
+            ORDER BY id DESC LIMIT 1;
+        """
+        r = Registry.objects.raw(query)
+        if r:
+            return {
+                'registry_id': r[0].id,
+                'category': r[0].category,
+                'authbase': r[0].authbase.replace('"',''),
+                'identity_history': r[0].identity_history.replace('"',''),
+                'nft_category': r[0].nft_category,
+            }
+        
+    
+    def get_nft_types(self, category):
+        """
+        Returns the NftType(s) of the SequentialNftCollection or ParsableNftCollection
+        """
+        query = f"""
+            SELECT 
+                id, 
+                category,
+                authbase, 
+                identity_history, 
+                nft,
+                commitment
+            FROM (
+                SELECT
+                    id,
+                    authbase,
+                    identity_history,
+                    commitment,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'nfts', 'parse', 'types', commitment) AS nft,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS category
+                FROM
+                    bcmr_main_registry,
+                    jsonb_object_keys(contents -> 'identities') AS authbase,
+                    LATERAL jsonb_object_keys(contents->'identities'->authbase) AS identity_history,
+                    LATERAL jsonb_object_keys(contents->'identities'->authbase->identity_history->'token'->'nfts'->'parse'->'types') AS commitment
+            ) AS subquery
+            
+            WHERE category = '"{category}";'
+        """
+        r = Registry.objects.raw(query)
+        if r:
+            return {
+                'registry_id': r[0].id,
+                'category': r[0].category.replace('"',''),
+                'authbase': r[0].authbase.replace('"',''),
+                'identity_history': r[0].identity_history.replace('"',''),
+                'nft': r[0].nft,
+                'commitment': r[0].commitment.replace('"', '')
             }
 
     @staticmethod
