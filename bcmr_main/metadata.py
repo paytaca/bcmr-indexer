@@ -39,69 +39,70 @@ def generate_token_metadata(registry_obj):
             if snapshots:
                 snapshots.sort(key=itemgetter(1))
                 latest_key, history_date = snapshots[-1]
-                token_data = registry_obj.contents['identities'][identity][latest_key]['token']
-                token_check = Token.objects.filter(category=token_data['category'])
-                if token_check.exists():
-                    # Check if token is NFT
-                    if token_check.filter(is_nft=True).exists():
-                        _metadata = copy.deepcopy(registry_obj.contents['identities'][identity][latest_key])
-                        # remove the 'nfts' key to be replaced later by metadata for each type
-                        try:
-                            del _metadata['token']['nfts']
-                        except KeyError:
-                            pass
+                if 'token' in registry_obj.contents['identities'][identity][latest_key].keys():
+                    token_data = registry_obj.contents['identities'][identity][latest_key]['token']
+                    token_check = Token.objects.filter(category=token_data['category'])
+                    if token_check.exists():
+                        # Check if token is NFT
+                        if token_check.filter(is_nft=True).exists():
+                            _metadata = copy.deepcopy(registry_obj.contents['identities'][identity][latest_key])
+                            # remove the 'nfts' key to be replaced later by metadata for each type
+                            try:
+                                del _metadata['token']['nfts']
+                            except KeyError:
+                                pass
 
-                        if 'nfts' in token_data.keys():
-                            # Deal with the nft types
-                            nft_types = token_data['nfts']['parse']['types']
-                            for nft_type_key in nft_types:
-                                nft_token_check = Token.objects.filter(
-                                    category=token_data['category'],
-                                    # TODO: Refactor this later to support parseable NFTs. For now,
-                                    # this only works for NFTs with type key equal to commitment.
-                                    commitment=nft_type_key,
-                                    capability='none'
-                                )
-                                if nft_token_check.exists():
-                                    _metadata['type_metadata'] = token_data['nfts']['parse']['types'][nft_type_key]
-                                    nft_token = nft_token_check.last()
-                                    nft_token_metadata, _ = TokenMetadata.objects.get_or_create(
-                                        token=nft_token,
-                                        registry=registry_obj,
-                                        identity=registry_obj.publisher,
-                                        metadata_type='type'
+                            if 'nfts' in token_data.keys():
+                                # Deal with the nft types
+                                nft_types = token_data['nfts']['parse']['types']
+                                for nft_type_key in nft_types:
+                                    nft_token_check = Token.objects.filter(
+                                        category=token_data['category'],
+                                        # TODO: Refactor this later to support parseable NFTs. For now,
+                                        # this only works for NFTs with type key equal to commitment.
+                                        commitment=nft_type_key,
+                                        capability='none'
                                     )
-                                    nft_token_metadata.contents = _metadata
-                                    nft_token_metadata.date_created = history_date
-                                    nft_token_metadata.save()
-                        # Save the generic NFT category metadata on the first token of this category ever created
-                        try:
-                            del _metadata['type_metadata']
-                        except KeyError:
-                            pass
-                        token = token_check.filter(is_nft=True).order_by('date_created', 'id').last()
-                        if token:
-                            token_metadata, _ = TokenMetadata.objects.get_or_create(
-                                token=token,
-                                registry=registry_obj,
-                                identity=registry_obj.publisher,
-                                metadata_type='category'
-                            )
-                            token_metadata.contents = _metadata
-                            token_metadata.date_created = history_date
-                            token_metadata.save()
-                    else:
-                        try:
-                            token = Token.objects.get(category=token_data['category'], is_nft=False)
-                            _metadata = registry_obj.contents['identities'][identity][latest_key]
-                            token_metadata, _ = TokenMetadata.objects.get_or_create(
-                                token=token,
-                                registry=registry_obj,
-                                identity=registry_obj.publisher,
-                                metadata_type='category'
-                            )
-                            token_metadata.contents = _metadata
-                            token_metadata.date_created = history_date
-                            token_metadata.save()
-                        except Token.DoesNotExist:
-                            pass
+                                    if nft_token_check.exists():
+                                        _metadata['type_metadata'] = token_data['nfts']['parse']['types'][nft_type_key]
+                                        nft_token = nft_token_check.last()
+                                        nft_token_metadata, _ = TokenMetadata.objects.get_or_create(
+                                            token=nft_token,
+                                            registry=registry_obj,
+                                            identity=registry_obj.publisher,
+                                            metadata_type='type'
+                                        )
+                                        nft_token_metadata.contents = _metadata
+                                        nft_token_metadata.date_created = history_date
+                                        nft_token_metadata.save()
+                            # Save the generic NFT category metadata on the first token of this category ever created
+                            try:
+                                del _metadata['type_metadata']
+                            except KeyError:
+                                pass
+                            token = token_check.filter(is_nft=True).order_by('date_created', 'id').last()
+                            if token:
+                                token_metadata, _ = TokenMetadata.objects.get_or_create(
+                                    token=token,
+                                    registry=registry_obj,
+                                    identity=registry_obj.publisher,
+                                    metadata_type='category'
+                                )
+                                token_metadata.contents = _metadata
+                                token_metadata.date_created = history_date
+                                token_metadata.save()
+                        else:
+                            try:
+                                token = Token.objects.get(category=token_data['category'], is_nft=False)
+                                _metadata = registry_obj.contents['identities'][identity][latest_key]
+                                token_metadata, _ = TokenMetadata.objects.get_or_create(
+                                    token=token,
+                                    registry=registry_obj,
+                                    identity=registry_obj.publisher,
+                                    metadata_type='category'
+                                )
+                                token_metadata.contents = _metadata
+                                token_metadata.date_created = history_date
+                                token_metadata.save()
+                            except Token.DoesNotExist:
+                                pass

@@ -38,8 +38,7 @@ class TokenMetadataAdmin(admin.ModelAdmin):
     list_display = [
         'category',
         'is_nft',
-        'valid',
-        'contents'
+        'valid'
     ]
 
     raw_id_fields = [

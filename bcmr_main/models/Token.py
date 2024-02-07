@@ -33,16 +33,6 @@ class Token(models.Model):
             'commitment',
             'capability',
         )
-        # indexes = [
-        #     models.Index(
-        #         fields=[
-        #             'category',
-        #             'commitment',
-        #             'capability',
-        #             'is_nft'
-        #         ]
-        #     )
-        # ]
 
     def __str__(self):
         fields = [self.category, self.commitment, self.capability]
@@ -89,11 +79,3 @@ class TokenMetadata(models.Model):
             'registry',
             'metadata_type'
         )
-        # indexes = [
-        #     models.Index(
-        #         fields=[
-        #             'metadata_type',
-        #             'date_created'
-        #         ]
-        #     )
-        # ]

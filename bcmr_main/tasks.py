@@ -6,6 +6,7 @@ import simplejson as json
 from django.db.models import Q
 from django.conf import settings
 from bcmr_main.app.BitcoinCashMetadataRegistry import BitcoinCashMetadataRegistry
+from bcmr_main.metadata import generate_token_metadata
 from celery import shared_task
 from django.db.models import Max
 from jsonschema import ValidationError

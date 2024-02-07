@@ -1,17 +1,8 @@
 from bcmr_main.utils import *
-from bcmr_main.ipfs import *
 from django.db import transaction
 from bcmr_main.models import (
-    Registry,
-    # Token,
-    #TokenMetadata
+    Registry
 )
-from bcmr_main.metadata import generate_token_metadata
-# from django.utils import timezone
-# from datetime import datetime
-# from dateutil.parser import parse as parse_datetime
-# from operator import itemgetter
-from urllib3.exceptions import LocationParseError
 from urllib.parse import urlparse
 import requests
 import logging
@@ -73,19 +64,7 @@ def process_op_return(
 
         print('--URL:', decoded_bcmr_url)
 
-        response = None
-        try:
-            if decoded_bcmr_url.startswith('ipfs://'):
-                response = download_ipfs_bcmr_data(decoded_bcmr_url)
-            else:
-                response = requests.get(decoded_bcmr_url)
-        except requests.exceptions.ConnectionError:
-            pass
-        except requests.exceptions.InvalidURL:
-            pass
-        except LocationParseError:
-            pass
-            
+        response = download_url(decoded_bcmr_url)
         if not response:
             validity_checks['bcmr_file_accessible'] = False
             registry_obj.validity_checks = validity_checks

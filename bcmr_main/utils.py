@@ -1,12 +1,17 @@
 from django.conf import settings
 from django.utils import timezone
-
+from requests.adapters import HTTPAdapter, Retry
+from urllib3.exceptions import LocationParseError
 from bcmr_main.models import *
 from dateutil import parser
 from datetime import datetime
 import pytz
+import random
 import requests
 import hashlib
+import logging
+
+LOGGER = logging.getLogger(__name__)
 
 
 def timestamp_to_date(timestamp):
@@ -37,11 +42,47 @@ def decode_url(encoded_url):
     else:
         if not decoded_bcmr_url.startswith('ipfs://'):
             decoded_bcmr_url = 'ipfs://' + decoded_bcmr_url
-    # if not decoded_bcmr_url.startswith('ipfs://'):
-    #     decoded_bcmr_url = 'https://' + decoded_bcmr_url.strip()
-    #     if not decoded_bcmr_url.endswith('.json'):
-    #         decoded_bcmr_url = decoded_bcmr_url.rstrip('/') + '/.well-known/bitcoin-cash-metadata-registry.json'
     return decoded_bcmr_url
+
+
+def _request_url(url):
+    response = None
+    try:
+        session = requests.Session()
+        retry_triggers = tuple( x for x in requests.status_codes._codes if x != 200)
+        retries = Retry(total=7, backoff_factor=0.1, status_forcelist=retry_triggers)
+        session.mount('https://', HTTPAdapter(max_retries=retries))
+        LOGGER.info('Downloading from: ' + url)
+        response = session.get(url, timeout=30)
+    except requests.exceptions.ConnectionError:
+        pass
+    except requests.exceptions.InvalidURL:
+        pass
+    except LocationParseError:
+        pass
+    return response
+
+
+def download_url(url):
+    response = None
+    if url.startswith('ipfs://'):
+        ipfs_cid = url.split('ipfs://')[1]
+        ipfs_gateways = [
+            "cloudflare-ipfs.com",
+            "ipfs-gateway.cloud",
+            "ipfs.filebase.io",
+            "nftstorage.link",
+            "gateway.pinata.cloud",
+        ]
+        random.shuffle(ipfs_gateways)
+        for ipfs_gateway in ipfs_gateways:
+            final_url = f'https://{ipfs_gateway}/ipfs/{ipfs_cid}'
+            response = _request_url(final_url)
+            if response.status_code == 200:
+                return response
+    else:
+        response = _request_url(url)
+    return response
 
 
 def send_webhook_token_update(category, index, txid, commitment=None, capability=None):
