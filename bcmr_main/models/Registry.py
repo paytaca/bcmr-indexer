@@ -146,30 +146,25 @@ class Registry(models.Model):
         """
         Returns the NftCategory
         """
-        # TODO: handle if registry does not contain NftCategory or NftType(s)
+        
         query = f"""
             SELECT 
                 id, 
                 category,
                 authbase, 
                 identity_history, 
-                nft_category,
-                nft,
-                commitment
+                nft_category
             FROM (
                 SELECT
                     id,
                     authbase,
                     identity_history,
-                    commitment,
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'nfts') AS nft_category,
-                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'nfts', 'parse', 'types', commitment ) AS nft,
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS category
                 FROM
                     bcmr_main_registry,
                     jsonb_object_keys(contents -> 'identities') AS authbase,
-                    LATERAL jsonb_object_keys(contents->'identities'->authbase) AS identity_history,
-                    LATERAL jsonb_object_keys(contents->'identities'->authbase->identity_history->'token'->'nfts'->'parse'->'types') AS commitment
+                    LATERAL jsonb_object_keys(contents->'identities'->authbase) AS identity_history
             ) AS subquery
             
             WHERE category = '"{category}"'
@@ -186,25 +181,26 @@ class Registry(models.Model):
             }
         
     
-    def get_nft_types(self, category):
+    def get_nft_types(self, category, limit=10, offset=0):
         """
         Returns the NftType(s) of the SequentialNftCollection or ParsableNftCollection
         """
+        # TODO: handle if registry does not contain NftCategory or NftType(s)
         query = f"""
             SELECT 
                 id, 
                 category,
                 authbase, 
                 identity_history, 
-                nft,
-                commitment
+                nft_category,
+                nft
             FROM (
                 SELECT
                     id,
                     authbase,
                     identity_history,
-                    commitment,
-                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'nfts', 'parse', 'types', commitment) AS nft,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'nfts') AS nft_category,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'nfts','parse','types',commitment) AS nft,
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS category
                 FROM
                     bcmr_main_registry,
@@ -213,8 +209,9 @@ class Registry(models.Model):
                     LATERAL jsonb_object_keys(contents->'identities'->authbase->identity_history->'token'->'nfts'->'parse'->'types') AS commitment
             ) AS subquery
             
-            WHERE category = '"{category}";'
-        """
+            WHERE category = '"{category}"'
+            ORDER BY id DESC LIMIT {limit} OFFSET {offset};
+        """ 
         r = Registry.objects.raw(query)
         if r:
             return {
