@@ -1,3 +1,4 @@
+import json
 from django.db import models
 from django.db.models import ExpressionWrapper, CharField, F, Q
 
@@ -57,11 +58,14 @@ class Registry(models.Model):
         r = Registry.objects.raw(query)
         if len(r) > 0:
             return {
-                'registry_id': r[0].id,
-                'authbase': authbase,
-                'identity_history': identity_history_timestamp,
-                'category': r[0].category,
-                'bytecode': r[0].bytecode
+                
+                'bytecode': r[0].bytecode,
+                'meta': {
+                    'registry_id': r[0].id,
+                    'authbase': authbase,
+                    'identity_history': identity_history_timestamp,
+                    'category': r[0].category.replace('"',''),
+                }
             }
 
     def get_token_category_basic(self, category):
@@ -96,31 +100,34 @@ class Registry(models.Model):
         r = Registry.objects.raw(query)
         if r:
             return {
-                'registry_id': r[0].id,
-                'symbol': r[0].symbol.replace('"',''),
-                'decimals': r[0].decimals,
-                'category': r[0].category.replace('"',''),
-                'authbase': r[0].authbase.replace('"',''),
-                'identity_history': r[0].identity_history.replace('"',''),
+                'token': {
+                    'symbol': r[0].symbol.replace('"',''),
+                    'decimals': r[0].decimals,
+                    'category': r[0].category.replace('"',''),
+                },
+                'meta': {
+                    'registry_id': r[0].id,
+                    'authbase': r[0].authbase.replace('"',''),
+                    'identity_history': r[0].identity_history.replace('"',''),
+                }
             }
 
     def get_identity_snapshot(self, category):
         """
         Return the basic TokenCategory details
         """
+        # jsonb_object_keys(contents->'identities') AS identities,
         query = f"""
             SELECT 
                 id, 
                 authbase, 
                 identity_history, 
-                identity_snapshot,
-                token 
+                identity_snapshot
             FROM (
                 SELECT
                     id,
                     authbase,
                     identity_history,
-                    jsonb_object_keys(contents->'identities') AS identities,
                     jsonb_extract_path(contents, 'identities', authbase, identity_history) AS identity_snapshot,
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS category
                 FROM
@@ -134,15 +141,20 @@ class Registry(models.Model):
         """
         r = Registry.objects.raw(query)
         if r:
+            identity_snapshot = r[0].identity_snapshot
+            if identity_snapshot:
+                identity_snapshot = json.loads(identity_snapshot)
             return {
-                'registry_id': r[0].id,
-                'token': r[0].token.replace('"',''),
-                'authbase': r[0].authbase.replace('"',''),
-                'identity_history': r[0].identity_history.replace('"',''),
-                'identity_snapshot': r[0].identity_snapshot,
+                'identity_snapshot': identity_snapshot,
+                'meta': {
+                    'registry_id': r[0].id,
+                    'category': category,
+                    'authbase': r[0].authbase.replace('"',''),
+                    'identity_history': r[0].identity_history.replace('"',''),
+                }
             }
         
-    def get_nft_category(self, category):
+    def get_nfts(self, category):
         """
         Returns the NftCategory
         """
@@ -173,11 +185,13 @@ class Registry(models.Model):
         r = Registry.objects.raw(query)
         if r:
             return {
-                'registry_id': r[0].id,
-                'category': r[0].category,
-                'authbase': r[0].authbase.replace('"',''),
-                'identity_history': r[0].identity_history.replace('"',''),
-                'nft_category': r[0].nft_category,
+                'nfts': r[0].nft_category,
+                'meta': {
+                    'registry_id': r[0].id,
+                    'category': r[0].category,
+                    'authbase': r[0].authbase.replace('"',''),
+                    'identity_history': r[0].identity_history.replace('"',''),
+                }
             }
         
     
@@ -213,15 +227,20 @@ class Registry(models.Model):
             ORDER BY id DESC LIMIT {limit} OFFSET {offset};
         """ 
         r = Registry.objects.raw(query)
-        if r:
-            return {
-                'registry_id': r[0].id,
-                'category': r[0].category.replace('"',''),
-                'authbase': r[0].authbase.replace('"',''),
-                'identity_history': r[0].identity_history.replace('"',''),
-                'nft': r[0].nft,
-                'commitment': r[0].commitment.replace('"', '')
-            }
+        nft_types = []
+        for item in r:
+            nft_types.append({
+                'commitment': item.commitment.replace('"', ''),
+                'nftType': item.nft,
+                'meta': {
+                    'registry_id': r[0].id,
+                    'category': r[0].category.replace('"',''),
+                    'authbase': r[0].authbase.replace('"',''),
+                    'identity_history': r[0].identity_history.replace('"',''),
+                }
+            })
+        return nft_types    
+        
 
     @staticmethod
     def find_registry_by_token_category(category):
@@ -253,10 +272,12 @@ class Registry(models.Model):
         if r:
             return {
                 'registry_id': r[0].id,
-                'category': r[0].category.replace('"',''),
-                'authbase': r[0].authbase.replace('"',''),
-                'identity_history': r[0].identity_history.replace('"',''),
-                'identities': r[0].identities
+                'meta': {
+                    'category': r[0].category.replace('"',''),
+                    'authbase': r[0].authbase.replace('"',''),
+                    'identity_history': r[0].identity_history.replace('"',''),
+                    'identities': r[0].identities
+                }
             }
 
 
