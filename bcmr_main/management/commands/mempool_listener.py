@@ -22,6 +22,27 @@ from bitcoinrpc.authproxy import AuthServiceProxy
 
 LOGGER = logging.getLogger(__name__)
 
+authhead_query_template = """
+query {
+  transaction(where: {
+    hash: {
+      _eq: "\\\\x%s"
+    }
+  }) {
+    hash
+    authchains {
+      authhead {
+        hash, identity_output {
+          fungible_token_amount
+        }
+      },
+      authchain_length
+    }
+  } 
+
+}
+"""
+
 def load_registry(txid, op_return_output):
     compute_hash = encode_str
     if Registry.objects.filter(txid=txid).exists():
@@ -100,6 +121,7 @@ class ZMQHandler():
         try:
             while True:
                 msg = self.zmqSubSocket.recv_multipart()
+                LOGGER.info(msg)
                 topic = msg[0].decode()
                 body = msg[1]
                 if topic == "rawtx":

@@ -98,7 +98,11 @@ class BCHN(object):
                 if 'tokenData' in prevout.keys():
                     input_token_data = prevout['tokenData']
             else:
-                value = int(float(tx_input['value'] * (10 ** 8)))
+
+                # value = int(float(tx_input['value'] * (10 ** 8)))
+                value = tx_input.get('value')
+                if value: 
+                    value = int(float(value * (10 ** 8)))
                 input_token_data = self.get_input_token_data(input_txid, tx_input['vout'])
                 input_address = self.get_input_address(input_txid, tx_input['vout'])
 
@@ -117,7 +121,10 @@ class BCHN(object):
 
             for tx_output in outputs:
                 if 'value' in tx_output.keys() and 'addresses' in tx_output['scriptPubKey'].keys():
-                    sats_value = int(float(tx_output['value'] * (10 ** 8)))
+                    # sats_value = int(float(tx_output['value'] * (10 ** 8)))
+                    sats_value = tx_output.get('value')
+                    if sats_value:
+                        sats_value = int(float(sats_value * (10 ** 8)))
                     data = {
                         'address': tx_output['scriptPubKey']['addresses'][0],
                         'value': sats_value,
@@ -128,7 +135,10 @@ class BCHN(object):
                         data['token_data'] = tx_output['tokenData']
                     transaction['outputs'].append(data)
 
-        transaction['tx_fee'] = txn['fee'] * (10 ** 8)
+        # transaction['tx_fee'] = txn['fee'] * (10 ** 8)
+        transaction['tx_fee'] = txn.get('fee')
+        if transaction['tx_fee']:
+            transaction['tx_fee'] = transaction['tx_fee'] * (10 ** 8)
         return transaction
     
     def get_input_address(self, txid, vout_index):
