@@ -49,7 +49,7 @@ def _request_url(url):
     response = None
     try:
         session = requests.Session()
-        retry_triggers = tuple( x for x in requests.status_codes._codes if x != 200)
+        retry_triggers = tuple( x for x in requests.status_codes._codes if x not in [200, 301, 302, 307, 308])
         retries = Retry(total=7, backoff_factor=0.1, status_forcelist=retry_triggers)
         session.mount('https://', HTTPAdapter(max_retries=retries))
         LOGGER.info('Downloading from: ' + url)
