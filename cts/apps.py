@@ -5,5 +5,3 @@ class CtsConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'cts'
 
-    def ready(self):
-        import cts.signals
