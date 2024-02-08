@@ -1,4 +1,5 @@
 import json
+import datetime
 from django.db import models
 from django.db.models import ExpressionWrapper, CharField, F, Q
 
@@ -42,7 +43,7 @@ class Registry(models.Model):
         
         histories = {}
     
-        for authbase in self.identities():
+        for authbase in self.get_identities():
             histories[authbase] = [i.timestamp for i in Registry.objects.raw("SELECT id, jsonb_object_keys(contents->'identities'->'%s') AS timestamp from bcmr_main_registry WHERE id=%s;" % (authbase, self.id))]
     
         return histories
@@ -96,8 +97,9 @@ class Registry(models.Model):
                 LATERAL jsonb_object_keys(contents->'identities'->authbase) AS identity_history
             ) AS subquery
             
-            WHERE category = '"{category}"'
-            ORDER BY id DESC LIMIT 1;
+            WHERE category = '"{category}"' and identity_history <= '{datetime.datetime.utcnow().isoformat()}'
+            ORDER BY identity_history DESC 
+            LIMIT 1;
         """
         r = Registry.objects.raw(query)
         if r:
@@ -138,8 +140,9 @@ class Registry(models.Model):
                 LATERAL jsonb_object_keys(contents->'identities'->authbase) AS identity_history
             ) AS subquery
             
-            WHERE category = '"{category}"'
-            ORDER BY id DESC LIMIT 1;
+            WHERE category = '"{category}"' and identity_history <= '{datetime.datetime.utcnow().isoformat()}'
+            ORDER BY identity_history DESC 
+            LIMIT 1;
         """
         r = Registry.objects.raw(query)
         if r:
@@ -155,7 +158,7 @@ class Registry(models.Model):
                     'identity_history': r[0].identity_history.replace('"',''),
                 }
             }
-        
+    
     def get_identity_snapshot_basic(self, category):
         """
         Return the basic IdentitySnapshot details without the token field. 
@@ -195,8 +198,9 @@ class Registry(models.Model):
                 LATERAL jsonb_object_keys(contents->'identities'->authbase) AS identity_history
             ) AS subquery
             
-            WHERE category = '"{category}"'
-            ORDER BY id DESC LIMIT 1;
+            WHERE category = '"{category}"' and identity_history <= '{datetime.datetime.utcnow().isoformat()}'
+            ORDER BY identity_history DESC 
+            LIMIT 1;
         """
         r = Registry.objects.raw(query)
         if r:
@@ -226,7 +230,7 @@ class Registry(models.Model):
                     'identity_history': r[0].identity_history.replace('"',''),
                 }
             }
-            
+
     def get_nfts(self, category):
         """
         Returns the NftCategory
@@ -252,8 +256,9 @@ class Registry(models.Model):
                     LATERAL jsonb_object_keys(contents->'identities'->authbase) AS identity_history
             ) AS subquery
             
-            WHERE category = '"{category}"'
-            ORDER BY id DESC LIMIT 1;
+            WHERE category = '"{category}"' and identity_history <= '{datetime.datetime.utcnow().isoformat()}'
+            ORDER BY identity_history DESC 
+            LIMIT 1;
         """
         r = Registry.objects.raw(query)
         if r:
@@ -269,7 +274,7 @@ class Registry(models.Model):
                     'identity_history': r[0].identity_history.replace('"',''),
                 }
             }
-        
+    
     
     def get_nft_types(self, category, limit=10, offset=0):
         """
@@ -277,7 +282,7 @@ class Registry(models.Model):
         """
         # TODO: handle if registry does not contain NftCategory or NftType(s)
         query = f"""
-            SELECT 
+            SELECT DISTINCT ON(commitment)
                 id, 
                 category,
                 authbase, 
@@ -299,10 +304,13 @@ class Registry(models.Model):
                     jsonb_object_keys(contents -> 'identities') AS authbase,
                     LATERAL jsonb_object_keys(contents->'identities'->authbase) AS identity_history,
                     LATERAL jsonb_object_keys(contents->'identities'->authbase->identity_history->'token'->'nfts'->'parse'->'types') AS commitment
+                WHERE identity_history <= '{datetime.datetime.utcnow().isoformat()}'
+                ORDER BY identity_history DESC
             ) AS subquery
             
             WHERE category = '"{category}"'
-            ORDER BY id DESC LIMIT {limit} OFFSET {offset};
+            ORDER BY commitment DESC 
+            LIMIT {limit} OFFSET {offset};
         """ 
         r = Registry.objects.raw(query)
         nft_types = []
@@ -329,7 +337,7 @@ class Registry(models.Model):
         """
         # TODO: handle if registry does not contain NftCategory or NftType(s)
         query = f"""
-            SELECT 
+            SELECT
                 id, 
                 category,
                 authbase, 
@@ -352,8 +360,9 @@ class Registry(models.Model):
                 WHERE commitment = '{commitment}'
             ) AS subquery
             
-            WHERE category = '"{category}"'
-            ORDER BY id DESC LIMIT 1;
+            WHERE category = '"{category}"' and identity_history <= '{datetime.datetime.utcnow().isoformat()}'
+            ORDER BY identity_history DESC 
+            LIMIT 1;
         """ 
         r = Registry.objects.raw(query)
         if r:
@@ -372,8 +381,7 @@ class Registry(models.Model):
                     'identity_history': item.identity_history.replace('"','')
                 }
             }
-        
-        
+    
 
     @staticmethod
     def find_registry_by_token_category(category):
@@ -395,8 +403,9 @@ class Registry(models.Model):
                 LATERAL jsonb_object_keys(contents->'identities'->authbase) AS identity_history
             ) AS subquery
             
-            WHERE category = '"{category}"'
-            ORDER BY id DESC LIMIT 1;
+            WHERE category = '"{category}"' and identity_history <= '{datetime.datetime.utcnow().isoformat()}'
+            ORDER BY id DESC 
+            LIMIT 1;
         """
 
         r = Registry.objects.raw(query)
