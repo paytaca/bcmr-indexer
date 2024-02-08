@@ -207,14 +207,16 @@ class Registry(models.Model):
                 authbase, 
                 identity_history, 
                 nft_category,
+                commitment,
                 nft
             FROM (
                 SELECT
                     id,
                     authbase,
                     identity_history,
+                    commitment,
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'nfts') AS nft_category,
-                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'nfts','parse','types',commitment) AS nft,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'nfts','parse','types', commitment) AS nft,
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS category
                 FROM
                     bcmr_main_registry,
@@ -229,14 +231,18 @@ class Registry(models.Model):
         r = Registry.objects.raw(query)
         nft_types = []
         for item in r:
+            nft_type = item.nft
+            commitment = item.commitment.replace('"','')
+            if nft_type and type(nft_type) == str:
+                nft_type = json.loads(nft_type)
             nft_types.append({
-                'commitment': item.commitment.replace('"', ''),
-                'nftType': item.nft,
+                commitment: nft_type,
                 'meta': {
-                    'registry_id': r[0].id,
-                    'category': r[0].category.replace('"',''),
-                    'authbase': r[0].authbase.replace('"',''),
-                    'identity_history': r[0].identity_history.replace('"',''),
+                    'registry_id': item.id,
+                    'commitment': commitment,
+                    'category': item.category.replace('"',''),
+                    'authbase': item.authbase.replace('"',''),
+                    'identity_history': item.identity_history.replace('"','')
                 }
             })
         return nft_types    
