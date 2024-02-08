@@ -12,14 +12,25 @@ class CashToken(Token):
     registry = Registry.find_registry_by_token_category(self.category)
     if registry and registry.get('registry_id'):
       registry_instance = Registry.objects.get(id=registry.get('registry_id'))
-      return registry_instance.get_nft_type(category=self.category, commitment=self.commitment)
+
+      metadata = None 
+      try:
+        metadata = registry_instance.get_nft_type(category=self.category, commitment=self.commitment)
+      except Exception as e:
+        pass
+      return metadata
   
   @property
   def token_category(self):
     registry = Registry.find_registry_by_token_category(self.category)
     if registry and registry.get('registry_id'):
       registry_instance = Registry.objects.get(id=registry.get('registry_id'))
-      return registry_instance.get_token_category_basic(category=self.category)
+      metadata = None 
+      try:
+        metadata = registry_instance.get_token_category_basic(category=self.category)
+      except Exception as e:
+        pass
+      return metadata
       
   class Meta:
     proxy = True
