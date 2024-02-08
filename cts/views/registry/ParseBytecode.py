@@ -14,7 +14,7 @@ class ParseBytecode(APIView):
             r = Registry.objects.get(id=registry['registry_id'])
             if r:
                 token_category = r.get_token_category_basic(category)
-                if token_category.get('meta'):
-                  meta = token_category.get('meta')
+                if token_category.get('_meta'):
+                  meta = token_category.get('_meta')
                   return JsonResponse(r.get_parse_bytecode(meta.get('authbase'), meta.get('identity_history')), safe=False)
         return JsonResponse(data=None, safe=False)
