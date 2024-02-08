@@ -36,10 +36,6 @@ def validate_authhead(token_id, authhead_used):
             query_response = query_response.json()
             if query_response:
                 expected_authhead_txid = query_response.get('authhead').get('txid')
-                LOGGER.info('EXPECTED AUTHHEAD')
-                LOGGER.info(expected_authhead_txid)
-                LOGGER.info('AUTHHEAD USED')
-                LOGGER.info(authhead_used)
                 if expected_authhead_txid and authhead_used == expected_authhead_txid:
                     return True
         retries += 1
@@ -76,8 +72,6 @@ def validate_authhead(token_id, authhead_used):
     while (retries < 3):
         res = requests.post(chaingraph_url, json={ 'query': authhead_query_template })
         if res.status_code == 200:
-            LOGGER.info('JSON')
-            LOGGER.info(res.json())
             query_response = res.json()
             break
         retries += 1
@@ -91,9 +85,6 @@ def validate_authhead(token_id, authhead_used):
             if authchains:
                 expected_authhead_txid = authchains[0].get('authhead').get('hash')
                 if expected_authhead_txid:
-                    LOGGER.info('AUTHHEAD')
-                    LOGGER.info(authhead_used)
-                    LOGGER.info(expected_authhead_txid.replace('\\x',''))
                     return authhead_used == expected_authhead_txid.replace('\\x','')
     return False
 
@@ -112,7 +103,7 @@ def extract_registry_pub_data(op_return_decoded_output: dict):
             }
             
 
-def load_registry(txid, decoded_txn, op_return_output):
+def load_registry(txid, op_return_output):
     """
     Load the decoded op_return output to the Registry table
     """
@@ -122,11 +113,8 @@ def load_registry(txid, decoded_txn, op_return_output):
         return
     
     published_uris_and_content_hash = extract_registry_pub_data(op_return_output)
-    LOGGER.info(published_uris_and_content_hash)
     if published_uris_and_content_hash:
         content_hash, uris = published_uris_and_content_hash.values()
-        LOGGER.info(content_hash)
-        LOGGER.info(uris)
         registry_contents = None
         published_uri = None
         response = None
@@ -526,10 +514,6 @@ def watch_registry_changes():
 
 @shared_task(queue='mempool_worker_queue')
 def process_op_return_from_mempool(raw_tx_hex:str):
-    
-
-    # x=requests.post('https://gql.chaingraph.pat.mn/v1/graphql', json={"query": body})
-
     rpc_connection = AuthServiceProxy(settings.BCHN_NODE)
     max_retries = 20
     retries = 0
@@ -538,8 +522,6 @@ def process_op_return_from_mempool(raw_tx_hex:str):
         try:
             LOGGER.info(f'@process_op_return_from_mempool: Trying to decode raw transaction')
             decoded_txn = rpc_connection.decoderawtransaction(raw_tx_hex)
-            LOGGER.info('DECODED TRANSACTION')
-            LOGGER.info(decoded_txn)
             break
         except Exception as exception:
             retries += 1
@@ -552,9 +534,7 @@ def process_op_return_from_mempool(raw_tx_hex:str):
         outputs = decoded_txn.get('vout')
         for output in outputs:
             if output['scriptPubKey']['type'] == 'nulldata' and output['scriptPubKey']['asm'].startswith('OP_RETURN'):
-                # load_registry(decoded_txn['txid'], output)
-
-                load_registry(decoded_txn['txid'], decoded_txn, output)
+                load_registry(decoded_txn['txid'], output)
 
 def _get_spender_tx(txid, index):
     url = 'https://watchtower.cash/api/transaction/spender/'
