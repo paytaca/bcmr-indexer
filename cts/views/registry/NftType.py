@@ -21,5 +21,5 @@ class NftType(APIView):
                 if commitment:
                     return JsonResponse(r.get_nft_type(category, commitment), safe=False)
                 else:
-                    return JsonResponse(r.get_nft_types(category, int(limit or 2), int(offset or 0)), safe=False)
+                    return JsonResponse(r.get_nft_types(category, int(limit or 10), int(offset or 0)), safe=False)
         return JsonResponse(data=None, safe=False)
