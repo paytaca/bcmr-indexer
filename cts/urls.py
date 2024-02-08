@@ -22,5 +22,6 @@ urlpatterns += [
     re_path(r"^registry/(?P<category>[\w+:]+)/identity-snapshot/token-category/nfts/$", views.NftCategory.as_view(), name='get-nfts'),
     re_path(r"^registry/(?P<category>[\w+:]+)/identity-snapshot/token-category/nfts/parse/bytecode/$", views.ParseBytecode.as_view(), name='get-nfts-parse-bytecode'),
     re_path(r"^registry/(?P<category>[\w+:]+)/identity-snapshot/token-category/nfts/parse/types/$", views.NftType.as_view(), name='get-nfts-parse-type'),
+    re_path(r"^registry/(?P<category>[\w+:]+)/identity-snapshot/token-category/nfts/parse/types/(?P<commitment>[\w+:]+)/$", views.NftType.as_view(), name='get-nfts-parse-type-commitment'),
     
 ]
