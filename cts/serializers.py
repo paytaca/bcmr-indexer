@@ -1,15 +1,13 @@
-# from rest_framework import serializers
-# from .models import *
+from rest_framework import serializers
+from bcmr_main.models import *
 
+class TokenSerializer(serializers.ModelSerializer):
 
-# class TokenSerializer(serializers.ModelSerializer):
-
-#     nft_collection_type = serializers.Field()
-
-#     class Meta:
-#         model = NftParsingInformation
-#         fields = (
-#             'bytecode',
-#             'fields',
-#             'nft_collection_type'
-#         )
+    class Meta:
+        model = Token
+        fields = (
+            'category',
+            'commitment',
+            'capability',
+            'amount'
+        )
