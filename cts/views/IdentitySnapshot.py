@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from bcmr_main.models import Registry
 
 class IdentitySnapshot(APIView):
+    allowed_methods = ['GET']
 
     def get(self, request, *args, **kwargs):
         category = kwargs.get('category', '')

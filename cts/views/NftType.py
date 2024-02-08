@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from bcmr_main.models import Registry
 
 class NftType(APIView):
+    allowed_methods = ['GET']
     """
     Returns the NftType(s) of a particular NftCategory
     """
