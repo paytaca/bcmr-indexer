@@ -5,11 +5,10 @@ from django.http import JsonResponse
 from bcmr_main.models import Registry
 
 class TokenCategory(APIView):
-
+    allowed_methods = ['GET']
     def get(self, request, *args, **kwargs):
         category = kwargs.get('category', '')
         registry = Registry.find_registry_by_token_category(category)
-        # return JsonResponse(registry)
         if registry:
             r = Registry.objects.get(id=registry['registry_id'])
             if r:

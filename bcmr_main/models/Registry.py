@@ -62,7 +62,7 @@ class Registry(models.Model):
                 bytecode = json.loads(bytecode)
             return {
                 'bytecode': bytecode,
-                'meta': {
+                '_meta': {
                     'registry_id': r[0].id,
                     'authbase': authbase,
                     'identity_history': identity_history_timestamp,
@@ -107,7 +107,7 @@ class Registry(models.Model):
                     'decimals': r[0].decimals,
                     'category': r[0].category.replace('"',''),
                 },
-                'meta': {
+                '_meta': {
                     'registry_id': r[0].id,
                     'authbase': r[0].authbase.replace('"',''),
                     'identity_history': r[0].identity_history.replace('"',''),
@@ -148,7 +148,7 @@ class Registry(models.Model):
                 identity_snapshot = json.loads(identity_snapshot)
             return {
                 'identity_snapshot': identity_snapshot,
-                'meta': {
+                '_meta': {
                     'registry_id': r[0].id,
                     'category': category,
                     'authbase': r[0].authbase.replace('"',''),
@@ -156,6 +156,77 @@ class Registry(models.Model):
                 }
             }
         
+    def get_identity_snapshot_basic(self, category):
+        """
+        Return the basic IdentitySnapshot details without the token field. 
+        The token field contains nfts.
+        Omit <IdentitySnapshot, 'token'>
+        """
+        query = f"""
+            SELECT 
+                id, 
+                authbase, 
+                identity_history, 
+                name,
+                description,
+                tags,
+                migrated,
+                status,
+                split_id,
+                uris,
+                extensions
+            FROM (
+                SELECT
+                    id,
+                    authbase,
+                    identity_history,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'name') AS name,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'description') AS description,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'tags') AS tags,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'migrated') AS migrated,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'status') AS status,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'splitId') AS split_id,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'uris') AS uris,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'extensions') AS extensions,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS category
+                FROM
+                    bcmr_main_registry,
+                    jsonb_object_keys(contents -> 'identities') AS authbase,
+                LATERAL jsonb_object_keys(contents->'identities'->authbase) AS identity_history
+            ) AS subquery
+            
+            WHERE category = '"{category}"'
+            ORDER BY id DESC LIMIT 1;
+        """
+        r = Registry.objects.raw(query)
+        if r:
+            identity_snapshot = {
+                'name': json.loads(r[0].name or '""')
+            }
+            if r[0].description:
+                identity_snapshot['description'] = json.loads(r[0].description)
+            if r[0].tags:
+                identity_snapshot['tags'] = json.loads(r[0].tags)
+            if r[0].migrated:
+                identity_snapshot['migrated'] = json.loads(r[0].migrated)
+            if r[0].status:
+                identity_snapshot['status'] = json.loads(r[0].status)
+            if r[0].split_id:
+                identity_snapshot['splitId'] = json.loads(r[0].split_id)
+            if r[0].uris:
+                identity_snapshot['uris'] = json.loads(r[0].uris)
+            if r[0].extensions:
+                identity_snapshot['extensions'] = json.loads(r[0].extensions)
+            return {
+                **identity_snapshot,
+                '_meta': {
+                    'registry_id': r[0].id,
+                    'category': category,
+                    'authbase': r[0].authbase.replace('"',''),
+                    'identity_history': r[0].identity_history.replace('"',''),
+                }
+            }
+            
     def get_nfts(self, category):
         """
         Returns the NftCategory
@@ -191,7 +262,7 @@ class Registry(models.Model):
                 nft_category = json.loads(nft_category)
             return {
                 'nfts': nft_category,
-                'meta': {
+                '_meta': {
                     'registry_id': r[0].id,
                     'category': r[0].category,
                     'authbase': r[0].authbase.replace('"',''),
@@ -242,7 +313,7 @@ class Registry(models.Model):
                 nft_type = json.loads(nft_type)
             nft_types.append({
                 commitment: nft_type,
-                'meta': {
+                '_meta': {
                     'registry_id': item.id,
                     'commitment': commitment,
                     'category': item.category.replace('"',''),
@@ -251,6 +322,57 @@ class Registry(models.Model):
                 }
             })
         return nft_types    
+    
+    def get_nft_type(self, category, commitment):
+        """
+        Returns the NftType(s) of the SequentialNftCollection or ParsableNftCollection
+        """
+        # TODO: handle if registry does not contain NftCategory or NftType(s)
+        query = f"""
+            SELECT 
+                id, 
+                category,
+                authbase, 
+                identity_history, 
+                commitment,
+                nft
+            FROM (
+                SELECT
+                    id,
+                    authbase,
+                    identity_history,
+                    commitment,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'nfts','parse','types', commitment) AS nft,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS category
+                FROM
+                    bcmr_main_registry,
+                    jsonb_object_keys(contents -> 'identities') AS authbase,
+                    LATERAL jsonb_object_keys(contents->'identities'->authbase) AS identity_history,
+                    LATERAL jsonb_object_keys(contents->'identities'->authbase->identity_history->'token'->'nfts'->'parse'->'types') AS commitment
+                WHERE commitment = '{commitment}'
+            ) AS subquery
+            
+            WHERE category = '"{category}"'
+            ORDER BY id DESC LIMIT 1;
+        """ 
+        r = Registry.objects.raw(query)
+        if r:
+            item = r[0]
+            nft_type = item.nft
+            commitment = item.commitment.replace('"','')
+            if nft_type and type(nft_type) == str:
+                nft_type = json.loads(nft_type)
+            return {
+                commitment: nft_type,
+                '_meta': {
+                    'registry_id': item.id,
+                    'commitment': commitment,
+                    'category': item.category.replace('"',''),
+                    'authbase': item.authbase.replace('"',''),
+                    'identity_history': item.identity_history.replace('"','')
+                }
+            }
+        
         
 
     @staticmethod
@@ -283,7 +405,7 @@ class Registry(models.Model):
         if r:
             return {
                 'registry_id': r[0].id,
-                'meta': {
+                '_meta': {
                     'category': r[0].category.replace('"',''),
                     'authbase': r[0].authbase.replace('"',''),
                     'identity_history': r[0].identity_history.replace('"',''),

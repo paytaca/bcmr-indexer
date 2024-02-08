@@ -4,16 +4,18 @@ from rest_framework.response import Response
 from django.http import JsonResponse
 from bcmr_main.models import Registry
 
-class ParseBytecode(APIView):
+class IdentitySnapshot(APIView):
+    allowed_methods = ['GET']
 
     def get(self, request, *args, **kwargs):
         category = kwargs.get('category', '')
+        include_token = request.query_params.get('include_token', '')
         registry = Registry.find_registry_by_token_category(category)
         if registry:
             r = Registry.objects.get(id=registry['registry_id'])
             if r:
-                token_category = r.get_token_category_basic(category)
-                if token_category.get('meta'):
-                  meta = token_category.get('meta')
-                  return JsonResponse(r.get_parse_bytecode(meta.get('authbase'), meta.get('identity_history')), safe=False)
+                if include_token and include_token.lower() == 'true':
+                    return JsonResponse(r.get_identity_snapshot(category) | {})
+                return JsonResponse(r.get_identity_snapshot_basic(category) | {})
+                
         return JsonResponse(data=None, safe=False)

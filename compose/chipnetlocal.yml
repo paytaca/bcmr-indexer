@@ -1,0 +1,58 @@
+version: "3.7"
+services:
+  docker-host:
+    image: qoomon/docker-host
+    cap_add: [ 'NET_ADMIN', 'NET_RAW' ]
+    mem_limit: 8M
+    restart: on-failure
+  bchn:
+    image: cagataygurturk/docker-ssh-tunnel
+    volumes:
+      - /root/.ssh:/root/ssh:ro # copy ~/.ssh to /root/.ssh mounting .ssh won't work if it's not on root
+    env_file:
+      - .env.chipnetlocal
+    environment:
+      SSH_DEBUG: "-v"
+      TUNNEL_HOST: bchn-chipnet
+      REMOTE_HOST: ${BCHN_CHIPNET_HOST}
+      LOCAL_PORT: 8332
+      REMOTE_PORT: 8332
+  zmq:
+    image: cagataygurturk/docker-ssh-tunnel
+    volumes:
+        - /root/.ssh:/root/ssh:ro
+    environment:
+      SSH_DEBUG: "-v"
+      TUNNEL_HOST: bchn-chipnet
+      REMOTE_HOST: "${BCHN_CHIPNET_HOST}"
+      LOCAL_PORT: 28332
+      REMOTE_PORT: 28332
+  postgres:
+    image: "postgres:11.1-alpine"
+    volumes:
+      - paytaca_bcmr_db_data:/var/lib/postgresql/data
+    env_file:
+      - ./.env.chipnetlocal
+    expose:
+      - "5432"
+  redis:
+    image: "redis:alpine"
+    env_file:
+      - ./.env.chipnetlocal
+  backend:
+    container_name: paytaca_bcmr_backend
+    build: 
+      context: ../
+    image: paytaca_bcmr_web
+    command: [ "supervisord", "-c", "/code/supervisord.conf", "--nodaemon" ]
+    env_file: ./.env.chipnetlocal
+    volumes:
+      - ../:/code
+    ports:
+      - 8000:8000
+    depends_on:
+      - postgres
+      - redis
+volumes:
+  paytaca_bcmr_db_data:
+    external: true

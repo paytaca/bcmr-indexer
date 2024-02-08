@@ -4,18 +4,17 @@ from rest_framework.response import Response
 from django.http import JsonResponse
 from bcmr_main.models import Registry
 
-class NftType(APIView):
-    """
-    Returns the NftType(s) of a particular NftCategory
-    """
+class ParseBytecode(APIView):
+    allowed_methods = ['GET']
+
     def get(self, request, *args, **kwargs):
         category = kwargs.get('category', '')
-        limit = request.query_params.get('limit')
-        offset = request.query_params.get('offset')
-        
         registry = Registry.find_registry_by_token_category(category)
         if registry:
             r = Registry.objects.get(id=registry['registry_id'])
             if r:
-                return JsonResponse(r.get_nft_types(category, int(limit or 2), int(offset or 0)), safe=False)
+                token_category = r.get_token_category_basic(category)
+                if token_category.get('_meta'):
+                  meta = token_category.get('_meta')
+                  return JsonResponse(r.get_parse_bytecode(meta.get('authbase'), meta.get('identity_history')), safe=False)
         return JsonResponse(data=None, safe=False)
