@@ -382,14 +382,12 @@ class Registry(models.Model):
                 id, 
                 authbase, 
                 identity_history, 
-                identities, 
                 category
             FROM (
                 SELECT
                     id,
                     authbase,
                     identity_history,
-                    jsonb_object_keys(contents->'identities') AS identities,
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS category
                 FROM
                     bcmr_main_registry,
@@ -408,8 +406,7 @@ class Registry(models.Model):
                 '_meta': {
                     'category': r[0].category.replace('"',''),
                     'authbase': r[0].authbase.replace('"',''),
-                    'identity_history': r[0].identity_history.replace('"',''),
-                    'identities': r[0].identities
+                    'identity_history': r[0].identity_history.replace('"','')
                 }
             }
 
