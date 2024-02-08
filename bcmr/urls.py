@@ -18,9 +18,10 @@ from django.urls import path, include
 
 from bcmr_main.urls import urlpatterns as bcmr_main_urls
 from bcmr_main.views import home_page
-
+from cts.urls import urlpatterns as cts_urls
 urlpatterns = [
     path('', home_page),
     path('admin/', admin.site.urls),
     path('api/', include(bcmr_main_urls)),
+    path('api/', include(cts_urls)),
 ]

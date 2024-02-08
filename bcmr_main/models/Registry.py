@@ -47,19 +47,21 @@ class Registry(models.Model):
     
         return histories
     
-    def get_bytecode(self, authbase:str, identity_history_timestamp: str):
+    def get_parse_bytecode(self, authbase:str, identity_history_timestamp: str):
         query = f"""
                     SELECT id, 
                     jsonb_extract_path(contents, 'identities', '{authbase}', '{identity_history_timestamp}', 'token','category') AS category,
-                    jsonb_extract_path(contents, 'identities', '{authbase}', '{identity_history_timestamp}', 'token', 'nfts', 'bytecode') AS bytecode 
+                    jsonb_extract_path(contents, 'identities', '{authbase}', '{identity_history_timestamp}', 'token', 'nfts', 'parse', 'bytecode') AS bytecode 
                     FROM bcmr_main_registry WHERE id = {self.id};
                 """
         
         r = Registry.objects.raw(query)
         if len(r) > 0:
+            bytecode = r[0].bytecode
+            if bytecode and type(bytecode) == str:
+                bytecode = json.loads(bytecode)
             return {
-                
-                'bytecode': r[0].bytecode,
+                'bytecode': bytecode,
                 'meta': {
                     'registry_id': r[0].id,
                     'authbase': authbase,
@@ -184,8 +186,11 @@ class Registry(models.Model):
         """
         r = Registry.objects.raw(query)
         if r:
+            nft_category = r[0].nft_category
+            if nft_category and type(nft_category) == str:
+                nft_category = json.loads(nft_category)
             return {
-                'nfts': r[0].nft_category,
+                'nfts': nft_category,
                 'meta': {
                     'registry_id': r[0].id,
                     'category': r[0].category,
