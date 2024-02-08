@@ -4,13 +4,14 @@ from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.http import JsonResponse
 from bcmr_main.models import Token
-from cts.serializers import TokenSerializer
+from cts.models import CashToken as CashTokenModel
+from cts.serializers import CashTokenSerializer
 
 class CashToken(APIView):
     """
     Returns the unique minted tokens
     """
-    serializer_class = TokenSerializer
+    serializer_class = CashTokenSerializer
 
     allowed_methods = ['GET']
 
@@ -18,8 +19,8 @@ class CashToken(APIView):
         
         nft_type = kwargs.get('nft_type')
         category = kwargs.get('category')
-        tokens = Token.objects.all()
-        
+        tokens = CashTokenModel.objects.all()
+
         if category:
             tokens = tokens.filter(category=category)
 
@@ -34,7 +35,7 @@ class CashToken(APIView):
         paginator.page_size = 20
         paginated_queryset = paginator.paginate_queryset(tokens, request)
         
-        serializer = TokenSerializer(paginated_queryset, many=True)
+        serializer = CashTokenSerializer(paginated_queryset, many=True, context={'request': request})
         # paginated_response = paginator.get_paginated_response(serializer.data)        
 
         return JsonResponse({
