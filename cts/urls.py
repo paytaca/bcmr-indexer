@@ -25,6 +25,6 @@ urlpatterns += [
     re_path(r"^registry/(?P<category>[\w+:]+)/identity-snapshot/token-category/nfts/parse/types/(?P<commitment>[\w+:]+)/$", views.NftType.as_view(), name='get-nfts-parse-type-commitment'),
     re_path(r"^cashtokens/$", views.CashToken.as_view(), name='get-cashtoken'),
     re_path(r"^cashtokens/(?P<category>[\w+:]+)/$", views.CashToken.as_view(), name='get-cashtoken-by-category'),
-    re_path(r"^cashtokens/(?P<category>[\w+:]+)/(?P<nft_type>[\w+:]+)/$", views.CashToken.as_view(), name='get-cashtoken-by-category-and-type'),
+    re_path(r"^cashtokens/(?P<category>[\w+:]+)/(?P<token_type>[\w+:]+)/$", views.CashToken.as_view(), name='get-cashtoken-by-category-and-type'),
     
 ]

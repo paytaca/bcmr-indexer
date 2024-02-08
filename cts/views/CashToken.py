@@ -17,18 +17,18 @@ class CashToken(APIView):
 
     def get(self, request, *args, **kwargs):
         
-        nft_type = kwargs.get('nft_type')
+        token_type = kwargs.get('token_type')
         category = kwargs.get('category')
         tokens = CashTokenModel.objects.all()
 
         if category:
             tokens = tokens.filter(category=category)
 
-        if nft_type == 'fts':
+        if token_type == 'fts':
             tokens = tokens.filter(capability__isnull=False)
-        elif nft_type == 'nfts':
+        elif token_type == 'nfts':
             tokens = tokens.filter(capability__isnull=True,amount__gt=0)
-        elif nft_type == 'hybrids':
+        elif token_type == 'hybrids':
             tokens = tokens.filter(capability__isnull=False,amount__gt=0)
 
         paginator = PageNumberPagination()
