@@ -319,6 +319,14 @@ def _process_tx(tx, bchn):
             date_created=time
         )
 
+        try:
+            # Regenerate token metadata
+            # TODO - make this granular. save metadata only for the saved token.
+            metadata = TokenMetadata.objects.filter(token__category=category).latest('id')
+            resolve_metadata.delay(metadata.registry.id)
+        except TokenMetadata.DoesNotExist:
+            pass
+
     # save authbase tx
     if tokens_created:
         authbase_tx = bchn._get_raw_transaction(category)
