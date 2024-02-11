@@ -10,7 +10,7 @@ from jsonschema import ValidationError
 from django.core.management.base import BaseCommand
 
 from bcmr_main.bchn import *
-from bcmr_main.ipfs import download_ipfs_bcmr_data
+from bcmr_main.utils import download_url
 from bcmr_main.models import Registry
 from bcmr_main.app.BitcoinCashMetadataRegistry import BitcoinCashMetadataRegistry
 
@@ -68,8 +68,8 @@ def load_registry(txid, op_return_output):
                     if not uri.startswith('ipfs://'):
                         uri = 'ipfs://' + uri
                     LOGGER.info(msg=f'Requesting registry from {uri}')
-                    response = download_ipfs_bcmr_data(uri)    
-                if response.status_code == 200:
+                    response = download_url(uri)    
+                if response and response.status_code == 200:
                     LOGGER.info(msg=f'Requesting success from {uri}')
                     registry_contents = response.text
                     published_uri = uri
@@ -121,7 +121,7 @@ class ZMQHandler():
         try:
             while True:
                 msg = self.zmqSubSocket.recv_multipart()
-                LOGGER.info(msg)
+                # LOGGER.info(msg)
                 topic = msg[0].decode()
                 body = msg[1]
                 if topic == "rawtx":

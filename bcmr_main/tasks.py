@@ -130,8 +130,8 @@ def load_registry(txid, op_return_output):
                 if not uri.startswith('ipfs://'):
                     uri = 'ipfs://' + uri
                 LOGGER.info(msg=f'Requesting registry from {uri}')
-                response = download_ipfs_bcmr_data(uri)    
-            if response.status_code == 200:
+                response = download_url(uri)    
+            if response and response.status_code == 200:
                 LOGGER.info(msg=f'Requesting success from {uri}')
                 registry_contents = response.text
                 published_uri = uri
@@ -319,13 +319,12 @@ def _process_tx(tx, bchn):
             date_created=time
         )
 
-        try:
-            # Regenerate token metadata
-            # TODO - make this granular. save metadata only for the saved token.
-            metadata = TokenMetadata.objects.filter(token__category=category).latest('id')
-            resolve_metadata.delay(metadata.registry.id)
-        except TokenMetadata.DoesNotExist:
-            pass
+        # try:
+        #     # Generate token metadata
+        #     metadata = TokenMetadata.objects.filter(token__category=category).latest('id')
+        #     resolve_metadata.delay(metadata.registry.id, commitment)
+        # except TokenMetadata.DoesNotExist:
+        #     pass
 
     # save authbase tx
     if tokens_created:
@@ -494,14 +493,14 @@ def recheck_unconfirmed_txn_details():
 
 
 @shared_task(queue='resolve_metadata')
-def resolve_metadata(registry_id=None):
+def resolve_metadata(registry_id=None, commitment=None):
     if registry_id:
         registries = Registry.objects.filter(id=registry_id)
     else:
         registries = Registry.objects.filter(generated_metadata__isnull=True).order_by('date_created')
     for registry in registries:
         LOGGER.info(f'GENERATING METADATA FOR REGISRTY ID #{registry.id}')
-        generate_token_metadata(registry)
+        generate_token_metadata(registry, commitment)
         registry.generated_metadata = timezone.now()
         registry.save()
 
@@ -518,8 +517,9 @@ def watch_registry_changes():
             registry.date_created
         )
 
-        resolve_metadata.delay(registry.id)
-        # generate_token_metadata(registry)
+        # resolve_metadata.delay(registry.id)
+
+
 
 @shared_task(queue='mempool_worker_queue')
 def process_op_return_from_mempool(raw_tx_hex:str):
@@ -529,8 +529,9 @@ def process_op_return_from_mempool(raw_tx_hex:str):
     decoded_txn = None
     while retries < max_retries:
         try:
-            LOGGER.info(f'@process_op_return_from_mempool: Trying to decode raw transaction')
+            # LOGGER.info(f'@process_op_return_from_mempool: Trying to decode raw transaction')
             decoded_txn = rpc_connection.decoderawtransaction(raw_tx_hex)
+            LOGGER.info(f"Mempool tx: {decoded_txn['txid']}")
             break
         except Exception as exception:
             retries += 1
@@ -544,6 +545,10 @@ def process_op_return_from_mempool(raw_tx_hex:str):
         for output in outputs:
             if output['scriptPubKey']['type'] == 'nulldata' and output['scriptPubKey']['asm'].startswith('OP_RETURN'):
                 load_registry(decoded_txn['txid'], output)
+
+        # process mempool tx
+        process_tx(decoded_txn)
+
 
 def _get_spender_tx(txid, index):
     url = 'https://watchtower.cash/api/transaction/spender/'

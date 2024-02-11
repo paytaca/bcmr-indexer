@@ -6,7 +6,7 @@ from bcmr_main.models import *
 import copy
 
 
-def generate_token_metadata(registry_obj):
+def generate_token_metadata(registry_obj, commitment=None):
     # Parse the BCMR to get the associated identities and tokens
     if not registry_obj.contents:
         return
@@ -55,6 +55,9 @@ def generate_token_metadata(registry_obj):
                             if 'nfts' in token_data.keys():
                                 # Deal with the nft types
                                 nft_types = token_data['nfts']['parse']['types']
+                                if commitment and commitment in nft_types.keys():
+                                    nft_types = { commitment: nft_types[commitment] }
+                                
                                 for nft_type_key in nft_types:
                                     nft_token_check = Token.objects.filter(
                                         category=token_data['category'],
