@@ -25,9 +25,9 @@ class CashToken(APIView):
             tokens = tokens.filter(category=category)
 
         if token_type == 'fts':
-            tokens = tokens.filter(capability__isnull=False)
+            tokens = tokens.filter(capability__isnull=True, amount__gt=0)
         elif token_type == 'nfts':
-            tokens = tokens.filter(capability__isnull=True,amount__gt=0)
+            tokens = tokens.filter(capability__isnull=False,amount=0)
         elif token_type == 'hybrids':
             tokens = tokens.filter(capability__isnull=False,amount__gt=0)
 
