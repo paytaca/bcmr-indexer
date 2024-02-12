@@ -6,16 +6,16 @@ import requests
 import simplejson as json
 from django.db.models import Q
 from django.conf import settings
-from bcmr_main.app.BitcoinCashMetadataRegistry import BitcoinCashMetadataRegistry
+# from bcmr_main.app.BitcoinCashMetadataRegistry import BitcoinCashMetadataRegistry
 from bcmr_main.metadata import generate_token_metadata
 from celery import shared_task
-from django.db.models import Max
-from jsonschema import ValidationError
+# from django.db.models import Max
+# from jsonschema import ValidationError
 from bcmr_main.op_return import *
 from bcmr_main.bchn import BCHN
 from bcmr_main.models import *
 from bcmr_main.utils import timestamp_to_date
-from bitcoinrpc.authproxy import AuthServiceProxy
+# from bitcoinrpc.authproxy import AuthServiceProxy
 
 LOGGER = logging.getLogger(__name__)
 
@@ -104,87 +104,87 @@ def extract_registry_pub_data(op_return_decoded_output: dict):
             }
             
 
-def load_registry(txid, op_return_output):
-    """
-    Load the decoded op_return output to the Registry table
-    """
-    compute_hash = encode_str
-    LOGGER.info('LOADING REGISTRY')
-    if Registry.objects.filter(txid=txid).exists():
-        return
+# def load_registry(txid, op_return_output):
+#     """
+#     Load the decoded op_return output to the Registry table
+#     """
+#     compute_hash = encode_str
+#     LOGGER.info('LOADING REGISTRY')
+#     if Registry.objects.filter(txid=txid).exists():
+#         return
     
-    published_uris_and_content_hash = extract_registry_pub_data(op_return_output)
-    if published_uris_and_content_hash:
-        content_hash, uris = published_uris_and_content_hash.values()
-        registry_contents = None
-        published_uri = None
-        response = None
-        for uri in uris:
-            LOGGER.info(msg=f'Found {uri}')
-            if '.' in uri:
-                if not uri.startswith('https://'):
-                    uri = 'https://' + uri
-                LOGGER.info(msg=f'Requesting registry from {uri}')
-                response = requests.get(uri)
-            else:
-                if not uri.startswith('ipfs://'):
-                    uri = 'ipfs://' + uri
-                LOGGER.info(msg=f'Requesting registry from {uri}')
-                response = download_url(uri)    
-            if response and response.status_code == 200:
-                LOGGER.info(msg=f'Requesting success from {uri}')
-                registry_contents = response.text
-                published_uri = uri
-                break
+#     published_uris_and_content_hash = extract_registry_pub_data(op_return_output)
+#     if published_uris_and_content_hash:
+#         content_hash, uris = published_uris_and_content_hash.values()
+#         registry_contents = None
+#         published_uri = None
+#         response = None
+#         for uri in uris:
+#             LOGGER.info(msg=f'Found {uri}')
+#             if '.' in uri:
+#                 if not uri.startswith('https://'):
+#                     uri = 'https://' + uri
+#                 LOGGER.info(msg=f'Requesting registry from {uri}')
+#                 response = requests.get(uri)
+#             else:
+#                 if not uri.startswith('ipfs://'):
+#                     uri = 'ipfs://' + uri
+#                 LOGGER.info(msg=f'Requesting registry from {uri}')
+#                 response = download_url(uri)    
+#             if response and response.status_code == 200:
+#                 LOGGER.info(msg=f'Requesting success from {uri}')
+#                 registry_contents = response.text
+#                 published_uri = uri
+#                 break
         
-        if registry_contents:
-            # published_content_hash = ''
-            # try:
-            #     published_content_hash = bytes.fromhex(published_content_hash_hex).decode() 
-            # except UnicodeDecodeError as e:
-            #     published_content_hash = published_content_hash_hex.hex()
-            ## for older bcmr publications
+#         if registry_contents:
+#             # published_content_hash = ''
+#             # try:
+#             #     published_content_hash = bytes.fromhex(published_content_hash_hex).decode() 
+#             # except UnicodeDecodeError as e:
+#             #     published_content_hash = published_content_hash_hex.hex()
+#             ## for older bcmr publications
 
-            validity_checks = {
-                'bcmr_file_accessible': True,
-                'bcmr_hash_match': content_hash == compute_hash(registry_contents),
-                'identities_match': None
-            }
-            try:
-                BitcoinCashMetadataRegistry.validate_contents(registry_contents)
-                LOGGER.info('TOKEN CATEGORIESS')
+#             validity_checks = {
+#                 'bcmr_file_accessible': True,
+#                 'bcmr_hash_match': content_hash == compute_hash(registry_contents),
+#                 'identities_match': None
+#             }
+#             try:
+#                 BitcoinCashMetadataRegistry.validate_contents(registry_contents)
+#                 LOGGER.info('TOKEN CATEGORIESS')
                 
-            except ValidationError: 
-                LOGGER.info('Validation Error')
+#             except ValidationError: 
+#                 LOGGER.info('Validation Error')
 
             
-            token_ids = BitcoinCashMetadataRegistry.get_token_categories(registry_contents)
-            LOGGER.info('TOKEN IDS')
-            LOGGER.info(token_ids)
+#             token_ids = BitcoinCashMetadataRegistry.get_token_categories(registry_contents)
+#             LOGGER.info('TOKEN IDS')
+#             LOGGER.info(token_ids)
             
             
-            try:
-                for token_id in token_ids:
-                    if not validate_authhead(token_id, txid):
-                        raise Exception(f'{txid} is not the authhead of {token_id}')
+#             try:
+#                 for token_id in token_ids:
+#                     if not validate_authhead(token_id, txid):
+#                         raise Exception(f'{txid} is not the authhead of {token_id}')
                     
-                LOGGER.info('CREATING REGISTRY')
-                Registry.objects.get_or_create(
-                    txid=txid,
-                    op_return=op_return_output['scriptPubKey'].get('asm'),
-                    defaults={
-                        'txid': txid,
-                        'index': op_return_output['n'],
-                        'validity_checks': validity_checks,
-                        'op_return': op_return_output['scriptPubKey'].get('asm'),
-                        'bcmr_url': published_uri,
-                        'contents': json.loads(registry_contents),
-                        'bcmr_request_status': response.status_code
-                    }
-                )
-            except Exception as e:
-                LOGGER.info(msg='Registry get_or_create error')
-                LOGGER.info(msg=e)
+#                 LOGGER.info('CREATING REGISTRY')
+#                 Registry.objects.get_or_create(
+#                     txid=txid,
+#                     op_return=op_return_output['scriptPubKey'].get('asm'),
+#                     defaults={
+#                         'txid': txid,
+#                         'index': op_return_output['n'],
+#                         'validity_checks': validity_checks,
+#                         'op_return': op_return_output['scriptPubKey'].get('asm'),
+#                         'bcmr_url': published_uri,
+#                         'contents': json.loads(registry_contents),
+#                         'bcmr_request_status': response.status_code
+#                     }
+#                 )
+#             except Exception as e:
+#                 LOGGER.info(msg='Registry get_or_create error')
+#                 LOGGER.info(msg=e)
         
 
 def generate_token_identity(token_data):
@@ -505,33 +505,33 @@ def resolve_metadata(registry_id=None, commitment=None):
         registry.save()
 
 
-@shared_task(queue='mempool_worker_queue')
-def process_op_return_from_mempool(raw_tx_hex:str):
-    rpc_connection = AuthServiceProxy(settings.BCHN_NODE)
-    max_retries = 20
-    retries = 0
-    decoded_txn = None
-    while retries < max_retries:
-        try:
-            # LOGGER.info(f'@process_op_return_from_mempool: Trying to decode raw transaction')
-            decoded_txn = rpc_connection.decoderawtransaction(raw_tx_hex)
-            LOGGER.info(f"Mempool tx: {decoded_txn['txid']}")
-            break
-        except Exception as exception:
-            retries += 1
-            if retries >= max_retries:
-                LOGGER.info(f'@process_op_return_from_mempool: Error decoding raw hex tx')
-                raise exception
-            time.sleep(1)
+# @shared_task(queue='mempool_worker_queue')
+# def process_op_return_from_mempool(raw_tx_hex:str):
+#     rpc_connection = AuthServiceProxy(settings.BCHN_NODE)
+#     max_retries = 20
+#     retries = 0
+#     decoded_txn = None
+#     while retries < max_retries:
+#         try:
+#             # LOGGER.info(f'@process_op_return_from_mempool: Trying to decode raw transaction')
+#             decoded_txn = rpc_connection.decoderawtransaction(raw_tx_hex)
+#             LOGGER.info(f"Mempool tx: {decoded_txn['txid']}")
+#             break
+#         except Exception as exception:
+#             retries += 1
+#             if retries >= max_retries:
+#                 LOGGER.info(f'@process_op_return_from_mempool: Error decoding raw hex tx')
+#                 raise exception
+#             time.sleep(1)
     
-    if decoded_txn:
-        outputs = decoded_txn.get('vout')
-        for output in outputs:
-            if output['scriptPubKey']['type'] == 'nulldata' and output['scriptPubKey']['asm'].startswith('OP_RETURN'):
-                load_registry(decoded_txn['txid'], output)
+#     if decoded_txn:
+#         outputs = decoded_txn.get('vout')
+#         for output in outputs:
+#             if output['scriptPubKey']['type'] == 'nulldata' and output['scriptPubKey']['asm'].startswith('OP_RETURN'):
+#                 load_registry(decoded_txn['txid'], output)
 
-        # process mempool tx
-        process_tx(decoded_txn)
+#         # process mempool tx
+#         process_tx(decoded_txn)
 
 
 def _get_spender_tx(txid, index):

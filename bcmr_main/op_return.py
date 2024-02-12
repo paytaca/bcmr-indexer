@@ -3,8 +3,9 @@ from django.db import transaction
 from bcmr_main.models import (
     Registry
 )
+from bcmr_main.app.BitcoinCashMetadataRegistry import BitcoinCashMetadataRegistry
+from jsonschema import ValidationError
 from urllib.parse import urlparse
-import requests
 import logging
 import copy
 import json
@@ -96,6 +97,14 @@ def process_op_return(
                     validity_checks['bcmr_hash_match'] = False
                     proceed = False
                     log_invalid_op_return(txid, encoded_response_json_hash, [decoded_bcmr_json_hash, encoded_bcmr_json_hash])
+                
+                try:
+                    BitcoinCashMetadataRegistry.validate_contents(response.text)
+                    validity_checks['bcmr_format_valid'] = True
+                    proceed = True
+                except ValidationError:
+                    validity_checks['bcmr_format_valid'] = False
+                    proceed = False
 
             if proceed:
                 try:
