@@ -14,7 +14,7 @@ from jsonschema import ValidationError
 from bcmr_main.op_return import *
 from bcmr_main.bchn import BCHN
 from bcmr_main.models import *
-from bcmr_main.utils import timestamp_to_date
+from bcmr_main.utils import timestamp_to_date, download_url
 from bitcoinrpc.authproxy import AuthServiceProxy
 
 LOGGER = logging.getLogger(__name__)
@@ -130,7 +130,7 @@ def load_registry(txid, op_return_output):
                 if not uri.startswith('ipfs://'):
                     uri = 'ipfs://' + uri
                 LOGGER.info(msg=f'Requesting registry from {uri}')
-                response = download_ipfs_bcmr_data(uri)    
+                response = download_url(uri)    
             if response.status_code == 200:
                 LOGGER.info(msg=f'Requesting success from {uri}')
                 registry_contents = response.text
