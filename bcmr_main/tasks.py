@@ -505,22 +505,6 @@ def resolve_metadata(registry_id=None, commitment=None):
         registry.save()
 
 
-@shared_task(queue='watch_registry_changes')
-def watch_registry_changes():
-    registries = Registry.objects.filter(watch_for_changes=True)
-    for registry in registries:
-        process_op_return(
-            registry.txid,
-            registry.index,
-            registry.op_return,
-            registry.publisher,
-            registry.date_created
-        )
-
-        # resolve_metadata.delay(registry.id)
-
-
-
 @shared_task(queue='mempool_worker_queue')
 def process_op_return_from_mempool(raw_tx_hex:str):
     rpc_connection = AuthServiceProxy(settings.BCHN_NODE)

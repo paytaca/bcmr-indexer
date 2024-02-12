@@ -1,6 +1,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from bcmr_main.tasks import resolve_metadata
+from bcmr_main.op_return import process_op_return
 from bcmr_main.models import Registry, Token, TokenMetadata
 
 
@@ -16,6 +17,15 @@ def validate_registry(sender, instance=None, created=False, **kwargs):
 def generate_metadata(sender, instance=None, created=False, **kwargs):
     try:
         metadata = TokenMetadata.objects.filter(token__category=instance.category).latest('id')
-        resolve_metadata.delay(metadata.registry.id, instance.commitment)
+        registry = metadata.registry
+        if registry.watch_for_changes:
+            process_op_return(
+                registry.txid,
+                registry.index,
+                registry.op_return,
+                registry.publisher,
+                registry.date_created
+            )
+        resolve_metadata.delay(registry.id, instance.commitment)
     except TokenMetadata.DoesNotExist:
             pass

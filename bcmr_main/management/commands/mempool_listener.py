@@ -3,22 +3,18 @@
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-import time
 import requests
-import threading
 from jsonschema import ValidationError
 from django.core.management.base import BaseCommand
-
-from bcmr_main.bchn import *
+from bitcash import transaction
 from bcmr_main.utils import download_url
 from bcmr_main.models import Registry
 from bcmr_main.app.BitcoinCashMetadataRegistry import BitcoinCashMetadataRegistry
-
+from django.conf import settings
 import logging
 from bcmr_main.utils import encode_str
 from bcmr_main.tasks import process_op_return_from_mempool
 import zmq
-from bitcoinrpc.authproxy import AuthServiceProxy
 
 LOGGER = logging.getLogger(__name__)
 
@@ -109,33 +105,29 @@ class ZMQHandler():
 
     def __init__(self):
         self.url = f"tcp://{settings.BCHN_HOST}:28332"
-        self.BCHN = BCHN()
-
         self.zmqContext = zmq.Context()
         self.zmqSubSocket = self.zmqContext.socket(zmq.SUB)
         self.zmqSubSocket.setsockopt_string(zmq.SUBSCRIBE, "rawtx")
+        self.zmqSubSocket.setsockopt(zmq.TCP_KEEPALIVE,1)
+        self.zmqSubSocket.setsockopt(zmq.TCP_KEEPALIVE_CNT,10)
+        self.zmqSubSocket.setsockopt(zmq.TCP_KEEPALIVE_IDLE,1)
+        self.zmqSubSocket.setsockopt(zmq.TCP_KEEPALIVE_INTVL,1)
         self.zmqSubSocket.connect(self.url)
-        self.rpc_connection = AuthServiceProxy(settings.BCHN_NODE)
 
     def start(self):
         try:
             while True:
                 msg = self.zmqSubSocket.recv_multipart()
-                # LOGGER.info(msg)
                 topic = msg[0].decode()
                 body = msg[1]
                 if topic == "rawtx":
+                    tx_hex = body.hex()
+                    txid = transaction.calc_txid(tx_hex)
+                    LOGGER.info(f'Received mempool tx: {txid}')
                     try:
-                        process_op_return_from_mempool.delay(body.hex())
-                        # decoded = self.rpc_connection.decoderawtransaction(body.hex())
-                        # outputs = decoded.get('vout')
-                        # for output in outputs:
-                        #     if output['scriptPubKey']['type'] == 'nulldata' and output['scriptPubKey']['asm'].startswith('OP_RETURN'):
-                        #         t = threading.Thread(target=load_registry, args=(decoded['txid'],output))
-                        #         t.start()
+                        process_op_return_from_mempool.delay(tx_hex)
                     except Exception as e:
                         LOGGER.info(msg='Error processing op_return from mempool')
-                
         except KeyboardInterrupt:
             self.zmqContext.destroy()
         except Exception as e:
