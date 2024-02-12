@@ -456,7 +456,13 @@ class Registry(models.Model):
                             ELSE '{}'::jsonb 
                         END
                     ) AS identity_history,                    
-                    LATERAL jsonb_object_keys(contents->'identities'->authbase->identity_history->'token'->'nfts'->'parse'->'types') AS commitment
+                    LATERAL jsonb_object_keys(
+                        CASE 
+                            WHEN jsonb_typeof(contents->'identities'->authbase->identity_history->'token'->'nfts'->'parse'->'types') = 'object' 
+                            THEN contents->'identities'->authbase->identity_history->'token'->'nfts'->'parse'->'types'
+                            ELSE '{}'::jsonb 
+                        END
+                    ) AS commitment                
                 WHERE commitment = '%s'
             ) AS subquery
             
