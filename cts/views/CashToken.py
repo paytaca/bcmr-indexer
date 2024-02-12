@@ -19,20 +19,30 @@ class CashToken(APIView):
         
         token_type = kwargs.get('token_type')
         category = kwargs.get('category')
+        commitment = kwargs.get('commitment')
+        capability = request.query_params.get('capability', '')
         tokens = CashTokenModel.objects.all()
 
         if category:
             tokens = tokens.filter(category=category)
 
         if token_type == 'fts':
-            tokens = tokens.filter(capability__isnull=False)
+            tokens = tokens.filter(capability__isnull=True, amount__gt=0)
         elif token_type == 'nfts':
-            tokens = tokens.filter(capability__isnull=True,amount__gt=0)
+            tokens = tokens.filter(capability__isnull=False,amount=0)
+            if commitment:
+                tokens = tokens.filter(commitment=commitment)
+            if capability:
+                tokens = tokens.filter(capability=capability)
         elif token_type == 'hybrids':
             tokens = tokens.filter(capability__isnull=False,amount__gt=0)
+            if commitment:
+                tokens = tokens.filter(commitment=commitment)
+            if capability:
+                tokens = tokens.filter(capability=capability)
 
         paginator = PageNumberPagination()
-        paginator.page_size = 20
+        paginator.page_size = 10
         paginated_queryset = paginator.paginate_queryset(tokens, request)
         
         serializer = CashTokenSerializer(paginated_queryset, many=True, context={'request': request})

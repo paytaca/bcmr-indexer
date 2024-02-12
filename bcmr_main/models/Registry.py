@@ -1,4 +1,5 @@
 import json
+import datetime
 from django.db import models
 from django.db.models import ExpressionWrapper, CharField, F, Q
 
@@ -22,7 +23,7 @@ class Registry(models.Model):
     date_created = models.DateTimeField(null=True, blank=True, db_index=True)
     generated_metadata = models.DateTimeField(null=True, blank=True, db_index=True)
 
-    def get_identities(self) -> [str]:
+    def get_identities(self):
 
         query = f"""
             SELECT id, 
@@ -35,15 +36,21 @@ class Registry(models.Model):
         """
         Returns history of specific authbase, or all identities if authbase (authbase) isn't provided.
         """
+        query = """
+            SELECT 
+                id, 
+                jsonb_object_keys(contents->'identities'->'%s') AS timestamp from bcmr_main_registry WHERE id=%s;
+        """ % (authbase, self.id)
+
         if authbase: 
             return {
-                authbase: [i.timestamp for i in Registry.objects.raw("SELECT id, jsonb_object_keys(contents->'identities'->'%s') AS timestamp from bcmr_main_registry WHERE id=%s;" % (authbase, self.id))]
+                authbase: [i.timestamp for i in Registry.objects.raw(query)]
             }
         
         histories = {}
     
-        for authbase in self.identities():
-            histories[authbase] = [i.timestamp for i in Registry.objects.raw("SELECT id, jsonb_object_keys(contents->'identities'->'%s') AS timestamp from bcmr_main_registry WHERE id=%s;" % (authbase, self.id))]
+        for authbase in self.get_identities():
+            histories[authbase] = [i.timestamp for i in Registry.objects.raw(query)]
     
         return histories
     
@@ -74,7 +81,7 @@ class Registry(models.Model):
         """
         Return the basic TokenCategory details
         """
-        query = f"""
+        query = """
             SELECT 
                 id, 
                 authbase, 
@@ -92,13 +99,26 @@ class Registry(models.Model):
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS category
                 FROM
                     bcmr_main_registry,
-                    jsonb_object_keys(contents -> 'identities') AS authbase,
-                LATERAL jsonb_object_keys(contents->'identities'->authbase) AS identity_history
+                    jsonb_object_keys(
+                        CASE 
+                            WHEN jsonb_typeof(contents->'identities') = 'object' 
+                            THEN contents->'identities' 
+                            ELSE '{}'::jsonb 
+                        END
+                    ) AS authbase,
+                    LATERAL jsonb_object_keys(
+                        CASE 
+                            WHEN jsonb_typeof(contents->'identities'->authbase) = 'object' 
+                            THEN contents->'identities'->authbase 
+                            ELSE '{}'::jsonb 
+                        END
+                    ) AS identity_history
             ) AS subquery
             
-            WHERE category = '"{category}"'
-            ORDER BY id DESC LIMIT 1;
-        """
+            WHERE category = '"%s"' and identity_history <= '%s'
+            ORDER BY identity_history DESC 
+            LIMIT 1;
+        """ % (category, datetime.datetime.utcnow().isoformat())
         r = Registry.objects.raw(query)
         if r:
             return {
@@ -118,13 +138,13 @@ class Registry(models.Model):
         """
         Return the basic TokenCategory details
         """
-        # jsonb_object_keys(contents->'identities') AS identities,
-        query = f"""
+        query = """
             SELECT 
                 id, 
                 authbase, 
                 identity_history, 
-                identity_snapshot
+                identity_snapshot,
+                category
             FROM (
                 SELECT
                     id,
@@ -134,13 +154,27 @@ class Registry(models.Model):
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS category
                 FROM
                     bcmr_main_registry,
-                    jsonb_object_keys(contents -> 'identities') AS authbase,
-                LATERAL jsonb_object_keys(contents->'identities'->authbase) AS identity_history
+                    jsonb_object_keys(
+                        CASE 
+                            WHEN jsonb_typeof(contents->'identities') = 'object' 
+                            THEN contents->'identities' 
+                            ELSE '{}'::jsonb 
+                        END
+                    ) AS authbase,
+                    LATERAL jsonb_object_keys(
+                        CASE 
+                            WHEN jsonb_typeof(contents->'identities'->authbase) = 'object' 
+                            THEN contents->'identities'->authbase 
+                            ELSE '{}'::jsonb 
+                        END
+                    ) AS identity_history
             ) AS subquery
             
-            WHERE category = '"{category}"'
-            ORDER BY id DESC LIMIT 1;
-        """
+            WHERE category = '"%s"' and identity_history <= '%s'
+            ORDER BY identity_history DESC 
+            LIMIT 1;
+        """ % (category, datetime.datetime.utcnow().isoformat())
+
         r = Registry.objects.raw(query)
         if r:
             identity_snapshot = r[0].identity_snapshot
@@ -155,14 +189,14 @@ class Registry(models.Model):
                     'identity_history': r[0].identity_history.replace('"',''),
                 }
             }
-        
+    
     def get_identity_snapshot_basic(self, category):
         """
         Return the basic IdentitySnapshot details without the token field. 
         The token field contains nfts.
         Omit <IdentitySnapshot, 'token'>
         """
-        query = f"""
+        query = """
             SELECT 
                 id, 
                 authbase, 
@@ -174,7 +208,10 @@ class Registry(models.Model):
                 status,
                 split_id,
                 uris,
-                extensions
+                extensions,
+                token_category,
+                token_symbol,
+                token_decimals
             FROM (
                 SELECT
                     id,
@@ -188,16 +225,32 @@ class Registry(models.Model):
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'splitId') AS split_id,
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'uris') AS uris,
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'extensions') AS extensions,
-                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS category
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS token_category,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'symbol') AS token_symbol,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'decimals') AS token_decimals
                 FROM
                     bcmr_main_registry,
-                    jsonb_object_keys(contents -> 'identities') AS authbase,
-                LATERAL jsonb_object_keys(contents->'identities'->authbase) AS identity_history
+                    jsonb_object_keys(
+                        CASE 
+                            WHEN jsonb_typeof(contents->'identities') = 'object' 
+                            THEN contents->'identities' 
+                            ELSE '{}'::jsonb 
+                        END
+                    ) AS authbase,
+                    LATERAL jsonb_object_keys(
+                        CASE 
+                            WHEN jsonb_typeof(contents->'identities'->authbase) = 'object' 
+                            THEN contents->'identities'->authbase 
+                            ELSE '{}'::jsonb 
+                        END
+                    ) AS identity_history
+
             ) AS subquery
             
-            WHERE category = '"{category}"'
-            ORDER BY id DESC LIMIT 1;
-        """
+            WHERE token_category = '"%s"' and identity_history <= '%s'
+            ORDER BY identity_history DESC 
+            LIMIT 1;
+        """ % (category, datetime.datetime.utcnow().isoformat())
         r = Registry.objects.raw(query)
         if r:
             identity_snapshot = {
@@ -217,6 +270,14 @@ class Registry(models.Model):
                 identity_snapshot['uris'] = json.loads(r[0].uris)
             if r[0].extensions:
                 identity_snapshot['extensions'] = json.loads(r[0].extensions)
+            if r[0].token_category:
+                identity_snapshot['token'] = {
+                    'category': json.loads(r[0].token_category)
+                }
+                if r[0].token_symbol:
+                    identity_snapshot['token']['symbol'] = json.loads(r[0].token_symbol)
+                if r[0].token_decimals:
+                    identity_snapshot['token']['decimals'] = json.loads(r[0].token_decimals)
             return {
                 **identity_snapshot,
                 '_meta': {
@@ -226,13 +287,13 @@ class Registry(models.Model):
                     'identity_history': r[0].identity_history.replace('"',''),
                 }
             }
-            
+
     def get_nfts(self, category):
         """
         Returns the NftCategory
         """
         
-        query = f"""
+        query = """
             SELECT 
                 id, 
                 category,
@@ -248,13 +309,27 @@ class Registry(models.Model):
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS category
                 FROM
                     bcmr_main_registry,
-                    jsonb_object_keys(contents -> 'identities') AS authbase,
-                    LATERAL jsonb_object_keys(contents->'identities'->authbase) AS identity_history
+                    jsonb_object_keys(
+                        CASE 
+                            WHEN jsonb_typeof(contents->'identities') = 'object' 
+                            THEN contents->'identities' 
+                            ELSE '{}'::jsonb 
+                        END
+                    ) AS authbase,
+                    LATERAL jsonb_object_keys(
+                        CASE 
+                            WHEN jsonb_typeof(contents->'identities'->authbase) = 'object' 
+                            THEN contents->'identities'->authbase 
+                            ELSE '{}'::jsonb 
+                        END
+                    ) AS identity_history
+
             ) AS subquery
             
-            WHERE category = '"{category}"'
-            ORDER BY id DESC LIMIT 1;
-        """
+            WHERE category = '"%s"' and identity_history <= '%s'
+            ORDER BY identity_history DESC 
+            LIMIT 1;
+        """ % (category, datetime.datetime.utcnow().isoformat())
         r = Registry.objects.raw(query)
         if r:
             nft_category = r[0].nft_category
@@ -269,15 +344,15 @@ class Registry(models.Model):
                     'identity_history': r[0].identity_history.replace('"',''),
                 }
             }
-        
+    
     
     def get_nft_types(self, category, limit=10, offset=0):
         """
         Returns the NftType(s) of the SequentialNftCollection or ParsableNftCollection
         """
         # TODO: handle if registry does not contain NftCategory or NftType(s)
-        query = f"""
-            SELECT 
+        query = """
+            SELECT DISTINCT ON(commitment)
                 id, 
                 category,
                 authbase, 
@@ -296,14 +371,36 @@ class Registry(models.Model):
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS category
                 FROM
                     bcmr_main_registry,
-                    jsonb_object_keys(contents -> 'identities') AS authbase,
-                    LATERAL jsonb_object_keys(contents->'identities'->authbase) AS identity_history,
-                    LATERAL jsonb_object_keys(contents->'identities'->authbase->identity_history->'token'->'nfts'->'parse'->'types') AS commitment
+                    jsonb_object_keys(
+                        CASE 
+                            WHEN jsonb_typeof(contents->'identities') = 'object' 
+                            THEN contents->'identities' 
+                            ELSE '{}'::jsonb 
+                        END
+                    ) AS authbase,
+                    LATERAL jsonb_object_keys(
+                        CASE 
+                            WHEN jsonb_typeof(contents->'identities'->authbase) = 'object' 
+                            THEN contents->'identities'->authbase 
+                            ELSE '{}'::jsonb 
+                        END
+                    ) AS identity_history,                    
+                    LATERAL jsonb_object_keys(
+                        CASE 
+                            WHEN jsonb_typeof(contents->'identities'->authbase->identity_history->'token'->'nfts'->'parse'->'types') = 'object' 
+                            THEN contents->'identities'->authbase->identity_history->'token'->'nfts'->'parse'->'types'
+                            ELSE '{}'::jsonb 
+                        END
+                    ) AS commitment                
+                WHERE identity_history <= '%s'
+                ORDER BY identity_history DESC
             ) AS subquery
             
-            WHERE category = '"{category}"'
-            ORDER BY id DESC LIMIT {limit} OFFSET {offset};
-        """ 
+            WHERE category = '"%s"'
+            ORDER BY commitment DESC 
+            LIMIT %s OFFSET %s;
+        """ % (datetime.datetime.utcnow().isoformat(), category, limit, offset)
+
         r = Registry.objects.raw(query)
         nft_types = []
         for item in r:
@@ -328,8 +425,8 @@ class Registry(models.Model):
         Returns the NftType(s) of the SequentialNftCollection or ParsableNftCollection
         """
         # TODO: handle if registry does not contain NftCategory or NftType(s)
-        query = f"""
-            SELECT 
+        query = """
+            SELECT
                 id, 
                 category,
                 authbase, 
@@ -346,15 +443,35 @@ class Registry(models.Model):
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS category
                 FROM
                     bcmr_main_registry,
-                    jsonb_object_keys(contents -> 'identities') AS authbase,
-                    LATERAL jsonb_object_keys(contents->'identities'->authbase) AS identity_history,
-                    LATERAL jsonb_object_keys(contents->'identities'->authbase->identity_history->'token'->'nfts'->'parse'->'types') AS commitment
-                WHERE commitment = '{commitment}'
+                    jsonb_object_keys(
+                        CASE 
+                            WHEN jsonb_typeof(contents->'identities') = 'object' 
+                            THEN contents->'identities' 
+                            ELSE '{}'::jsonb 
+                        END
+                    ) AS authbase,
+                    LATERAL jsonb_object_keys(
+                        CASE 
+                            WHEN jsonb_typeof(contents->'identities'->authbase) = 'object' 
+                            THEN contents->'identities'->authbase 
+                            ELSE '{}'::jsonb 
+                        END
+                    ) AS identity_history,                    
+                    LATERAL jsonb_object_keys(
+                        CASE 
+                            WHEN jsonb_typeof(contents->'identities'->authbase->identity_history->'token'->'nfts'->'parse'->'types') = 'object' 
+                            THEN contents->'identities'->authbase->identity_history->'token'->'nfts'->'parse'->'types'
+                            ELSE '{}'::jsonb 
+                        END
+                    ) AS commitment                
+                WHERE commitment = '%s'
             ) AS subquery
             
-            WHERE category = '"{category}"'
-            ORDER BY id DESC LIMIT 1;
-        """ 
+            WHERE category = '"%s"' and identity_history <= '%s'
+            ORDER BY identity_history DESC 
+            LIMIT 1;
+        """ % (commitment, category, datetime.datetime.utcnow().isoformat())
+
         r = Registry.objects.raw(query)
         if r:
             item = r[0]
@@ -372,34 +489,43 @@ class Registry(models.Model):
                     'identity_history': item.identity_history.replace('"','')
                 }
             }
-        
-        
-
+    
     @staticmethod
-    def find_registry_by_token_category(category):
-        query = f"""
+    def find_registry_id(category):
+        query = """
             SELECT 
                 id, 
                 authbase, 
                 identity_history, 
-                identities, 
                 category
             FROM (
                 SELECT
                     id,
                     authbase,
                     identity_history,
-                    jsonb_object_keys(contents->'identities') AS identities,
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS category
                 FROM
                     bcmr_main_registry,
-                    jsonb_object_keys(contents -> 'identities') AS authbase,
-                LATERAL jsonb_object_keys(contents->'identities'->authbase) AS identity_history
+                    jsonb_object_keys(
+                        CASE 
+                            WHEN jsonb_typeof(contents->'identities') = 'object' 
+                            THEN contents->'identities' 
+                            ELSE '{}'::jsonb 
+                        END
+                    ) AS authbase,
+                    LATERAL jsonb_object_keys(
+                        CASE 
+                            WHEN jsonb_typeof(contents->'identities'->authbase) = 'object' 
+                            THEN contents->'identities'->authbase 
+                            ELSE '{}'::jsonb 
+                        END
+                    ) AS identity_history              
             ) AS subquery
             
-            WHERE category = '"{category}"'
-            ORDER BY id DESC LIMIT 1;
-        """
+            WHERE category = '"%s"' and identity_history <= '%s'
+            ORDER BY id DESC 
+            LIMIT 1;
+        """ % (category, datetime.datetime.utcnow().isoformat())
 
         r = Registry.objects.raw(query)
         if r:
@@ -408,14 +534,95 @@ class Registry(models.Model):
                 '_meta': {
                     'category': r[0].category.replace('"',''),
                     'authbase': r[0].authbase.replace('"',''),
-                    'identity_history': r[0].identity_history.replace('"',''),
-                    'identities': r[0].identities
+                    'identity_history': r[0].identity_history.replace('"','')
                 }
             }
 
+    @staticmethod
+    def find_registry(category, include_identities=False):
 
-            
+        select_identities = "identities," if include_identities else ''
 
+        extract_identities = """
+        jsonb_extract_path(contents, 'identities') AS identities, 
+        """ if include_identities else ''
+
+        query = """
+        SELECT 
+            id, 
+            identity_history,
+            authbase,
+            schema,
+            version,
+            latest_revision,
+            registry_identity,
+            tags,
+            default_chain,
+            chains,
+            license,
+            locales,
+            extensions,
+            %s
+            category
+        FROM (
+            SELECT
+                id,
+                jsonb_extract_path(contents, '$schema') AS schema,
+                jsonb_extract_path(contents, 'version') AS version,
+                jsonb_extract_path(contents, 'latestRevision') AS latest_revision,
+                jsonb_extract_path(contents, 'registryIdentity') AS registry_identity,
+                jsonb_extract_path(contents, 'tags') AS tags,
+                jsonb_extract_path(contents, 'defaultChain') AS default_chain,
+                jsonb_extract_path(contents, 'chains') AS chains,
+                jsonb_extract_path(contents, 'license') AS license,
+                jsonb_extract_path(contents, 'locales') AS locales,
+                jsonb_extract_path(contents, 'extensions') AS extensions,
+                %s
+                authbase,
+                identity_history,
+                jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS category
+            FROM
+                bcmr_main_registry,
+                jsonb_object_keys(
+                    CASE 
+                        WHEN jsonb_typeof(contents->'identities') = 'object' 
+                        THEN contents->'identities' 
+                        ELSE '{}'::jsonb 
+                    END
+                ) AS authbase,
+                LATERAL jsonb_object_keys(
+                    CASE 
+                        WHEN jsonb_typeof(contents->'identities'->authbase) = 'object' 
+                        THEN contents->'identities'->authbase 
+                        ELSE '{}'::jsonb 
+                    END
+                ) AS identity_history              
+        ) AS subquery
+
+        WHERE category = '"%s"' and identity_history <= '%s'
+        ORDER BY id DESC 
+        LIMIT 1;
+        """ % (select_identities, extract_identities, category, datetime.datetime.utcnow().isoformat())
+
+        registry = Registry.objects.raw(query)
+        if registry:
+            bcmr = {key: value for key,value in registry[0].__dict__.items() if key in ['schema', 'version', 'latest_revision', 'registry_identity','tags','default_chain', 'chains', 'license', 'locales', 'extensions', 'identities']}
+            bcmr = {key: json.loads(value) for key, value in bcmr.items() if value}
+            bcmr['$schema'] = bcmr.pop('schema')
+            bcmr['latestRevision'] = bcmr.pop('latest_revision')
+            bcmr['registryIdentity'] = bcmr.pop('registry_identity')
+            if bcmr.get('default_chain'):
+                bcmr['defaultChain'] = bcmr.pop('default_chain', None) 
+            return {
+                    **bcmr,       
+                    '_meta': {
+                        'registry_id': registry[0].id,
+                        'category': registry[0].category.replace('"',''),
+                        'authbase': registry[0].authbase.replace('"',''),
+                        'identity_history': registry[0].identity_history.replace('"','')
+                    }
+                }
+    
 
     class Meta:
         verbose_name_plural = 'Registries'
