@@ -115,7 +115,7 @@ class Registry(models.Model):
                     ) AS identity_history
             ) AS subquery
             
-            WHERE token_category = '"%s"' and identity_history <= '%s'
+            WHERE category = '"%s"' and identity_history <= '%s'
             ORDER BY identity_history DESC 
             LIMIT 1;
         """ % (category, datetime.datetime.utcnow().isoformat())
@@ -143,7 +143,8 @@ class Registry(models.Model):
                 id, 
                 authbase, 
                 identity_history, 
-                identity_snapshot
+                identity_snapshot,
+                category
             FROM (
                 SELECT
                     id,
@@ -169,7 +170,7 @@ class Registry(models.Model):
                     ) AS identity_history
             ) AS subquery
             
-            WHERE token_category = '"%s"' and identity_history <= '%s'
+            WHERE category = '"%s"' and identity_history <= '%s'
             ORDER BY identity_history DESC 
             LIMIT 1;
         """ % (category, datetime.datetime.utcnow().isoformat())
