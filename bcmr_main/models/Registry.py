@@ -610,7 +610,8 @@ class Registry(models.Model):
             bcmr['$schema'] = bcmr.pop('schema')
             bcmr['latestRevision'] = bcmr.pop('latest_revision')
             bcmr['registryIdentity'] = bcmr.pop('registry_identity')
-            bcmr['defaultChain'] = bcmr.pop('default_chain', None) 
+            if bcmr.get('default_chain'):
+                bcmr['defaultChain'] = bcmr.pop('default_chain', None) 
             return {
                     **bcmr,       
                     '_meta': {
