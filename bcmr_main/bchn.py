@@ -153,3 +153,15 @@ class BCHN(object):
         if 'tokenData' in previous_out.keys():
             return previous_out['tokenData']
         return None
+
+    def decode_raw_transaction(self, tx_hex):
+        retries = 0
+        while retries < self.max_retries:
+            try:
+                txn = self.rpc_connection.decoderawtransaction(tx_hex)
+                return txn
+            except Exception as exception:
+                retries += 1
+                if retries >= self.max_retries:
+                    raise exception
+                time.sleep(1)

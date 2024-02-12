@@ -1,191 +1,19 @@
-
-
 import time
 import logging
 import requests
 import simplejson as json
 from django.db.models import Q
 from django.conf import settings
-from bcmr_main.app.BitcoinCashMetadataRegistry import BitcoinCashMetadataRegistry
 from bcmr_main.metadata import generate_token_metadata
 from celery import shared_task
-from django.db.models import Max
-from jsonschema import ValidationError
 from bcmr_main.op_return import *
 from bcmr_main.bchn import BCHN
 from bcmr_main.models import *
-from bcmr_main.utils import timestamp_to_date, download_url
-from bitcoinrpc.authproxy import AuthServiceProxy
+from bcmr_main.utils import timestamp_to_date
+
 
 LOGGER = logging.getLogger(__name__)
 
-def validate_authhead(token_id, authhead_used):
-    
-    time.sleep(1) # Let's give watchtower and chaingraph a little bit of time
-
-    retries = 0    
-    query_response = None
-
-    #try watchtower
-    watchtower_url = f'https://watchtower.cash/api/cts/authhead/?authbase={token_id}'
-    if settings.NETWORK == 'chipnet':
-        watchtower_url =  f'https://chipnet.watchtower.cash/api/cts/authhead/?authbase={token_id}'
-    
-    while (retries < 3):
-        query_response = requests.get(watchtower_url)
-        if query_response.status_code == 200:
-            query_response = query_response.json()
-            if query_response:
-                expected_authhead_txid = query_response.get('authhead').get('txid')
-                if expected_authhead_txid and authhead_used == expected_authhead_txid:
-                    return True
-        retries += 1
-        time.sleep(.5)
-
-    # allow to fallback to chaingraph if auth fails in watchtower
-
-    # try chaingraph
-    chaingraph_url = 'https://gql.chaingraph.pat.mn/v1/graphql'
-    authhead_query_template = """
-        query {
-        transaction(where: {
-            hash: {
-            _eq: "\\\\x%s"
-            }
-        }) {
-            hash
-            authchains {
-            authhead {
-                hash, identity_output {
-                fungible_token_amount
-                }
-            },
-            authchain_length
-            }
-        } 
-
-        }
-        """ % token_id
-    
-    retries = 0
-    query_response = None
-    
-    while (retries < 3):
-        res = requests.post(chaingraph_url, json={ 'query': authhead_query_template })
-        if res.status_code == 200:
-            query_response = res.json()
-            break
-        retries += 1
-        time.sleep(1)
-
-    # {'data': {'transaction': [{'hash': '\\x60768cf071bacde07470b5b281b96d4fd98a94d9cbb90252a2a3c5ce78b056b2', 'authchains': [{'authhead': {'hash': '\\xf2813865b9865c763e361cc5a8828d2cf0579f68eaf3b3b3c335e73d3088d044', 'identity_output': [{'fungible_token_amount': '0'}]}, 'authchain_length': 16}]}]}}
-    if query_response:
-        transaction = query_response['data']['transaction']
-        if transaction:
-            authchains = transaction[0].get('authchains')
-            if authchains:
-                expected_authhead_txid = authchains[0].get('authhead').get('hash')
-                if expected_authhead_txid:
-                    return authhead_used == expected_authhead_txid.replace('\\x','')
-    return False
-
-def extract_registry_pub_data(op_return_decoded_output: dict):
-    """ 
-    Extract registry publication data from the OP_RETURN 
-    """
-    if op_return_decoded_output['scriptPubKey']['type'] == 'nulldata' and op_return_decoded_output['scriptPubKey']['asm'].startswith('OP_RETURN'):
-        asm_arr = op_return_decoded_output['scriptPubKey'].get('asm').split(' ') 
-        
-        if len(asm_arr) >= 4:  
-            published_uris_string = bytes.fromhex(asm_arr[3]).decode('utf-8')
-            return {
-                'content_hash': asm_arr[2],
-                'uris': published_uris_string.split(';')
-            }
-            
-
-def load_registry(txid, op_return_output):
-    """
-    Load the decoded op_return output to the Registry table
-    """
-    compute_hash = encode_str
-    LOGGER.info('LOADING REGISTRY')
-    if Registry.objects.filter(txid=txid).exists():
-        return
-    
-    published_uris_and_content_hash = extract_registry_pub_data(op_return_output)
-    if published_uris_and_content_hash:
-        content_hash, uris = published_uris_and_content_hash.values()
-        registry_contents = None
-        published_uri = None
-        response = None
-        for uri in uris:
-            LOGGER.info(msg=f'Found {uri}')
-            if '.' in uri:
-                if not uri.startswith('https://'):
-                    uri = 'https://' + uri
-                LOGGER.info(msg=f'Requesting registry from {uri}')
-                response = requests.get(uri)
-            else:
-                if not uri.startswith('ipfs://'):
-                    uri = 'ipfs://' + uri
-                LOGGER.info(msg=f'Requesting registry from {uri}')
-                response = download_url(uri)    
-            if response.status_code == 200:
-                LOGGER.info(msg=f'Requesting success from {uri}')
-                registry_contents = response.text
-                published_uri = uri
-                break
-        
-        if registry_contents:
-            # published_content_hash = ''
-            # try:
-            #     published_content_hash = bytes.fromhex(published_content_hash_hex).decode() 
-            # except UnicodeDecodeError as e:
-            #     published_content_hash = published_content_hash_hex.hex()
-            ## for older bcmr publications
-
-            validity_checks = {
-                'bcmr_file_accessible': True,
-                'bcmr_hash_match': content_hash == compute_hash(registry_contents),
-                'identities_match': None
-            }
-            try:
-                BitcoinCashMetadataRegistry.validate_contents(registry_contents)
-                LOGGER.info('TOKEN CATEGORIESS')
-                
-            except ValidationError: 
-                LOGGER.info('Validation Error')
-
-            
-            token_ids = BitcoinCashMetadataRegistry.get_token_categories(registry_contents)
-            LOGGER.info('TOKEN IDS')
-            LOGGER.info(token_ids)
-            
-            
-            try:
-                for token_id in token_ids:
-                    if not validate_authhead(token_id, txid):
-                        raise Exception(f'{txid} is not the authhead of {token_id}')
-                    
-                LOGGER.info('CREATING REGISTRY')
-                Registry.objects.get_or_create(
-                    txid=txid,
-                    op_return=op_return_output['scriptPubKey'].get('asm'),
-                    defaults={
-                        'txid': txid,
-                        'index': op_return_output['n'],
-                        'validity_checks': validity_checks,
-                        'op_return': op_return_output['scriptPubKey'].get('asm'),
-                        'bcmr_url': published_uri,
-                        'contents': json.loads(registry_contents),
-                        'bcmr_request_status': response.status_code
-                    }
-                )
-            except Exception as e:
-                LOGGER.info(msg='Registry get_or_create error')
-                LOGGER.info(msg=e)
-        
 
 def generate_token_identity(token_data):
     token_identity = ''
@@ -318,6 +146,13 @@ def _process_tx(tx, bchn):
             is_nft=is_nft,
             date_created=time
         )
+
+        # try:
+        #     # Generate token metadata
+        #     metadata = TokenMetadata.objects.filter(token__category=category).latest('id')
+        #     resolve_metadata.delay(metadata.registry.id, commitment)
+        # except TokenMetadata.DoesNotExist:
+        #     pass
 
     # save authbase tx
     if tokens_created:
@@ -486,56 +321,17 @@ def recheck_unconfirmed_txn_details():
 
 
 @shared_task(queue='resolve_metadata')
-def resolve_metadata(registry_id=None):
+def resolve_metadata(registry_id=None, commitment=None):
     if registry_id:
         registries = Registry.objects.filter(id=registry_id)
     else:
         registries = Registry.objects.filter(generated_metadata__isnull=True).order_by('date_created')
     for registry in registries:
         LOGGER.info(f'GENERATING METADATA FOR REGISRTY ID #{registry.id}')
-        generate_token_metadata(registry)
+        generate_token_metadata(registry, commitment)
         registry.generated_metadata = timezone.now()
         registry.save()
 
-
-@shared_task(queue='watch_registry_changes')
-def watch_registry_changes():
-    registries = Registry.objects.filter(watch_for_changes=True)
-    for registry in registries:
-        process_op_return(
-            registry.txid,
-            registry.index,
-            registry.op_return,
-            registry.publisher,
-            registry.date_created
-        )
-
-        resolve_metadata.delay(registry.id)
-        # generate_token_metadata(registry)
-
-@shared_task(queue='mempool_worker_queue')
-def process_op_return_from_mempool(raw_tx_hex:str):
-    rpc_connection = AuthServiceProxy(settings.BCHN_NODE)
-    max_retries = 20
-    retries = 0
-    decoded_txn = None
-    while retries < max_retries:
-        try:
-            LOGGER.info(f'@process_op_return_from_mempool: Trying to decode raw transaction')
-            decoded_txn = rpc_connection.decoderawtransaction(raw_tx_hex)
-            break
-        except Exception as exception:
-            retries += 1
-            if retries >= max_retries:
-                LOGGER.info(f'@process_op_return_from_mempool: Error decoding raw hex tx')
-                raise exception
-            time.sleep(1)
-    
-    if decoded_txn:
-        outputs = decoded_txn.get('vout')
-        for output in outputs:
-            if output['scriptPubKey']['type'] == 'nulldata' and output['scriptPubKey']['asm'].startswith('OP_RETURN'):
-                load_registry(decoded_txn['txid'], output)
 
 def _get_spender_tx(txid, index):
     url = 'https://watchtower.cash/api/transaction/spender/'
