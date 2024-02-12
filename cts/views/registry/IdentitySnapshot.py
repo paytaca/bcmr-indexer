@@ -10,7 +10,7 @@ class IdentitySnapshot(APIView):
     def get(self, request, *args, **kwargs):
         category = kwargs.get('category', '')
         include_token = request.query_params.get('include_token', '')
-        registry = Registry.find_registry_by_token_category(category)
+        registry = Registry.find_registry_id(category)
         if registry:
             r = Registry.objects.get(id=registry['registry_id'])
             if r:

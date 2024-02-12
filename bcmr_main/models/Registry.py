@@ -489,9 +489,8 @@ class Registry(models.Model):
                 }
             }
     
-
     @staticmethod
-    def find_registry_by_token_category(category):
+    def find_registry_id(category):
         query = """
             SELECT 
                 id, 
@@ -538,6 +537,90 @@ class Registry(models.Model):
                 }
             }
 
+    @staticmethod
+    def find_registry(category, include_identities=False):
+
+        select_identities = "identities," if include_identities else ''
+
+        extract_identities = """
+        jsonb_extract_path(contents, 'identities') AS identities, 
+        """ if include_identities else ''
+
+        query = """
+        SELECT 
+            id, 
+            identity_history,
+            authbase,
+            schema,
+            version,
+            latest_revision,
+            registry_identity,
+            tags,
+            default_chain,
+            chains,
+            license,
+            locales,
+            extensions,
+            %s
+            category
+        FROM (
+            SELECT
+                id,
+                jsonb_extract_path(contents, '$schema') AS schema,
+                jsonb_extract_path(contents, 'version') AS version,
+                jsonb_extract_path(contents, 'latestRevision') AS latest_revision,
+                jsonb_extract_path(contents, 'registryIdentity') AS registry_identity,
+                jsonb_extract_path(contents, 'tags') AS tags,
+                jsonb_extract_path(contents, 'defaultChain') AS default_chain,
+                jsonb_extract_path(contents, 'chains') AS chains,
+                jsonb_extract_path(contents, 'license') AS license,
+                jsonb_extract_path(contents, 'locales') AS locales,
+                jsonb_extract_path(contents, 'extensions') AS extensions,
+                %s
+                authbase,
+                identity_history,
+                jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS category
+            FROM
+                bcmr_main_registry,
+                jsonb_object_keys(
+                    CASE 
+                        WHEN jsonb_typeof(contents->'identities') = 'object' 
+                        THEN contents->'identities' 
+                        ELSE '{}'::jsonb 
+                    END
+                ) AS authbase,
+                LATERAL jsonb_object_keys(
+                    CASE 
+                        WHEN jsonb_typeof(contents->'identities'->authbase) = 'object' 
+                        THEN contents->'identities'->authbase 
+                        ELSE '{}'::jsonb 
+                    END
+                ) AS identity_history              
+        ) AS subquery
+
+        WHERE category = '"%s"' and identity_history <= '%s'
+        ORDER BY id DESC 
+        LIMIT 1;
+        """ % (select_identities, extract_identities, category, datetime.datetime.utcnow().isoformat())
+
+        registry = Registry.objects.raw(query)
+        if registry:
+            bcmr = {key: value for key,value in registry[0].__dict__.items() if key in ['schema', 'version', 'latest_revision', 'registry_identity','tags','default_chain', 'chains', 'license', 'locales', 'extensions', 'identities']}
+            bcmr = {key: json.loads(value) for key, value in bcmr.items() if value}
+            bcmr['$schema'] = bcmr.pop('schema')
+            bcmr['latestRevision'] = bcmr.pop('latest_revision')
+            bcmr['registryIdentity'] = bcmr.pop('registry_identity')
+            bcmr['defaultChain'] = bcmr.pop('default_chain', None) 
+            return {
+                    **bcmr,       
+                    '_meta': {
+                        'registry_id': registry[0].id,
+                        'category': registry[0].category.replace('"',''),
+                        'authbase': registry[0].authbase.replace('"',''),
+                        'identity_history': registry[0].identity_history.replace('"','')
+                    }
+                }
+    
 
     class Meta:
         verbose_name_plural = 'Registries'

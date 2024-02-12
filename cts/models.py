@@ -26,7 +26,7 @@ class CashToken(Token):
     if registry_id:
       registry_id = int(registry_id.decode())
     else:
-      registry = Registry.find_registry_by_token_category(self.category)
+      registry = Registry.find_registry_id(self.category)
       if registry and registry.get('registry_id'):
         registry_id = registry.get('registry_id')
         client.set(f'{self.category}_registry-id', registry_id, ex=(60 * 30))
@@ -61,7 +61,7 @@ class CashToken(Token):
     if registry_id:
       registry_id = int(registry_id.decode())
     else:
-      registry = Registry.find_registry_by_token_category(self.category)
+      registry = Registry.find_registry_id(self.category)
       if registry and registry.get('registry_id'):
         registry_id = registry.get('registry_id')
         client.set(f'{self.category}_registry-id', registry_id, ex=(60 * 30))

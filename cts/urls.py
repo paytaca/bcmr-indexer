@@ -1,11 +1,12 @@
 from rest_framework import routers
+from django.views.decorators.cache import cache_page
 
 from . import views
 
 from django.urls import path, re_path
 
 
-app_name = "bcmr_main"
+app_name = "cts"
 
 router = routers.DefaultRouter()
 
@@ -14,7 +15,7 @@ router = routers.DefaultRouter()
 
 urlpatterns = router.urls
 urlpatterns += [
-    # re_path(r"^registry/(?P<category>[\w+:]+)/$", views.get_published_url, name='get-registry'),
+    re_path(r"^registry/(?P<category>[\w+:]+)/$", views.Registry.as_view(), name='get-registry'),
     # re_path(r"^registry/(?P<category>[\w+:]+)/urls/$", views.get_published_url, name='get-registry-urls'),
     # re_path(r"^registry/(?P<category>[\w+:]+)/urls/published/$", views.get_published_url, name='get-registry-urls-published'),
     re_path(r"^registry/(?P<category>[\w+:]+)/identity-snapshot/$", views.IdentitySnapshot.as_view(), name='get-identity-snapshot'),

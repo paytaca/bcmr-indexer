@@ -14,7 +14,7 @@ class NftType(APIView):
         commitment = kwargs.get('commitment', '')
         limit = request.query_params.get('limit')
         offset = request.query_params.get('offset')
-        registry = Registry.find_registry_by_token_category(category)
+        registry = Registry.find_registry_id(category)
         if registry:
             r = Registry.objects.get(id=registry['registry_id'])
             if r:
