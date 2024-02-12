@@ -74,7 +74,7 @@ class BitcoinCashMetadataRegistry:
       validate(instance=json.loads(contents) if type(contents) == str else contents, schema=bcmr_schema)
 
   @staticmethod
-  def get_token_categories(contents) -> [str]:
+  def get_token_categories(contents):
     """
     Returns all the token categories on the registry
     return: 
