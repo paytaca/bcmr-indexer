@@ -211,7 +211,8 @@ class Registry(models.Model):
                 extensions,
                 token_category,
                 token_symbol,
-                token_decimals
+                token_decimals,
+                token_nfts_parse_bytecode
             FROM (
                 SELECT
                     id,
@@ -227,7 +228,8 @@ class Registry(models.Model):
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'extensions') AS extensions,
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS token_category,
                     jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'symbol') AS token_symbol,
-                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'decimals') AS token_decimals
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'decimals') AS token_decimals,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'nfts', 'parse', 'bytecode') AS token_nfts_parse_bytecode
                 FROM
                     bcmr_main_registry,
                     jsonb_object_keys(
@@ -278,6 +280,12 @@ class Registry(models.Model):
                     identity_snapshot['token']['symbol'] = json.loads(r[0].token_symbol)
                 if r[0].token_decimals:
                     identity_snapshot['token']['decimals'] = json.loads(r[0].token_decimals)
+                if r[0].token_nfts_parse_bytecode:
+                    identity_snapshot['token']['nfts'] = {
+                        'parse': {
+                            'bytecode': json.loads(r[0].token_nfts_parse_bytecode)
+                        }
+                    }
             return {
                 **identity_snapshot,
                 '_meta': {
