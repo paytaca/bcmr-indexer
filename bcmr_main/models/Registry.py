@@ -352,9 +352,147 @@ class Registry(models.Model):
                     'identity_history': r[0].identity_history.replace('"',''),
                 }
             }
+        
+    def _paginator(self, count, limit, offset, url):
+        if count == 0:
+            return {
+            'count': 0,
+            'limit': limit,
+            'offset': offset,
+            'previous': None,
+            'next': None
+            }
+        
+        previous_offset = None
+        next_offset = None
+        if offset > 0: 
+            previous_offset = offset - limit
+            previous_offset = 0 if offset < 0 or previous_offset < limit else previous_offset
+        if count > limit:
+            next_offset = offset + limit
+            next_offset = None if next_offset > count - 1 else next_offset
+        previous = None
+        if offset == 0 or offset > count:
+            previous = None
+        else:
+            previous  = f'{url}?paginated=true&limit={limit}' if previous_offset == 0 or previous_offset == None else f'{url}?paginated=true&limit={limit}&offset={previous_offset}'
+        _next = f'{url}?paginated=true&limit={limit}&offset={next_offset}' if next_offset else None
+        return {
+            'count': count,
+            'limit': limit,
+            'offset': offset,
+            'previous': previous,
+            'next': _next
+        }
+
     
+    def _get_nft_types_paginated(self, category, limit=10, offset=0, request_url=''):
+        query = """
+            SELECT
+                id, 
+                category,
+                authbase, 
+                identity_history, 
+                nft_category,
+                commitment,
+                nft,
+                results_count
+            FROM (
+                SELECT 
+                id, 
+                category,
+                authbase, 
+                identity_history, 
+                nft_category,
+                commitment,
+                nft,
+                COUNT(*) OVER() as results_count
+                FROM (
+                    SELECT DISTINCT ON(commitment)
+                        id, 
+                        category,
+                        authbase, 
+                        identity_history, 
+                        nft_category,
+                        commitment,
+                        nft
+                    FROM (
+                        SELECT
+                            id,
+                            authbase,
+                            identity_history,
+                            commitment,
+                            jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'nfts') AS nft_category,
+                            jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'nfts','parse','types', commitment) AS nft,
+                            jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS category
+                        FROM
+                            bcmr_main_registry,
+                            jsonb_object_keys(
+                                CASE 
+                                    WHEN jsonb_typeof(contents->'identities') = 'object' 
+                                    THEN contents->'identities' 
+                                    ELSE '{}'::jsonb 
+                                END
+                            ) AS authbase,
+                            LATERAL jsonb_object_keys(
+                                CASE 
+                                    WHEN jsonb_typeof(contents->'identities'->authbase) = 'object' 
+                                    THEN contents->'identities'->authbase 
+                                    ELSE '{}'::jsonb 
+                                END
+                            ) AS identity_history,                    
+                            LATERAL jsonb_object_keys(
+                                CASE 
+                                    WHEN jsonb_typeof(contents->'identities'->authbase->identity_history->'token'->'nfts'->'parse'->'types') = 'object' 
+                                    THEN contents->'identities'->authbase->identity_history->'token'->'nfts'->'parse'->'types'
+                                    ELSE '{}'::jsonb 
+                                END
+                            ) AS commitment                
+                        WHERE identity_history <= '%s'
+                        ORDER BY identity_history DESC
+                        
+                        
+                    ) AS subquery
+                    
+                    WHERE category = '"%s"'
+                    ORDER BY commitment DESC   
+                )AS unique_commitments
+                LIMIT %s OFFSET %s
+            ) AS result;
+
+            """ % (datetime.datetime.utcnow().isoformat(), category, limit, offset)
+        r = Registry.objects.raw(query)
+        paginated = {
+            'limit': limit,
+            'offset': offset,
+            'previous': None,
+            'next': None,
+            'results': []
+        }
+        
+        if r and r[0]:
+            paginated['count'] = r[0].results_count
+            paginated = { **paginated, **self._paginator(paginated['count'], limit, offset, request_url)}
+            
+        
+        for item in r:
+            nft_type = item.nft
+            commitment = item.commitment.replace('"','')
+            if nft_type and type(nft_type) == str:
+                nft_type = json.loads(nft_type)
+            paginated['results'].append({
+                commitment: nft_type,
+                '_meta': {
+                    'registry_id': item.id,
+                    'commitment': commitment,
+                    'category': item.category.replace('"',''),
+                    'authbase': item.authbase.replace('"',''),
+                    'identity_history': item.identity_history.replace('"','')
+                }
+            })
+        return paginated
     
-    def get_nft_types(self, category, limit=10, offset=0):
+    def _get_nft_types(self, category, limit=10, offset=0):
         """
         Returns the NftType(s) of the SequentialNftCollection or ParsableNftCollection
         """
@@ -426,7 +564,14 @@ class Registry(models.Model):
                     'identity_history': item.identity_history.replace('"','')
                 }
             })
-        return nft_types    
+        return nft_types
+    
+    def get_nft_types(self, category, limit=10, offset=0, paginated=False, request_url=''):
+        if paginated:
+            return self._get_nft_types_paginated(category, limit, offset, request_url)
+        return self._get_nft_types(category, limit, offset)
+
+        
     
     def get_nft_type(self, category, commitment):
         """
@@ -529,7 +674,6 @@ class Registry(models.Model):
                         END
                     ) AS identity_history              
             ) AS subquery
-            
             WHERE category = '"%s"' and identity_history <= '%s'
             ORDER BY id DESC 
             LIMIT 1;
