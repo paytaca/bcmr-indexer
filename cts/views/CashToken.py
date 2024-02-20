@@ -20,7 +20,8 @@ class CashToken(APIView):
         token_type = kwargs.get('token_type')
         category = kwargs.get('category')
         commitment = kwargs.get('commitment')
-        capability = request.query_params.get('capability', '')
+        # capability = request.query_params.get('capability', '')
+        capability = request.query_params.getlist('capability', [])
         tokens = CashTokenModel.objects.all()
 
         if category:
@@ -33,14 +34,14 @@ class CashToken(APIView):
             if commitment:
                 tokens = tokens.filter(commitment=commitment)
             if capability:
-                tokens = tokens.filter(capability=capability)
+                tokens = tokens.filter(capability__in=capability)
         elif token_type == 'hybrids':
             tokens = tokens.filter(capability__isnull=False,amount__gt=0)
             if commitment:
                 tokens = tokens.filter(commitment=commitment)
             if capability:
                 tokens = tokens.filter(capability=capability)
-
+        tokens = tokens.order_by('commitment', 'capability', '-id').distinct('commitment', 'capability')
         paginator = PageNumberPagination()
         paginator.page_size = 10
         paginated_queryset = paginator.paginate_queryset(tokens, request)
@@ -52,7 +53,8 @@ class CashToken(APIView):
             'count': paginator.page.paginator.count,
             'next': paginator.get_next_link(),
             'previous': paginator.get_previous_link(),
-            'results': serializer.data
+            'results': serializer.data,
+            'capability': capability
         })
     
 
