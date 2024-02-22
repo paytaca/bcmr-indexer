@@ -2,6 +2,7 @@ import json
 import datetime
 from django.db import models
 from django.db.models import ExpressionWrapper, CharField, F, Q
+from django.forms import model_to_dict
 
 class Registry(models.Model):
     txid = models.CharField(max_length=100, db_index=True)
@@ -136,8 +137,9 @@ class Registry(models.Model):
 
     def get_identity_snapshot(self, category):
         """
-        Return the basic TokenCategory details
+        Return To
         """
+
         query = """
             SELECT 
                 id, 
@@ -190,6 +192,112 @@ class Registry(models.Model):
                 }
             }
     
+    def get_identity_snapshot_nft_type(self, category, nft_type_key):
+        """
+        Return To IdentitySnapshot of the particular NftType;s key. Where key is a commitment or bottomAltStackHex
+        """
+
+        query = """
+            SELECT DISTINCT ON(nft_type_key) *
+            FROM (
+                SELECT 
+                    id,
+                    authbase,
+                    identity_history,
+                    nft_type_key,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'name') AS name,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'description') AS description,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'uris') AS uris,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'tags') AS tags,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'migrated') AS migrated,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'status') AS status,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'split_id') AS split_id,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'extensions') AS extensions,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'symbol') AS token_symbol,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS token_category,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'decimals') AS token_decimals,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'category') AS category,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'nfts', 'parse', 'bytecode') AS nft_parse_bytecode,
+                    jsonb_extract_path(contents, 'identities', authbase, identity_history, 'token', 'nfts', 'parse', 'types', nft_type_key) AS nft_type
+
+                FROM
+                    bcmr_main_registry,
+                    jsonb_object_keys(
+                        CASE 
+                            WHEN jsonb_typeof(contents->'identities') = 'object' 
+                            THEN contents->'identities' 
+                            ELSE '{}'::jsonb 
+                        END
+                    ) AS authbase,
+                    LATERAL jsonb_object_keys(
+                        CASE 
+                            WHEN jsonb_typeof(contents->'identities'->authbase) = 'object' 
+                            THEN contents->'identities'->authbase 
+                            ELSE '{}'::jsonb 
+                        END
+                    ) AS identity_history,
+                    LATERAL jsonb_object_keys(
+                        CASE 
+                            WHEN jsonb_typeof(contents->'identities'->authbase->identity_history->'token'->'nfts'->'parse'->'types') = 'object' 
+                            THEN contents->'identities'->authbase->identity_history->'token'->'nfts'->'parse'->'types'
+                            ELSE '{}'::jsonb 
+                        END
+                    ) AS nft_type_key
+                    WHERE nft_type_key = '%s'
+            ) AS subquery
+            
+            WHERE category = '"%s"' and identity_history <= '%s' 
+            ORDER BY nft_type_key, identity_history DESC 
+        """ % (nft_type_key, category, datetime.datetime.utcnow().isoformat())
+
+
+        r = Registry.objects.raw(query)
+        if r and r[0]:
+            identity_snapshot_fields = [
+                'name',
+                'description',
+                'uris',
+                'tags',
+                'migrated',
+                'status',
+                'split_id',
+                'extensions'
+            ]
+
+            token_fields = [
+                'token_symbol',
+                'token_category',
+                'token_decimals'
+            ]
+
+            identity_snapshot = {key: json.loads((getattr(r[0], key, None) or '""')) for key in identity_snapshot_fields if getattr(r[0], key, None) is not None}
+            token = {key: json.loads((getattr(r[0], key, None) or '""')) for key in token_fields if getattr(r[0], key, None) is not None}
+            nft_type = getattr(r[0], 'nft_type', None)
+            if nft_type:
+                token['nfts'] = {
+                    'parse': {
+                        'bytecode': getattr(r[0], 'nft_parse_bytecode', None),
+                        'types': {
+                            r[0].nft_type_key: json.loads(getattr(r[0], 'nft_type', None))
+                        }
+                    }
+                }
+
+            identity_snapshot['token'] = token 
+
+            return {
+                'identity_snapshot': identity_snapshot,
+                '_meta': {
+                    'registry_id': r[0].id,
+                    'category': category,
+                    'authbase': r[0].authbase.replace('"',''),
+                    'identity_history': r[0].identity_history.replace('"',''),
+                    'nft_type_key': r[0].nft_type_key,
+
+                }
+            }
+    
+
     def get_identity_snapshot_basic(self, category):
         """
         Return the basic IdentitySnapshot details without the token field. 
