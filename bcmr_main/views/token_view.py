@@ -91,7 +91,7 @@ def transform_to_paytaca_expected_format(identity_snapshot, nft_type_key):
             identity_snapshot['is_nft'] = False
     else:
         identity_snapshot['is_nft'] = False
-        
+
     if identity_snapshot.get('_meta'):
         identity_snapshot.pop('_meta')
     
@@ -103,12 +103,14 @@ class TokenView(APIView):
         category = kwargs.get('category', '')
         nft_type_key = kwargs.get('type_key', '') # commitment
         client = redis.Redis(host=config('REDIS_HOST', 'redis'), port=config('REDIS_PORT', 6379))
+        
         cache_key = f'{category}_identity-snapshot_nft_type_on_token_view'
+        
         if nft_type_key: 
             cache_key = f'{category}_identity-snapshot_nft_type_on_token_view_{nft_type_key}'
 
-        # identity_snapshot = client.get(f'{category}_identity-snapshot_nft_type_on_token_view')
-        identity_snapshot = None
+        identity_snapshot = client.get(f'{category}_identity-snapshot_nft_type_on_token_view')
+        # identity_snapshot = None
         if identity_snapshot:
             identity_snapshot = json.loads(identity_snapshot)
             # Update cache every time it's touched

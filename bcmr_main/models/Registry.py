@@ -267,9 +267,9 @@ class Registry(models.Model):
             identity_snapshot = {key: json.loads((getattr(r[0], key, None) or '""')) for key in identity_snapshot_fields if getattr(r[0], key, None) is not None}
             # token = {key.split('_')[1]: json.loads((getattr(r[0], key, None) or '""')) for key in token_fields if getattr(r[0], key, None) is not None}
             token = {
-                'symbol': getattr(r[0], 'token_symbol', '').replace('"',''),
-                'category': getattr(r[0], 'token_category', '').replace('"',''),
-                'decimals': getattr(r[0], 'token_decimals', '').replace('"',''),
+                'symbol': (getattr(r[0], 'token_symbol', '') or '').replace('"',''),
+                'category': (getattr(r[0], 'token_category', '') or '').replace('"',''),
+                'decimals': (getattr(r[0], 'token_decimals', '') or '').replace('"',''),
             }
 
             nft_type = getattr(r[0], 'nft_type', None)
