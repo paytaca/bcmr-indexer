@@ -1,8 +1,8 @@
 import json
 import datetime
 from django.db import models
-from django.db.models import ExpressionWrapper, CharField, F, Q
-from django.forms import model_to_dict
+from django.contrib.postgres.indexes import GinIndex
+
 
 class Registry(models.Model):
     txid = models.CharField(max_length=100, db_index=True)
@@ -887,15 +887,10 @@ class Registry(models.Model):
     class Meta:
         verbose_name_plural = 'Registries'
         ordering = ('-date_created', )
-        # indexes = [
-        #     models.Index(fields=[
-        #         'txid',
-        #         'index',
-        #         'valid',
-        #         'date_created',
-        #         'generated_metadata'
-        #     ])
-        # ]
+        indexes = [
+            GinIndex('contents', name='contents_idx'),
+            models.Index(models.F("contents__identities"), name="contents__identities_idx"),
+        ]
         unique_together = [
             'txid',
             'index',
