@@ -264,14 +264,14 @@ class Registry(models.Model):
                 'extensions'
             ]
 
-            token_fields = [
-                'token_symbol',
-                'token_category',
-                'token_decimals'
-            ]
-
             identity_snapshot = {key: json.loads((getattr(r[0], key, None) or '""')) for key in identity_snapshot_fields if getattr(r[0], key, None) is not None}
-            token = {key: json.loads((getattr(r[0], key, None) or '""')) for key in token_fields if getattr(r[0], key, None) is not None}
+            # token = {key.split('_')[1]: json.loads((getattr(r[0], key, None) or '""')) for key in token_fields if getattr(r[0], key, None) is not None}
+            token = {
+                'symbol': getattr(r[0], 'token_symbol', '').replace('"',''),
+                'category': getattr(r[0], 'token_category', '').replace('"',''),
+                'decimals': getattr(r[0], 'token_decimals', '').replace('"',''),
+            }
+
             nft_type = getattr(r[0], 'nft_type', None)
             if nft_type:
                 token['nfts'] = {
@@ -286,7 +286,7 @@ class Registry(models.Model):
             identity_snapshot['token'] = token 
 
             return {
-                'identity_snapshot': identity_snapshot,
+                **identity_snapshot,
                 '_meta': {
                     'registry_id': r[0].id,
                     'category': category,
