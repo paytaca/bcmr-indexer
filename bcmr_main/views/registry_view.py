@@ -11,5 +11,5 @@ class RegistryView(APIView):
         if not category:
             return JsonResponse(data=None, safe=False)
 
-        registry = Registry.find_registry(category, include_identities=True)
-        return JsonResponse(data=registry, safe=False)
+        registry = Registry.objects.filter(contents__identities__has_key=category).latest('id')
+        return JsonResponse(data=registry.contents, safe=False)
