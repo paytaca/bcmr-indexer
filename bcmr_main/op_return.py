@@ -5,6 +5,7 @@ from bcmr_main.models import (
 )
 from bcmr_main.app.BitcoinCashMetadataRegistry import BitcoinCashMetadataRegistry
 from jsonschema import ValidationError
+from json.decoder import JSONDecodeError
 from urllib.parse import urlparse
 import logging
 import copy
@@ -102,7 +103,7 @@ def process_op_return(
                     BitcoinCashMetadataRegistry.validate_contents(response.text)
                     validity_checks['bcmr_format_valid'] = True
                     proceed = True
-                except ValidationError:
+                except (JSONDecodeError, ValidationError):
                     validity_checks['bcmr_format_valid'] = False
                     proceed = False
 
