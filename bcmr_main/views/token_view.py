@@ -4,7 +4,7 @@ import json
 from decouple import config
 from rest_framework.views import APIView
 from django.http import JsonResponse
-from bcmr_main.models import Registry
+from bcmr_main.models import Registry, Token
 from rest_framework.views import APIView
 from django.http import JsonResponse
 
@@ -35,40 +35,51 @@ class TokenView(APIView):
 
     def get(self, request, *args, **kwargs):
         category = kwargs.get('category', '')
-        nft_type_key = kwargs.get('type_key', '') # commitment
-        client = redis.Redis(host=config('REDIS_HOST', 'redis'), port=config('REDIS_PORT', 6379))
-        
-        cache_key = f'{category}_identity-snapshot_nft_type_on_token_view'
-        
-        if nft_type_key: 
-            cache_key = f'{category}_identity-snapshot_nft_type_on_token_view_{nft_type_key}'
+        token = Token.objects.filter(category=category)
+        if token.exists():
+            response = {
+                'category': category,
+                'error': 'no valid metadata found'
+            }
+            nft_type_key = kwargs.get('type_key', '') # commitment
+            
+            # client = redis.Redis(host=config('REDIS_HOST', 'redis'), port=config('REDIS_PORT', 6379))
+            
+            # cache_key = f'{category}_identity-snapshot_nft_type_on_token_view'
+            
+            # if nft_type_key: 
+            #     cache_key = f'{category}_identity-snapshot_nft_type_on_token_view_{nft_type_key}'
 
-        ## Disable cache
-        # identity_snapshot = client.get(f'{category}_identity-snapshot_nft_type_on_token_view')
-        identity_snapshot = None ## Disable cache
+            # ## Disable cache
+            # # identity_snapshot = client.get(f'{category}_identity-snapshot_nft_type_on_token_view')
+            # identity_snapshot = None ## Disable cache
 
-        if identity_snapshot:
-            identity_snapshot = json.loads(identity_snapshot)
-            # Update cache every time it's touched
-            # client.set(cache_key,json.dumps(identity_snapshot), ex=(60 * 30)) ## Disable cache
-            return JsonResponse(transform_to_paytaca_expected_format(identity_snapshot, nft_type_key), safe=False)
+            # if identity_snapshot:
+            #     identity_snapshot = json.loads(identity_snapshot)
+            #     # Update cache every time it's touched
+            #     # client.set(cache_key,json.dumps(identity_snapshot), ex=(60 * 30)) ## Disable cache
+            #     response = transform_to_paytaca_expected_format(identity_snapshot, nft_type_key)
 
-        registry = Registry.find_registry_id(category)
-        if registry:
-            r = Registry.objects.get(id=registry['registry_id'])
-            if r:
-                identity_snapshot = r.get_identity_snapshot(category)
-                identity_snapshot = identity_snapshot.get('identity_snapshot')
-                # identity_snapshot = None
-                # if nft_type_key:
-                #     identity_snapshot = r.get_identity_snapshot_nft_type(category, nft_type_key)
-                #     if not identity_snapshot:
-                #         identity_snapshot = r.get_identity_snapshot_basic(category)
-                # else:
-                #     identity_snapshot = r.get_identity_snapshot(category)
+            registry = Registry.find_registry_id(category)
+            if registry:
+                r = Registry.objects.get(id=registry['registry_id'])
+                if r:
+                    identity_snapshot = r.get_identity_snapshot(category)
+                    identity_snapshot = identity_snapshot.get('identity_snapshot')
+                    # identity_snapshot = None
+                    # if nft_type_key:
+                    #     identity_snapshot = r.get_identity_snapshot_nft_type(category, nft_type_key)
+                    #     if not identity_snapshot:
+                    #         identity_snapshot = r.get_identity_snapshot_basic(category)
+                    # else:
+                    #     identity_snapshot = r.get_identity_snapshot(category)
 
-                if identity_snapshot:
-                    # client.set(cache_key, json.dumps(identity_snapshot), ex=(60 * 30)) ## Disable cache
-                    return JsonResponse(transform_to_paytaca_expected_format(identity_snapshot, nft_type_key), safe=False)
-                
-        return JsonResponse(data=None, safe=False)
+                    if identity_snapshot:
+                        # client.set(cache_key, json.dumps(identity_snapshot), ex=(60 * 30)) ## Disable cache
+                        response = transform_to_paytaca_expected_format(identity_snapshot, nft_type_key)
+
+        else:
+            response = {
+                'error': 'category not found'
+            }
+        return JsonResponse(response, safe=False)
