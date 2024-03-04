@@ -15,3 +15,18 @@ def update_identity_snapshot_cache(category):
             identity_snapshot = r.get_identity_snapshot_basic(category)
             client.set(f'{category}_identity-snapshot',json.dumps({**identity_snapshot}), ex=(60 * 30))
 
+
+@shared_task(queue='resolve_metadata')
+def update_nftmetadata_cache(category, commitment, cache_key=None):
+  client = redis.Redis(host=config('REDIS_HOST', 'redis'), port=config('REDIS_PORT', 6379))
+  cache_key = cache_key or f'nftmetadata:{category}:{commitment}'  
+  r = Registry.objects.filter(contents__identities__has_key=category)
+  if r.exists():
+    r = r.latest('id')
+    metadata = r.get_nft_type(category=category, commitment=commitment)
+  if metadata:
+    try:
+      client.set(cache_key, json.dumps(metadata), ex=(60 * 30))
+    except Exception as e:
+      pass
+
