@@ -13,19 +13,20 @@ class Command(BaseCommand):
         keys_to_delete = []
         if options.get('category'):
             category = options.get('category')
-            registries_keys = f'registry:token:{category}:*'
-            keys_to_delete += registries_keys
-            token_metadata_keys = f'metadata:token:{category}:*'
-            keys_to_delete += token_metadata_keys          
-        else:
-            registries_keys = 'registry:token:*'
-            keys_to_delete += registries_keys
-            token_metadata_keys = 'metadata:token:*'
-            keys_to_delete += token_metadata_keys
+            if category == 'all':
+                registries_keys = 'registry:token:*'
+                keys_to_delete += registries_keys
+                token_metadata_keys = 'metadata:token:*'
+                keys_to_delete += token_metadata_keys
+            else:
+                registries_keys = f'registry:token:{category}:*'
+                keys_to_delete += registries_keys
+                token_metadata_keys = f'metadata:token:{category}:*'
+                keys_to_delete += token_metadata_keys       
 
         for key in keys_to_delete:
             client.delete(key)
-        if options.get('category'):
-            print(f'Cache cleared for category: {category}!')
-        else:
+        if options.get('category') == 'all':
             print('Cache cleared!')
+        else:
+            print(f'Cache cleared for category: {category}!')
