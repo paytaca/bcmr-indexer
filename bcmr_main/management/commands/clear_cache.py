@@ -5,10 +5,27 @@ import redis
 class Command(BaseCommand):
     help = "Clear registries and token metadata cache"
 
+    def add_arguments(self, parser):
+        parser.add_argument("category", nargs="+", type=str)
+
     def handle(self, *args, **options):
         client = redis.Redis(host=config('REDIS_HOST', 'redis'), port=config('REDIS_PORT', 6379))
-        registries_keys = 'registry:token:*'
-        client.delete(registries_keys)
-        token_metadata_keys = 'metadata:token:*'
-        client.delete(token_metadata_keys)
-        print('Cache cleared!')
+        keys_to_delete = []
+        if options.get('category'):
+            category = options.get('category')
+            registries_keys = f'registry:token:{category}:*'
+            keys_to_delete += registries_keys
+            token_metadata_keys = f'metadata:token:{category}:*'
+            keys_to_delete += token_metadata_keys          
+        else:
+            registries_keys = 'registry:token:*'
+            keys_to_delete += registries_keys
+            token_metadata_keys = 'metadata:token:*'
+            keys_to_delete += token_metadata_keys
+
+        for key in keys_to_delete:
+            client.delete(key)
+        if options.get('category'):
+            print(f'Cache cleared for category: {category}!')
+        else:
+            print('Cache cleared!')
