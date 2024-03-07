@@ -1,9 +1,10 @@
+import redis 
+from decouple import config
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from bcmr_main.tasks import resolve_metadata
 from bcmr_main.op_return import process_op_return
 from bcmr_main.models import Registry, Token, TokenMetadata
-
 
 @receiver(post_save, sender=Registry)
 def validate_registry(sender, instance=None, created=False, **kwargs):
@@ -29,3 +30,22 @@ def generate_metadata(sender, instance=None, created=False, **kwargs):
         resolve_metadata.delay(registry.id, instance.commitment)
     except TokenMetadata.DoesNotExist:
             pass
+    
+@receiver(post_save, sender=Registry, dispatch_uid='clear_cache')
+def clear_cache(sender, instance=None, created=False, **kwargs):
+    
+    categories = set()
+    if created and instance.contents:
+        authbases = list((instance.contents.get('identities') or {}).keys())
+        for a in authbases:
+            timestamps = list((instance.contents.get('identities').get(a) or {}).keys())
+            for t in timestamps:
+                category = (instance.contents.get('identities').get(a).get(t).get('token') or {}).get('category')
+                if category:
+                    categories.add(category)
+    
+    client = redis.Redis(host=config('REDIS_HOST', 'redis'), port=config('REDIS_PORT', 6379))
+    for c in categories:
+        keys = client.keys(f'registry:token:{c}:*')
+        keys += client.keys(f'metadata:token:{c}:*')
+        client.delete(*keys)
