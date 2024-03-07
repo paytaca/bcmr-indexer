@@ -41,7 +41,8 @@ def clear_cache(sender, instance=None, created=False, **kwargs):
             timestamps = list((instance.contents.get('identities').get(a) or {}).keys())
             for t in timestamps:
                 category = (instance.contents.get('identities').get(a).get(t).get('token') or {}).get('category')
-                categories.add(category)
+                if category:
+                    categories.add(category)
     
     client = redis.Redis(host=config('REDIS_HOST', 'redis'), port=config('REDIS_PORT', 6379))
     for c in categories:
