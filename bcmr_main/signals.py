@@ -47,5 +47,5 @@ def clear_cache(sender, instance=None, created=False, **kwargs):
     client = redis.Redis(host=config('REDIS_HOST', 'redis'), port=config('REDIS_PORT', 6379))
     for c in categories:
         keys = client.keys(f'registry:token:{c}:*')
-        keys += (client.keys(f'metadata:token:{c}:*'))
+        keys += client.keys(f'metadata:token:{c}:*')
         client.delete(*keys)
