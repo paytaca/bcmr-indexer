@@ -12,17 +12,17 @@ class Command(BaseCommand):
         client = redis.Redis(host=config('REDIS_HOST', 'redis'), port=config('REDIS_PORT', 6379))
         keys_to_delete = []
         if options.get('category'):
-            category = options.get('category')
+            category = options.get('category')[0]
             if category == 'all':
                 registries_keys = 'registry:token:*'
-                keys_to_delete += registries_keys
+                keys_to_delete += client.keys(registries_keys)
                 token_metadata_keys = 'metadata:token:*'
-                keys_to_delete += token_metadata_keys
+                keys_to_delete += client.keys(token_metadata_keys)
             else:
                 registries_keys = f'registry:token:{category}:*'
-                keys_to_delete += registries_keys
+                keys_to_delete += client.keys(registries_keys)
                 token_metadata_keys = f'metadata:token:{category}:*'
-                keys_to_delete += token_metadata_keys       
+                keys_to_delete += client.keys(token_metadata_keys)      
 
         for key in keys_to_delete:
             client.delete(key)
