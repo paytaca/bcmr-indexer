@@ -33,7 +33,7 @@ def generate_metadata(sender, instance=None, created=False, **kwargs):
     
 @receiver(post_save, sender=Registry, dispatch_uid='clear_cache')
 def clear_cache(sender, instance=None, created=False, **kwargs):
-    client = redis.Redis(host=config('REDIS_HOST', 'redis'), port=config('REDIS_PORT', 6379))
+    
     categories = set()
     if created and instance.contents:
         authbases = list((instance.contents.get('identities') or {}).keys())
@@ -43,6 +43,7 @@ def clear_cache(sender, instance=None, created=False, **kwargs):
                 category = (instance.contents.get('identities').get(a).get(t).get('token') or {}).get('category')
                 categories.add(category)
     
+    client = redis.Redis(host=config('REDIS_HOST', 'redis'), port=config('REDIS_PORT', 6379))
     for c in categories:
         keys = client.keys(f'registry:token:{c}:*')
         keys += (client.keys(f'metadata:token:{c}:*'))
