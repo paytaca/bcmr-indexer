@@ -13,7 +13,7 @@ def update_identity_snapshot_cache(category):
       r = Registry.objects.get(id=registry['registry_id'])
       if r:
             identity_snapshot = r.get_identity_snapshot_basic(category)
-            client.set(f'{category}_identity-snapshot',json.dumps({**identity_snapshot}), ex=(60 * 30))
+            client.set(f'{category}_identity-snapshot',json.dumps(identity_snapshot), ex=(60 * 30))
 
 
 @shared_task(queue='resolve_metadata')
