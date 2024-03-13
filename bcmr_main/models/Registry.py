@@ -441,7 +441,7 @@ class Registry(models.Model):
                             ELSE '{}'::jsonb 
                         END
                     ) AS identity_history
-
+                ORDER BY id DESC
             ) AS subquery
             
             WHERE category = '"%s"' and identity_history <= '%s'
@@ -728,6 +728,7 @@ class Registry(models.Model):
                         END
                     ) AS commitment                
                 WHERE commitment = '%s'
+                ORDER BY id DESC
             ) AS subquery
             
             WHERE category = '"%s"' and identity_history <= '%s'
