@@ -114,11 +114,11 @@ class Registry(models.Model):
                             ELSE '{}'::jsonb 
                         END
                     ) AS identity_history
-                ORDER BY id DESC
+                ORDER BY identity_history DESC 
             ) AS subquery
             
             WHERE category = '"%s"' and identity_history <= '%s'
-            ORDER BY identity_history DESC 
+            ORDER BY id DESC
             LIMIT 1;
         """ % (category, datetime.datetime.utcnow().isoformat())
         r = Registry.objects.raw(query)
@@ -171,11 +171,11 @@ class Registry(models.Model):
                             ELSE '{}'::jsonb 
                         END
                     ) AS identity_history
-                ORDER BY id DESC
+                ORDER BY identity_history DESC 
             ) AS subquery
             
             WHERE category = '"%s"' and identity_history <= '%s'
-            ORDER BY identity_history DESC 
+            ORDER BY id DESC
             LIMIT 1;
         """ % (category, datetime.datetime.utcnow().isoformat())
 
@@ -356,11 +356,11 @@ class Registry(models.Model):
                             ELSE '{}'::jsonb 
                         END
                     ) AS identity_history
-                ORDER BY id DESC
+                ORDER BY identity_history DESC
             ) AS subquery
             
             WHERE token_category = '"%s"' and identity_history <= '%s'
-            ORDER BY identity_history DESC 
+            ORDER BY id DESC
             LIMIT 1;
         """ % (category, datetime.datetime.utcnow().isoformat())
         r = Registry.objects.raw(query)
@@ -441,11 +441,11 @@ class Registry(models.Model):
                             ELSE '{}'::jsonb 
                         END
                     ) AS identity_history
-                ORDER BY id DESC
+                ORDER BY identity_history DESC
             ) AS subquery
             
             WHERE category = '"%s"' and identity_history <= '%s'
-            ORDER BY identity_history DESC 
+            ORDER BY id DESC
             LIMIT 1;
         """ % (category, datetime.datetime.utcnow().isoformat())
         r = Registry.objects.raw(query)
@@ -560,8 +560,6 @@ class Registry(models.Model):
                             ) AS commitment                
                         WHERE identity_history <= '%s'
                         ORDER BY identity_history DESC
-                        
-                        
                     ) AS subquery
                     
                     WHERE category = '"%s"'
