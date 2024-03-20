@@ -726,11 +726,10 @@ class Registry(models.Model):
                         END
                     ) AS commitment                
                 WHERE commitment = '%s'
-                ORDER BY id DESC
+                ORDER BY identity_history DESC     
             ) AS subquery
-            
             WHERE category = '"%s"' and identity_history <= '%s'
-            ORDER BY identity_history DESC 
+            ORDER BY id DESC
             LIMIT 1;
         """ % (commitment, category, datetime.datetime.utcnow().isoformat())
 

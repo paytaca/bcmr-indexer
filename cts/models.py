@@ -42,7 +42,7 @@ class CashToken(Token):
     
     if metadata:
       metadata = json.loads(metadata)
-      update_tokencategorymetadata_cache.delay(self.category, self.commitment, cache_key)
+      update_tokencategorymetadata_cache.delay(self.category, cache_key)
       return metadata
 
     r = Registry.objects.filter(contents__identities__has_key=self.category)
