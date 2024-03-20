@@ -41,9 +41,9 @@ class CashToken(APIView):
                 tokens = tokens.filter(commitment=commitment)
             if capability:
                 tokens = tokens.filter(capability=capability)
-        tokens = tokens.order_by('commitment', 'capability', '-id').distinct('commitment', 'capability')
+        tokens = tokens.order_by('-id', 'commitment', 'capability').distinct('id', 'commitment', 'capability')
         paginator = PageNumberPagination()
-        paginator.page_size = 10
+        paginator.page_size = 10    
         paginated_queryset = paginator.paginate_queryset(tokens, request)
         
         serializer = CashTokenSerializer(paginated_queryset, many=True, context={'request': request})
