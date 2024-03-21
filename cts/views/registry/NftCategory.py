@@ -3,6 +3,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from django.http import JsonResponse
 from bcmr_main.models import Registry
+from ...registrycontenthelpers import get_nfts
 
 class NftCategory(APIView):
     allowed_methods = ['GET']
@@ -11,9 +12,11 @@ class NftCategory(APIView):
     """
     def get(self, request, *args, **kwargs):
         category = kwargs.get('category', '')
-        registry = Registry.find_registry_id(category)
-        if registry:
-            r = Registry.objects.get(id=registry['registry_id'])
-            if r:
-                return JsonResponse(r.get_nfts(category), safe=False)
-        return JsonResponse(data=None, safe=False)
+        # registry = Registry.find_registry_id(category)
+        # if registry:
+        #     r = Registry.objects.get(id=registry['registry_id'])
+        #     if r:
+        #         return JsonResponse(r.get_nfts(category), safe=False)
+        # return JsonResponse(data=None, safe=False)
+    
+        return JsonResponse(get_nfts(category), safe=False)
