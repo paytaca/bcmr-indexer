@@ -1,8 +1,6 @@
 import redis
 import json
 from rest_framework.views import APIView
-from rest_framework import status
-from rest_framework.response import Response
 from decouple import config
 from django.http import JsonResponse
 from bcmr_main.models import Registry
@@ -20,9 +18,4 @@ class TokenCategory(APIView):
             token_metadata = json.loads(token_metadata)
             update_tokencategorymetadata_cache.delay(category)
             return JsonResponse(token_metadata, safe=False)
-        # registry = Registry.find_registry_id(category)
-        # if registry:
-        #     r = Registry.objects.get(id=registry['registry_id'])
-        #     if r:
         return JsonResponse(get_token_category_basic(category) | {})
-        # return JsonResponse(data=None, safe=False)

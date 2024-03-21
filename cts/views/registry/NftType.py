@@ -1,8 +1,5 @@
 from rest_framework.views import APIView
-from rest_framework import status
-from rest_framework.response import Response
 from django.http import JsonResponse
-from bcmr_main.models import Registry
 from ...registrycontenthelpers import get_nft_type, get_nft_types
 
 class NftType(APIView):
@@ -20,13 +17,7 @@ class NftType(APIView):
             paginated = True
         else:
             paginated = False
-
-        # registry = Registry.find_registry_id(category)
-        # if registry:
-        #     r = Registry.objects.get(id=registry['registry_id'])
-        #     if r:
         if commitment:
             return JsonResponse(get_nft_type(category, commitment), safe=False)
         else:
             return JsonResponse(get_nft_types(category, int(limit or 10), int(offset or 0), paginated, request.get_raw_uri().split('?')[0]), safe=False)
-        # return JsonResponse(data=None, safe=False)
