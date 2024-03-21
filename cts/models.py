@@ -5,6 +5,7 @@ from bcmr_main.models import Token
 from bcmr_main.models import Registry
 from decouple import config
 from .tasks import update_nftmetadata_cache, update_tokencategorymetadata_cache
+from .registrycontenthelpers import get_token_category_basic, get_nft_type
 
 class CashToken(Token):
   
@@ -20,11 +21,18 @@ class CashToken(Token):
       update_nftmetadata_cache.delay(self.category, self.commitment, cache_key)
       return json.loads(metadata)
     
-    r = Registry.objects.filter(contents__identities__has_key=self.category)
+    # r = Registry.objects.filter(contents__identities__has_key=self.category)
 
-    if r.exists():
-      r = r.latest('id')
-      metadata = r.get_nft_type(category=self.category, commitment=self.commitment)
+    # if r.exists():
+    #   r = r.latest('id')
+    #   metadata = r.get_nft_type(category=self.category, commitment=self.commitment)
+    # if metadata:
+    #   try:
+    #     client.set(cache_key, json.dumps(metadata), ex=(60 * 30))
+    #   except Exception as e:
+    #     pass
+
+    metadata = get_nft_type(category=self.category, commitment=self.commitment)
     if metadata:
       try:
         client.set(cache_key, json.dumps(metadata), ex=(60 * 30))
@@ -45,17 +53,25 @@ class CashToken(Token):
       update_tokencategorymetadata_cache.delay(self.category, cache_key)
       return metadata
 
-    r = Registry.objects.filter(contents__identities__has_key=self.category)
+    # r = Registry.objects.filter(contents__identities__has_key=self.category)
 
-    if r.exists():
-      r = r.latest('id')
-      if r:
-        try:
-          metadata = r.get_token_category_basic(category=self.category)
-          if metadata:
-            client.set(cache_key,json.dumps(metadata), ex=(60 * 30))
-        except Exception as e:
-          pass
+    # if r.exists():
+    #   r = r.latest('id')
+    #   if r:
+    #     try:
+    #       metadata = r.get_token_category_basic(category=self.category)
+    #       if metadata:
+    #         client.set(cache_key,json.dumps(metadata), ex=(60 * 30))
+    #     except Exception as e:
+    #       pass
+        # r = Registry.objects.filter(contents__identities__has_key=self.category)
+
+    try:
+      metadata = get_token_category_basic(category=self.category)
+      if metadata:
+        client.set(cache_key,json.dumps(metadata), ex=(60 * 30))
+    except Exception as e:
+      pass
 
     return metadata
       
