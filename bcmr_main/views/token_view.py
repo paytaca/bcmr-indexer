@@ -29,6 +29,10 @@ def transform_to_paytaca_expected_format(identity_snapshot, nft_type_key):
                     asset_uri_ext = asset_uri.split('.')[-1].lower()
                     if asset_uri_ext in ['jpg', 'png', 'gif', 'svg']:
                         identity_snapshot['type_metadata']['uris']['image'] = asset_uri
+
+                # For some collections that only specified an icon but not an image
+                if 'icon' in type_uris.keys()  and 'image' not in type_uris.keys():
+                    identity_snapshot['type_metadata']['uris']['image'] = identity_snapshot['type_metadata']['uris']['icon']
         
         else:
             identity_snapshot['is_nft'] = False
