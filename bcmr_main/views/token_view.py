@@ -17,6 +17,8 @@ def transform_to_paytaca_expected_format(identity_snapshot, nft_type_key):
         if identity_snapshot.get('token') and identity_snapshot['token'].get('nfts'):
             identity_snapshot['is_nft'] = True
             nfts = identity_snapshot['token'].pop('nfts')
+            if nft_type_key == 'empty' or nft_type_key == 'none':
+                nft_type_key = ''
             nft_type_details = (nfts.get('parse') or {}).get('types' or {}).get(nft_type_key)
             if nft_type_details: 
                 identity_snapshot['type_metadata'] = nfts['parse']['types'][nft_type_key]
