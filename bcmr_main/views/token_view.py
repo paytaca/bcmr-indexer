@@ -12,10 +12,9 @@ from operator import itemgetter
 from dateutil.parser import parse as parse_datetime
 
 
-def transform_to_paytaca_expected_format(identity_snapshot, nft_type_key):
+def transform_to_paytaca_expected_format(identity_snapshot, nft_type_key, is_nft):
     if nft_type_key:
         if identity_snapshot.get('token') and identity_snapshot['token'].get('nfts'):
-            identity_snapshot['is_nft'] = True
             nfts = identity_snapshot['token'].pop('nfts')
             if nft_type_key == 'empty' or nft_type_key == 'none':
                 nft_type_key = ''
@@ -36,17 +35,14 @@ def transform_to_paytaca_expected_format(identity_snapshot, nft_type_key):
                 if 'icon' in type_uris.keys()  and 'image' not in type_uris.keys():
                     identity_snapshot['type_metadata']['uris']['image'] = identity_snapshot['type_metadata']['uris']['icon']
         
-        else:
-            identity_snapshot['is_nft'] = False
-    else:
-        if identity_snapshot.get('token') and identity_snapshot['token'].get('nfts'):
-            identity_snapshot['token'].pop('nfts')
-            identity_snapshot['is_nft'] = True
-        else:
-            identity_snapshot['is_nft'] = False
+    if identity_snapshot.get('token') and identity_snapshot['token'].get('nfts'):
+        identity_snapshot['token'].pop('nfts')
 
     if identity_snapshot.get('_meta'):
         identity_snapshot.pop('_meta')
+
+    if identity_snapshot:
+        identity_snapshot['is_nft'] = is_nft
     
     return identity_snapshot
 
@@ -55,7 +51,9 @@ class TokenView(APIView):
     def get(self, request, *args, **kwargs):
         category = kwargs.get('category', '')
         token = Token.objects.filter(category=category)
+        
         if token.exists():
+            is_nft = token[0].is_nft
             response = {
                 'category': category,
                 'error': 'no valid metadata found'
@@ -87,7 +85,7 @@ class TokenView(APIView):
                         latest_key, history_date = snapshots[-1]
                         identity_snapshot = identity_snapshots[latest_key]
                         if identity_snapshot:
-                            response = transform_to_paytaca_expected_format(identity_snapshot, nft_type_key)
+                            response = transform_to_paytaca_expected_format(identity_snapshot, nft_type_key, is_nft)
                             client.set(cache_key, json.dumps(response), ex=(60 * 60 * 24))
         else:
             response = {
