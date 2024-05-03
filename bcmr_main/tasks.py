@@ -369,3 +369,16 @@ def retrace_authchain(token_id):
             LOGGER.info('Identity output not found')
     else:
         LOGGER.info('Token not found')
+
+
+@shared_task(queue='watch_registry_changes')
+def watch_registry_changes():
+    registries = Registry.objects.filter(watch_for_changes=True)
+    for registry in registries:
+        process_op_return(
+            registry.txid,
+            registry.index,
+            registry.op_return,
+            registry.publisher,
+            registry.date_created
+        )
