@@ -13,6 +13,7 @@ from dateutil.parser import parse as parse_datetime
 
 
 def transform_to_paytaca_expected_format(identity_snapshot, nft_type_key, is_nft):
+    nft_type_key_exists = False
     if nft_type_key:
         if identity_snapshot.get('token') and identity_snapshot['token'].get('nfts'):
             nfts = identity_snapshot['token'].pop('nfts')
@@ -20,6 +21,7 @@ def transform_to_paytaca_expected_format(identity_snapshot, nft_type_key, is_nft
                 nft_type_key = ''
             nft_type_details = (nfts.get('parse') or {}).get('types' or {}).get(nft_type_key)
             if nft_type_details: 
+                nft_type_key_exists = True
                 identity_snapshot['type_metadata'] = nfts['parse']['types'][nft_type_key]
 
                 # NOTE: This is a temporary fix for NFTs that do not have `image` field under `uris`
@@ -34,7 +36,7 @@ def transform_to_paytaca_expected_format(identity_snapshot, nft_type_key, is_nft
                 # For some collections that only specified an icon but not an image
                 if 'icon' in type_uris.keys()  and 'image' not in type_uris.keys():
                     identity_snapshot['type_metadata']['uris']['image'] = identity_snapshot['type_metadata']['uris']['icon']
-        
+            
     if identity_snapshot.get('token') and identity_snapshot['token'].get('nfts'):
         identity_snapshot['token'].pop('nfts')
 
@@ -44,7 +46,7 @@ def transform_to_paytaca_expected_format(identity_snapshot, nft_type_key, is_nft
     if identity_snapshot:
         identity_snapshot['is_nft'] = is_nft
     
-    return identity_snapshot
+    return (identity_snapshot, nft_type_key_exists)
 
 class TokenView(APIView):
 
@@ -52,43 +54,46 @@ class TokenView(APIView):
         category = kwargs.get('category', '')
         token = Token.objects.filter(category=category)
         
-        if token.exists():
-            is_nft = token[0].is_nft
-            response = {
-                'category': category,
-                'error': 'no valid metadata found'
-            }
-            nft_type_key = kwargs.get('type_key', '') # commitment
-            
-            client = redis.Redis(host=config('REDIS_HOST', 'redis'), port=config('REDIS_PORT', 6379))
-            cache_key = f'metadata:token:{category}'            
-            if nft_type_key: 
-                cache_key = f'metadata:token:{category}:{nft_type_key}'
+        if not token.exists():
+            return JsonResponse({'error': 'category not found'}, safe=False)
+        
+        response = {
+            'category': category,
+            'error': 'no valid metadata found'
+        }
+
+        is_nft = token[0].is_nft
+
+        nft_type_key = kwargs.get('type_key', '') 
+        
+        client = redis.Redis(host=config('REDIS_HOST', 'redis'), port=config('REDIS_PORT', 6379))
+        
+        cached_response = None            
+        if nft_type_key: 
+            cache_key = f'metadata:token:{category}:{nft_type_key}'
             cached_response = client.get(cache_key)
 
-            if cached_response:
-                response = json.loads(cached_response)
-            else:
-                registry = Registry.objects.filter(contents__identities__has_key=category)
-                if registry.exists():
-                    r = registry.latest('id')
-                    if r:
-                        identity_snapshots = r.contents['identities'][category]
-                        snapshot_keys = identity_snapshots.keys()
-                        snapshots = []
-                        for snapshot_key in snapshot_keys:
-                            try:
-                                snapshots.append([snapshot_key, parse_datetime(snapshot_key)])
-                            except dateutil.parser._parser.ParserError:
-                                pass
-                        snapshots.sort(key=itemgetter(1))
-                        latest_key, history_date = snapshots[-1]
-                        identity_snapshot = identity_snapshots[latest_key]
-                        if identity_snapshot:
-                            response = transform_to_paytaca_expected_format(identity_snapshot, nft_type_key, is_nft)
-                            client.set(cache_key, json.dumps(response), ex=(60 * 60 * 24))
+        if cached_response:
+            response = json.loads(cached_response)
         else:
-            response = {
-                'error': 'category not found'
-            }
+            registry = Registry.objects.filter(contents__identities__has_key=category)
+            if registry.exists():
+                r = registry.latest('id')
+                if r:
+                    identity_snapshots = r.contents['identities'][category]
+                    snapshot_keys = identity_snapshots.keys()
+                    snapshots = []
+                    for snapshot_key in snapshot_keys:
+                        try:
+                            snapshots.append([snapshot_key, parse_datetime(snapshot_key)])
+                        except dateutil.parser._parser.ParserError:
+                            pass
+                    snapshots.sort(key=itemgetter(1))
+                    latest_key, history_date = snapshots[-1]
+                    identity_snapshot = identity_snapshots[latest_key]
+                    if identity_snapshot:
+                        response, nft_type_key_exists = transform_to_paytaca_expected_format(identity_snapshot, nft_type_key, is_nft)
+                        if nft_type_key_exists:
+                            client.set(cache_key, json.dumps(response), ex=(60 * 60 * 24))
+
         return JsonResponse(response, safe=False)
