@@ -67,18 +67,10 @@ class TokenView(APIView):
         nft_type_key = kwargs.get('type_key', '') 
         
         client = redis.Redis(host=config('REDIS_HOST', 'redis'), port=config('REDIS_PORT', 6379))
-        
-        token_cache_key = f'metadata:token:{category}'
-        
-        nft_cache_key = None      
-        
-        cached_response = None 
-
+        cache_key = f'metadata:token:{category}'            
         if nft_type_key: 
-            nft_cache_key = f'metadata:token:{category}:{nft_type_key}'      
-            cached_response = client.get(nft_cache_key)
-        else:
-            cached_response = client.get(token_cache_key)
+            cache_key = f'metadata:token:{category}:{nft_type_key}'
+        cached_response = client.get(cache_key)
 
         if cached_response:
             response = json.loads(cached_response)
@@ -100,9 +92,13 @@ class TokenView(APIView):
                     identity_snapshot = identity_snapshots[latest_key]
                     if identity_snapshot:
                         response, nft_type_key_exists = transform_to_paytaca_expected_format(identity_snapshot, nft_type_key, is_nft)
-                        if nft_type_key and nft_type_key_exists and nft_cache_key:
-                            client.set(nft_cache_key, json.dumps(response), ex=(60 * 60 * 24))
-                        elif not nft_type_key:
-                            client.set(token_cache_key, json.dumps(response), ex=(60 * 60 * 24))
+                        if nft_type_key:
+                            if nft_type_key_exists:
+                                client.set(f'metadata:token:{category}:{nft_type_key}', json.dumps(response), ex=(60 * 60 * 24))
+                            else:
+                                # Saving, the default token metadata of non existing key, but expire early
+                                client.set(f'metadata:token:{category}:{nft_type_key}', json.dumps(response), ex=(60 * 15))
+                        else:
+                            client.set(f'metadata:token:{category}', json.dumps(response), ex=(60 * 60 * 24)) 
 
         return JsonResponse(response, safe=False)
