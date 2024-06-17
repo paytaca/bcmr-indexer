@@ -27,15 +27,15 @@ def _process_tx(tx, bchn):
     tx_hash = tx['txid']
     LOGGER.info(f'PROCESSING TX --- {tx_hash}')
 
-    try:
-        tx_obj = QueuedTransaction.objects.get(txid=tx_hash)
-        tx = tx_obj.details
-    except QueuedTransaction.DoesNotExist:
-        tx_obj = QueuedTransaction(
-            txid=tx_hash,
-            details=tx
-        )
-        tx_obj.save()
+    # try:
+    #     tx_obj = QueuedTransaction.objects.get(txid=tx_hash)
+    #     tx = tx_obj.details
+    # except QueuedTransaction.DoesNotExist:
+    #     tx_obj = QueuedTransaction(
+    #         txid=tx_hash,
+    #         details=tx
+    #     )
+    #     tx_obj.save()
 
     block = None
     time = None
@@ -85,12 +85,12 @@ def _process_tx(tx, bchn):
                 output_token_identities.append(token_identity)
                 
                 # TODO: save ownership records
-                if token_identity in input_token_identities:
-                    # scenario: token transfer
-                    pass
-                else:
-                    # scenario: token minting or mutation
-                    pass
+                # if token_identity in input_token_identities:
+                #     # scenario: token transfer
+                #     pass
+                # else:
+                #     # scenario: token minting or mutation
+                #     pass
         
         elif output_type == 'nulldata':
             if not bcmr_op_ret:
@@ -107,10 +107,10 @@ def _process_tx(tx, bchn):
 
     # TODO: catch token burning by checking which token identities
     # are present in inputs but not in outputs
-    for token_id in input_token_identities:
-        if token_id not in output_token_identities:
-            # scenario: token burning
-            pass
+    # for token_id in input_token_identities:
+    #     if token_id not in output_token_identities:
+    #         # scenario: token burning
+    #         pass
 
     parents = IdentityOutput.objects.filter(txid__in=input_txids)
 
@@ -163,7 +163,7 @@ def _process_tx(tx, bchn):
         output_data['txid'] = category
         output_data['authbase'] = True
         output_data['genesis'] = False
-        output_data['identities'] = tokens_created
+        output_data['identities'] = list(set(tokens_created))
         save_output(**output_data)
 
     if parents.count():
@@ -273,11 +273,13 @@ def process_tx(tx=None, tx_hash=None):
 
     if 'coinbase' in tx['vin'][0].keys():
         return
+    
+    _process_tx(tx, bchn)
 
-    ancestor_txs = _get_ancestors(tx, bchn, [])
-    tx_chain = ancestor_txs + [tx]
-    for txn in tx_chain:
-        _process_tx(txn, bchn)
+    # ancestor_txs = _get_ancestors(tx, bchn, [])
+    # tx_chain = ancestor_txs + [tx]
+    # for txn in tx_chain:
+    #     _process_tx(txn, bchn)
 
 
 def record_txn_dates(qs, bchn):

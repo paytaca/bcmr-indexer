@@ -889,7 +889,7 @@ class Registry(models.Model):
         ordering = ('-date_created', )
         indexes = [
             GinIndex('contents', name='contents_idx'),
-            models.Index(models.F("contents__identities"), name="contents__identities_idx"),
+            # models.Index(models.F("contents__identities"), name="contents__identities_idx"),
         ]
         unique_together = [
             'txid',

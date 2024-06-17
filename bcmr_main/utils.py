@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.utils import timezone
 from requests.adapters import HTTPAdapter, Retry
-from urllib3.exceptions import LocationParseError
+from urllib3.exceptions import LocationParseError, MaxRetryError
 from bcmr_main.models import *
 from dateutil import parser
 from datetime import datetime
@@ -50,10 +50,14 @@ def _request_url(url):
     try:
         session = requests.Session()
         retry_triggers = tuple( x for x in requests.status_codes._codes if x not in [200, 301, 302, 307, 308, 404])
-        retries = Retry(total=7, backoff_factor=0.1, status_forcelist=retry_triggers)
+        retries = Retry(total=3, backoff_factor=0.1, status_forcelist=retry_triggers)
         session.mount('https://', HTTPAdapter(max_retries=retries))
         LOGGER.info('Downloading from: ' + url)
         response = session.get(url, timeout=30)
+    except MaxRetryError:
+        pass
+    except requests.exceptions.RetryError:
+        pass
     except requests.exceptions.ConnectionError:
         pass
     except requests.exceptions.InvalidURL:
@@ -78,8 +82,7 @@ def download_url(url):
         for ipfs_gateway in ipfs_gateways:
             final_url = f'https://{ipfs_gateway}/ipfs/{ipfs_cid}'
             response = _request_url(final_url)
-            if response.status_code == 200:
-                return response
+            return response
     else:
         response = _request_url(url)
     return response
