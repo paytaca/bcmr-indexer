@@ -164,3 +164,46 @@ def save_ownership(
     spends
 ):
     pass
+
+
+def fetch_authchain_from_chaingraph(token_id) -> list:
+  """
+  Fetches the authchain of the token_id from chaingraph
+  Args:
+    token_id (str): A string representing the token ID.
+  Returns:
+    list: The authchain, with index 0 = the authbase and last index = authhead
+  """
+
+  url = 'https://gql.chaingraph.pat.mn/v1/graphql'
+  headers = {
+      'Content-Type': 'application/json',
+  }
+  query = """{transaction(where:{hash:{_eq:\"\\\\x%s\"}}){hash authchains{authhead{hash}, authchain_length migrations(order_by:{migration_index:desc}){transaction{hash inputs(where:{outpoint_index:{_eq:\"0\"}}){outpoint_index}outputs{output_index locking_bytecode}}}}}}""" % token_id
+  body = {
+      'operationName': None,
+      'variables': {},
+      'query': query,
+  }
+
+  response = requests.post(url, headers=headers, json=body)
+  
+  if response.status_code != 200:
+    return print(f'Error {response.status_code} getting authchain of {token_id}')
+  
+  response = response.json()
+  authchain = []
+  migrations = None
+
+  try:
+    migrations = response['data']['transaction'][0]['authchains'][0]['migrations']
+  except KeyError as e:
+    print('No migrations')
+  
+  if migrations:
+    authchain = reversed(list(map(lambda x: x['transaction'][0]['hash'].replace('\\x',''), migrations)))
+    authchain = list(authchain)
+  return authchain
+
+
+
