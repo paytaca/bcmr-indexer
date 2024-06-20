@@ -387,14 +387,14 @@ def reindex(token_id):
         r = Registry.objects.filter(txid=tx)
         if r.exists() and r.first().contents:
             continue
-        process_tx(tx)
+        process_tx(tx_hash=tx)
         time.sleep(3)
 
     return (token_id, authchain)
 
 @shared_task(queue='resolve_metadata')
 def reindex_all():
-    identity_outputs = IdentityOutput.objects.filter(genesis=True)
+    identity_outputs = IdentityOutput.objects.filter(genesis=True).order_by('id')
     processed_identities = []
     for identity_output in identity_outputs:
         for identity in identity_output.identities:
@@ -415,3 +415,4 @@ def watch_registry_changes():
             registry.publisher,
             registry.date_created
         )
+
