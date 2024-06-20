@@ -1,3 +1,4 @@
+import os
 import time
 import logging
 import requests
@@ -400,7 +401,7 @@ def reindex_all():
             reindex(identity)
             processed_identities.append(identity)
     
-    with open(f'reindexed-{datetime.now(timezone.utc)}.log', 'w') as f:
+    with open(os.path.join(settings.BASE_DIR,'logs',f'reindexed-{datetime.now(timezone.utc)}.log'), 'w') as f:
         f.write(json.dumps(processed_identities))
 
 @shared_task(queue='watch_registry_changes')
