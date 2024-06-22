@@ -72,11 +72,13 @@ def download_url(url):
     if url.startswith('ipfs://'):
         ipfs_cid = url.split('ipfs://')[1]
         ipfs_gateways = [
-            "cloudflare-ipfs.com",
-            "ipfs-gateway.cloud",
-            "ipfs.filebase.io",
             "nftstorage.link",
-            "gateway.pinata.cloud",
+            "w3s.link",
+            "ipfs.pat.mn",
+            "ipfs-gateway.cloud",
+            # "cloudflare-ipfs.com",
+            # "gateway.pinata.cloud", not working
+            # "ipfs.filebase.io", only serves content pinned by filebase
         ]
         random.shuffle(ipfs_gateways)
         for ipfs_gateway in ipfs_gateways:
@@ -166,7 +168,29 @@ def save_ownership(
     pass
 
 
-def fetch_authchain_from_chaingraph(token_id) -> list:
+def fetch_authchain_length_from_chaingraph(token_id):
+    url = 'https://gql.chaingraph.pat.mn/v1/graphql'
+    headers = {
+        'Content-Type': 'application/json',
+    }
+    query = """query {transaction(where:{hash:{_eq:\"\\\\x%s\"}}){hash authchains{authhead{hash},authchain_length}}}""" % token_id
+    body = {
+        'operationName': None,
+        'variables': {},
+        'query': query,
+    }
+
+    response = requests.post(url, headers=headers, json=body)
+    
+    if response.status_code != 200:
+        return print(f'Error {response.status_code} getting authchain of {token_id}')
+    
+    response = response.json()
+
+    return response['data']['transaction'][0]['authchains'][0]['authchain_length']
+    
+
+def fetch_authchain_from_chaingraph(token_id, sort='asc', offset=0):
   """
   Fetches the authchain of the token_id from chaingraph
   Args:
@@ -179,7 +203,7 @@ def fetch_authchain_from_chaingraph(token_id) -> list:
   headers = {
       'Content-Type': 'application/json',
   }
-  query = """{transaction(where:{hash:{_eq:\"\\\\x%s\"}}){hash authchains{authhead{hash}, authchain_length migrations(order_by:{migration_index:desc}){transaction{hash inputs(where:{outpoint_index:{_eq:\"0\"}}){outpoint_index}outputs{output_index locking_bytecode}}}}}}""" % token_id
+  query = """{transaction(where:{hash:{_eq:\"\\\\x%s\"}}){hash authchains{authhead{hash}, authchain_length migrations(order_by:{migration_index:%s}, offset:%s){transaction{hash inputs(where:{outpoint_index:{_eq:\"0\"}}){outpoint_index}outputs{output_index locking_bytecode}}}}}}""" % (token_id, sort, offset)
   body = {
       'operationName': None,
       'variables': {},
@@ -194,16 +218,84 @@ def fetch_authchain_from_chaingraph(token_id) -> list:
   response = response.json()
   authchain = []
   migrations = None
-
+  
   try:
     migrations = response['data']['transaction'][0]['authchains'][0]['migrations']
   except KeyError as e:
     print('No migrations')
   
   if migrations:
-    authchain = reversed(list(map(lambda x: x['transaction'][0]['hash'].replace('\\x',''), migrations)))
-    authchain = list(authchain)
+    authchain = list(map(lambda x: x['transaction'][0]['hash'].replace('\\x',''), migrations))
   return authchain
 
+
+def fetch_authhead_from_chaingraph(token_id):
+    url = 'https://gql.chaingraph.pat.mn/v1/graphql'
+    headers = {
+        'Content-Type': 'application/json',
+    }
+    query = """query {transaction(where:{hash:{_eq:"\\\\x%s"}}){hash authchains{authhead{hash,identity_output{fungible_token_amount}},authchain_length}}}""" % token_id
+    body = {
+        'operationName': None,
+        'variables': {},
+        'query': query,
+    }
+
+    response = requests.post(url, headers=headers, json=body)
+    
+    if response.status_code != 200:
+        return print(f'Error {response.status_code} getting authhead of {token_id}')
+    
+    response = response.json()
+    authhead = None
+
+    try:
+        authhead = response['data']['transaction'][0]['authchains'][0]['authhead']
+        if authhead:
+            authhead = authhead['hash'].replace('\\x','')
+    except KeyError as e:
+        LOGGER.info(e)
+    
+    return authhead
+
+def fetch_authchain_pub_from_chaingraph(token_id, sort='asc', offset=0):
+    """
+    Fetches chain of publications only.
+    """
+    url = 'https://gql.chaingraph.pat.mn/v1/graphql'
+    headers = {
+        'Content-Type': 'application/json',
+    }
+    
+    op = "6a04%"
+    query = """query {transaction(where:{hash:{_eq:\"\\\\x%s\"}}){hash authchains{authhead{hash}, authchain_length migrations(where: {transaction: {outputs: {locking_bytecode_pattern: { _like: \"%s\" }}}},order_by:{migration_index:%s},offset: %s){transaction{hash inputs(where:{outpoint_index:{_eq:"0"}}){outpoint_index}outputs(where: { locking_bytecode_pattern: { _like: \"%s\" } }){output_index locking_bytecode}}}}}}""" % (token_id, op, sort, offset, op)
+    body = {
+        'operationName': None,
+        'variables': {},
+        'query': query,
+    }
+
+    response = requests.post(url, headers=headers, json=body)
+  
+    if response.status_code != 200:
+        return print(f'Error {response.status_code} getting authchain of {token_id}')
+    
+    response = response.json()
+    authchain = []
+    migrations = None
+
+    try:
+        migrations = response['data']['transaction'][0]['authchains'][0]['migrations']
+    except KeyError as e:
+        print(e)
+        print('No migrations')
+    
+    if migrations:
+        authchain = list(map(lambda x: x['transaction'][0]['hash'].replace('\\x',''), migrations))
+    return authchain
+
+def is_authhead(token_id, identity_output_txid):
+    authhead = fetch_authhead_from_chaingraph(token_id)
+    return (identity_output_txid == authhead, authhead )
 
 
