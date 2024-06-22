@@ -404,6 +404,38 @@ def reindex_all():
     with open(os.path.join(settings.BASE_DIR,'logs',f'reindexed-{datetime.now(timezone.utc)}.log'), 'w') as f:
         f.write(json.dumps(processed_identities))
 
+@shared_task(queue='resolve_metadata')
+def reindex_all_from_file():
+    f = open(os.path.join(settings.BASE_DIR,'logs',f'scanned.json'), 'r')
+    f = json.load(f)
+    identity_authchains = f['authchains']
+
+    processed_identities = []
+    errors = []
+    for identity_authchain in identity_authchains:
+        token_id, authchains = identity_authchain
+        for identity_output_tx in authchains:
+            r = Registry.objects.filter(txid=identity_output_tx)
+            if r.exists() and r.first().contents:
+                LOGGER.info(f'Registry already exists for {token_id}, skipping!')
+                continue
+            try:
+                print(f'Processing token_id/identityoutput: {token_id}, {identity_output_tx}')
+                process_tx(tx_hash=identity_output_tx)
+                processed_identities.append(token_id)
+                time.sleep(3)
+            except Exception as e:
+                errors.append({
+                    'token_id': token_id,
+                    'e': str(e)
+                })
+
+    with open(os.path.join(settings.BASE_DIR,'logs',f'reindexed-errors-{datetime.now(timezone.utc)}.log'), 'w') as f:
+        f.write(json.dumps(errors))
+
+    with open(os.path.join(settings.BASE_DIR,'logs',f'reindexed-{datetime.now(timezone.utc)}.log'), 'w') as f:
+        f.write(json.dumps(processed_identities))
+
 @shared_task(queue='watch_registry_changes')
 def watch_registry_changes():
     registries = Registry.objects.filter(watch_for_changes=True)
