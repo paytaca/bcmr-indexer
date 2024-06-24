@@ -74,7 +74,7 @@ def download_url(url):
         ipfs_gateways = [
             "nftstorage.link",
             "w3s.link",
-            "ipfs.pat.mn",
+            # "ipfs.pat.mn",
             "ipfs-gateway.cloud",
             # "cloudflare-ipfs.com",
             # "gateway.pinata.cloud", not working
