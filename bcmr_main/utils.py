@@ -76,6 +76,7 @@ def download_url(url):
             "w3s.link",
             # "ipfs.pat.mn",
             "ipfs-gateway.cloud",
+            "cf-ipfs.com",
             # "cloudflare-ipfs.com",
             # "gateway.pinata.cloud", not working
             # "ipfs.filebase.io", only serves content pinned by filebase
