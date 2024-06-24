@@ -222,7 +222,8 @@ def fetch_authchain_from_chaingraph(token_id, sort='asc', offset=0):
   try:
     migrations = response['data']['transaction'][0]['authchains'][0]['migrations']
   except KeyError as e:
-    print('No migrations')
+    LOGGER.info(f'Error @fetch_authchain_from_chaingraph no migrations found for {token_id}')
+    LOGGER.info(e)  
   
   if migrations:
     authchain = list(map(lambda x: x['transaction'][0]['hash'].replace('\\x',''), migrations))
@@ -244,7 +245,7 @@ def fetch_authhead_from_chaingraph(token_id):
     response = requests.post(url, headers=headers, json=body)
     
     if response.status_code != 200:
-        return print(f'Error {response.status_code} getting authhead of {token_id}')
+        return LOGGER.info(f'Error {response.status_code} getting authhead of {token_id}')
     
     response = response.json()
     authhead = None
@@ -287,8 +288,8 @@ def fetch_authchain_pub_from_chaingraph(token_id, sort='asc', offset=0):
     try:
         migrations = response['data']['transaction'][0]['authchains'][0]['migrations']
     except KeyError as e:
-        print(e)
-        print('No migrations')
+        LOGGER.info(f'Error @fetch_authchain_pub_from_chaingraph no migrations found for {token_id}')
+        LOGGER.info(e)
     
     if migrations:
         authchain = list(map(lambda x: x['transaction'][0]['hash'].replace('\\x',''), migrations))

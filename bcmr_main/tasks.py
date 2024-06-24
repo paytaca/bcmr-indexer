@@ -420,7 +420,7 @@ def reindex_all_from_file():
                 LOGGER.info(f'Registry already exists for {token_id}, skipping!')
                 continue
             try:
-                print(f'Processing token_id/identityoutput: {token_id}, {identity_output_tx}')
+                LOGGER.info(f'Processing token_id/identityoutput: {token_id}, {identity_output_tx}')
                 process_tx(tx_hash=identity_output_tx)
                 processed_identities.append(token_id)
                 time.sleep(3)
