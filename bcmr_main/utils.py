@@ -74,18 +74,18 @@ def download_url(url):
         ipfs_gateways = [
             "nftstorage.link",
             "w3s.link",
-            # "ipfs.pat.mn",
-            "ipfs-gateway.cloud",
             "cf-ipfs.com",
-            # "cloudflare-ipfs.com",
+            "cloudflare-ipfs.com",
+            "ipfs-gateway.clud",
+            "ipfs.filebase.io",
             # "gateway.pinata.cloud", not working
-            # "ipfs.filebase.io", only serves content pinned by filebase
         ]
         random.shuffle(ipfs_gateways)
         for ipfs_gateway in ipfs_gateways:
             final_url = f'https://{ipfs_gateway}/ipfs/{ipfs_cid}'
             response = _request_url(final_url)
-            return response
+            if response and response.status_code == 200:
+                break
     else:
         response = _request_url(url)
     return response
