@@ -80,7 +80,7 @@ def download_url(url):
             "ipfs.filebase.io",
             # "gateway.pinata.cloud", not working
         ]
-        random.shuffle(ipfs_gateways)
+        # random.shuffle(ipfs_gateways)
         for ipfs_gateway in ipfs_gateways:
             final_url = f'https://{ipfs_gateway}/ipfs/{ipfs_cid}'
             response = _request_url(final_url)
