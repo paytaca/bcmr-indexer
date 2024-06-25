@@ -64,16 +64,27 @@ def _request_url(url):
         pass
     except LocationParseError:
         pass
+    except Exception as e:
+        pass
     return response
 
 
 def download_url(url):
     response = None
+    ipfs_cid = None 
+
     if url.startswith('ipfs://'):
         ipfs_cid = url.split('ipfs://')[1]
+
+    # Temporarily use other gateway for nftstorage.link
+    if url.startswith('https://nftstorage.link/ipfs') or url.startswith('nftstorage.link/ipfs'):
+        ipfs_cid_index = url.index('ipfs') + 5 
+        ipfs_cid = url[ipfs_cid_index:]
+
+    if ipfs_cid:
         ipfs_gateways = [
-            "nftstorage.link",
             "w3s.link",
+            "nftstorage.link",
             "cf-ipfs.com",
             "cloudflare-ipfs.com",
             "ipfs-gateway.clud",
