@@ -83,6 +83,7 @@ def download_url(url):
 
     if ipfs_cid:
         ipfs_gateways = [
+            "cashtokens-studio.mypinata.cloud",
             "w3s.link",
             "nftstorage.link",
             "cf-ipfs.com",
@@ -94,6 +95,8 @@ def download_url(url):
         # random.shuffle(ipfs_gateways)
         for ipfs_gateway in ipfs_gateways:
             final_url = f'https://{ipfs_gateway}/ipfs/{ipfs_cid}'
+            if ipfs_gateway == 'cashtokens-studio.mypinata.cloud':
+                final_url += f'?pinataGatewayToken={settings.PINATA_GATEWAY_TOKEN}'
             response = _request_url(final_url)
             if response and response.status_code == 200:
                 break
