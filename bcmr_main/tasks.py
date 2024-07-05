@@ -1,7 +1,9 @@
+import os
 import time
 import logging
 import requests
 import simplejson as json
+from datetime import datetime, timezone
 from django.db.models import Q
 from django.conf import settings
 from bcmr_main.metadata import generate_token_metadata
@@ -9,7 +11,7 @@ from celery import shared_task
 from bcmr_main.op_return import *
 from bcmr_main.bchn import BCHN
 from bcmr_main.models import *
-from bcmr_main.utils import timestamp_to_date
+from bcmr_main.utils import timestamp_to_date, fetch_authchain_from_chaingraph
 
 
 LOGGER = logging.getLogger(__name__)
@@ -372,6 +374,67 @@ def retrace_authchain(token_id):
     else:
         LOGGER.info('Token not found')
 
+@shared_task(queue='resolve_metadata')
+def reindex(token_id):
+    authchain = fetch_authchain_from_chaingraph(token_id)
+    if authchain and len(authchain) > 0:
+        authhead = authchain[-1:]
+        r = Registry.objects.filter(txid=authhead)
+        if r.exists() and r.first().contents:
+            return LOGGER.info(f'Registry already exists for {token_id}, skipping!')
+
+    for tx in authchain:
+        r = Registry.objects.filter(txid=tx)
+        if r.exists() and r.first().contents:
+            continue
+        process_tx(tx_hash=tx)
+        time.sleep(3)
+
+    return (token_id, authchain)
+
+@shared_task(queue='resolve_metadata')
+def reindex_all():
+    identity_outputs = IdentityOutput.objects.filter(genesis=True).order_by('id')
+    processed_identities = []
+    for identity_output in identity_outputs:
+        for identity in identity_output.identities:
+            reindex(identity)
+            processed_identities.append(identity)
+    
+    with open(os.path.join(settings.BASE_DIR,'logs',f'reindexed-{datetime.now(timezone.utc)}.log'), 'w') as f:
+        f.write(json.dumps(processed_identities))
+
+@shared_task(queue='resolve_metadata')
+def reindex_all_from_file():
+    f = open(os.path.join(settings.BASE_DIR,'logs',f'scanned.json'), 'r')
+    f = json.load(f)
+    identity_authchains = f['authchains']
+
+    processed_identities = []
+    errors = []
+    for identity_authchain in identity_authchains:
+        token_id, authchains = identity_authchain
+        for identity_output_tx in authchains:
+            r = Registry.objects.filter(txid=identity_output_tx)
+            if r.exists() and r.first().contents:
+                LOGGER.info(f'Registry already exists for {token_id}, skipping!')
+                continue
+            try:
+                LOGGER.info(f'Processing token_id/identityoutput: {token_id}, {identity_output_tx}')
+                process_tx(tx_hash=identity_output_tx)
+                processed_identities.append(token_id)
+                time.sleep(3)
+            except Exception as e:
+                errors.append({
+                    'token_id': token_id,
+                    'e': str(e)
+                })
+
+    with open(os.path.join(settings.BASE_DIR,'logs',f'reindexed-errors-{datetime.now(timezone.utc)}.log'), 'w') as f:
+        f.write(json.dumps(errors))
+
+    with open(os.path.join(settings.BASE_DIR,'logs',f'reindexed-{datetime.now(timezone.utc)}.log'), 'w') as f:
+        f.write(json.dumps(processed_identities))
 
 @shared_task(queue='watch_registry_changes')
 def watch_registry_changes():
@@ -384,3 +447,4 @@ def watch_registry_changes():
             registry.publisher,
             registry.date_created
         )
+
