@@ -77,7 +77,7 @@ class TokenView(APIView):
         else:
             registry = Registry.objects.filter(contents__identities__has_key=category)
             if registry.exists():
-                r = registry.latest('id')
+                r = registry.latest('publisher_id')
                 if r:
                     identity_snapshots = r.contents['identities'][category]
                     snapshot_keys = identity_snapshots.keys()
