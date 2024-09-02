@@ -10,19 +10,19 @@ services:
     volumes:
       - paytaca_bcmr_db_data:/var/lib/postgresql/data
     env_file:
-      - /home/ubuntu/paytaca-bcmr/compose/.env_mainnet
+      - /root/paytaca-bcmr/compose/.env_mainnet
     expose:
       - "5432"
   redis:
     image: "redis:alpine"
     env_file:
-      - /home/ubuntu/paytaca-bcmr/compose/.env_mainnet
+      - /root/paytaca-bcmr/compose/.env_mainnet
   backend:
     container_name: paytaca_bcmr_backend
-    build: /home/ubuntu/paytaca-bcmr
+    build: /root/paytaca-bcmr
     image: paytaca_bcmr_web
     command: [ "supervisord", "-c", "/code/supervisord.conf", "--nodaemon" ]
-    env_file: /home/ubuntu/paytaca-bcmr/compose/.env_mainnet
+    env_file: /root/paytaca-bcmr/compose/.env_mainnet
     ports:
       - 8000:8000
     depends_on:

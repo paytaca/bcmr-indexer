@@ -104,10 +104,7 @@ DATABASES = {
         'USER': config('POSTGRES_USER', default='postgres'),
         'PASSWORD': config('POSTGRES_PASSWORD', default='badpassword'),
         'CONN_MAX_AGE': None,
-        'CONN_HEALTH_CHECKS': True,
-        # 'OPTIONS': {
-        #     'isolation_level': psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE,
-        # }
+        'CONN_HEALTH_CHECKS': True
     }
 }
 
@@ -150,7 +147,8 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+FILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field

@@ -22,11 +22,10 @@ def chipnet(ctx):
 @task
 def mainnet(ctx):
     ctx.config.network = 'mainnet'
-    ctx.config.project_dir = f'/home/ubuntu/{project}'
+    ctx.config.project_dir = f'/root/{project}'
     ctx.config.run.env['conn'] = Connection(
         config['MAINNET_SERVER_HOST'],
-        user=config['MAINNET_SERVER_USER'],
-        connect_kwargs = { 'key_filename': config['SERVER_SSH_KEY'] }
+        user=config['MAINNET_SERVER_USER']
     )
 
 
