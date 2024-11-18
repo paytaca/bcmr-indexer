@@ -144,7 +144,8 @@ class BCHN(object):
     def get_input_address(self, txid, vout_index):
         previous_tx = self._get_raw_transaction(txid)
         previous_out = previous_tx['vout'][vout_index]
-        return previous_out['scriptPubKey']['addresses'][0]
+        if 'addresses' in previous_out['scriptPubKey'].keys():
+            return previous_out['scriptPubKey']['addresses'][0]
 
     def get_input_token_data(self, txid, vout_index):
         previous_tx = self._get_raw_transaction(txid)

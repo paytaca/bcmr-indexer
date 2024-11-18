@@ -8,7 +8,7 @@ services:
   bchn:
     image: cagataygurturk/docker-ssh-tunnel
     volumes:
-      - /home/ubuntu/.ssh:/root/ssh:ro
+      - /root/.ssh:/root/ssh:ro
     environment:
       SSH_DEBUG: "-v"
       TUNNEL_HOST: bchn-chipnet
@@ -18,7 +18,7 @@ services:
   zmq:
     image: cagataygurturk/docker-ssh-tunnel
     volumes:
-      - /home/ubuntu/.ssh:/root/ssh:ro
+      - /root/.ssh:/root/ssh:ro
     environment:
       SSH_DEBUG: "-v"
       TUNNEL_HOST: bchn-chipnet
@@ -30,19 +30,19 @@ services:
     volumes:
       - paytaca_bcmr_db_data:/var/lib/postgresql/data
     env_file:
-      - /home/ubuntu/paytaca-bcmr/compose/.env_chipnet
+      - /root/paytaca-bcmr/compose/.env_chipnet
     expose:
       - "5432"
   redis:
     image: "redis:alpine"
     env_file:
-      - /home/ubuntu/paytaca-bcmr/compose/.env_chipnet
+      - /root/paytaca-bcmr/compose/.env_chipnet
   backend:
     container_name: paytaca_bcmr_backend
-    build: /home/ubuntu/paytaca-bcmr
+    build: /root/paytaca-bcmr
     image: paytaca_bcmr_web
     command: [ "supervisord", "-c", "/code/supervisord.conf", "--nodaemon" ]
-    env_file: /home/ubuntu/paytaca-bcmr/compose/.env_chipnet
+    env_file: /root/paytaca-bcmr/compose/.env_chipnet
     ports:
       - 8000:8000
     depends_on:
