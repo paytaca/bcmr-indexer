@@ -75,7 +75,7 @@ class TokenView(APIView):
         if cached_response:
             response = json.loads(cached_response)
         else:
-            registry = Registry.objects.filter(contents__identities__has_key=category)
+            registry = Registry.objects.filter(contents__identities__has_key=category, publisher__identities__contains=[category])
             if registry.exists():
                 r = registry.latest('publisher_id')
                 if r:

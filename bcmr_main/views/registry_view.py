@@ -23,7 +23,7 @@ class RegistryView(APIView):
             response = json.loads(cached_response)
         else:
             try:
-                registry = Registry.objects.filter(contents__identities__has_key=category).latest('id')
+                registry = Registry.objects.filter(contents__identities__has_key=category, publisher__identities__contains=[category]).latest('publisher_id')
                 response = registry.contents
                 client.set(cache_key, json.dumps(response), ex=(60 * 60 * 24))
             except Registry.DoesNotExist:
