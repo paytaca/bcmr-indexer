@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
+from django.contrib.postgres.indexes import GinIndex
 
 
 class IdentityOutput(models.Model):
@@ -24,9 +25,9 @@ class IdentityOutput(models.Model):
     class Meta:
         verbose_name_plural = 'Identity Outputs'
         ordering = ('-id', )
-        # indexes = [
-        #     models.Index(fields=['txid', 'spent', 'authbase'])
-        # ]
+        indexes = [
+            GinIndex('identities', name='identities_idx'),
+        ]
 
     def _retrieve_identities(self, parents, identities=[]):
         _parents = []
