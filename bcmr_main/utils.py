@@ -83,14 +83,13 @@ def download_url(url):
 
     if ipfs_cid:
         ipfs_gateways = [
-            "cashtokens-studio.mypinata.cloud",
-            "w3s.link",
-            "nftstorage.link",
-            "cf-ipfs.com",
-            "cloudflare-ipfs.com",
-            "ipfs-gateway.clud",
-            "ipfs.filebase.io",
-            # "gateway.pinata.cloud", not working
+            "ipfs.paytaca.com",
+            # "w3s.link",
+            # "nftstorage.link",
+            # "cf-ipfs.com",
+            # "cloudflare-ipfs.com",
+            # "ipfs-gateway.clud",
+            # "ipfs.filebase.io"
         ]
         # random.shuffle(ipfs_gateways)
         for ipfs_gateway in ipfs_gateways:
