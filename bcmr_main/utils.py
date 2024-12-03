@@ -94,7 +94,7 @@ def download_url(url):
         # random.shuffle(ipfs_gateways)
         for ipfs_gateway in ipfs_gateways:
             final_url = f'https://{ipfs_gateway}/ipfs/{ipfs_cid}'
-            if ipfs_gateway == 'cashtokens-studio.mypinata.cloud':
+            if ipfs_gateway == 'ipfs.paytaca.com':
                 final_url += f'?pinataGatewayToken={settings.PINATA_GATEWAY_TOKEN}'
             response = _request_url(final_url)
             if response and response.status_code == 200:
