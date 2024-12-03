@@ -114,7 +114,8 @@ class IdentityOutputAdmin(admin.ModelAdmin):
         'txid',
         'spender__txid',
         'block',
-        'address'
+        'address',
+        'identities'
     ]
 
     list_display = [
