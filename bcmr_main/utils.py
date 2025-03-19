@@ -52,8 +52,12 @@ def _request_url(url):
         retry_triggers = tuple( x for x in requests.status_codes._codes if x not in [200, 301, 302, 307, 308, 404])
         retries = Retry(total=3, backoff_factor=0.1, status_forcelist=retry_triggers)
         session.mount('https://', HTTPAdapter(max_retries=retries))
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+            "Referer": "https://bcmr.paytaca.com",
+        }
         LOGGER.info('Downloading from: ' + url)
-        response = session.get(url, timeout=30)
+        response = session.get(url, timeout=30, headers=headers)
     except MaxRetryError:
         pass
     except requests.exceptions.RetryError:
