@@ -5,6 +5,7 @@ from django.db.models import ExpressionWrapper, CharField, F, Q
 from rest_framework.decorators import api_view
 from bcmr_main.models import Registry
 from bcmr_main.app.BitcoinCashMetadataRegistry import BitcoinCashMetadataRegistry
+from bcmr_main.tasks import reindex
 
 @api_view(['GET'])
 def get_contents(request, category):
@@ -181,3 +182,10 @@ def get_published_url(request, category):
     except:
         return JsonResponse({'error': 'Bad request'}, status=400)
 
+@api_view(['GET'])
+def reindex_token(request, category):
+    try:
+        reindex.delay(category)
+        return JsonResponse({'success': 'Reindexing task queued.' }, status=200)
+    except:
+        return JsonResponse({'error': 'Bad request'}, status=400)
