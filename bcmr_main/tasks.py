@@ -1,5 +1,7 @@
 import os
 import time
+import redis
+from decouple import config
 import logging
 import requests
 import simplejson as json
@@ -8,10 +10,13 @@ from django.db.models import Q
 from django.conf import settings
 from bcmr_main.metadata import generate_token_metadata
 from celery import shared_task
+import dateutil.parser
+from operator import itemgetter
+from dateutil.parser import parse as parse_datetime
 from bcmr_main.op_return import *
 from bcmr_main.bchn import BCHN
 from bcmr_main.models import *
-from bcmr_main.utils import timestamp_to_date, fetch_authchain_from_chaingraph
+from bcmr_main.utils import timestamp_to_date, fetch_authchain_from_chaingraph, transform_to_paytaca_expected_format
 
 
 LOGGER = logging.getLogger(__name__)
@@ -435,6 +440,36 @@ def reindex_all_from_file():
 
     with open(os.path.join(settings.BASE_DIR,'logs',f'reindexed-{datetime.now(timezone.utc)}.log'), 'w') as f:
         f.write(json.dumps(processed_identities))
+
+@shared_task(queue='resolve_metadata')
+def update_registry_and_nft_cache(category, nft_type_key):
+    client = redis.Redis(host=config('REDIS_HOST', 'redis'), port=config('REDIS_PORT', 6379))
+    registry = Registry.objects.filter(contents__identities__has_key=category, publisher__identities__contains=[category])
+    if registry.exists():
+        r = registry.latest('publisher_id')
+        if r:
+            identity_snapshots = r.contents['identities'][category]
+            snapshot_keys = identity_snapshots.keys()
+            snapshots = []
+            for snapshot_key in snapshot_keys:
+                try:
+                    snapshots.append([snapshot_key, parse_datetime(snapshot_key)])
+                except dateutil.parser._parser.ParserError:
+                    pass
+            snapshots.sort(key=itemgetter(1))
+            latest_key, history_date = snapshots[-1]
+            identity_snapshot = identity_snapshots[latest_key]
+            if identity_snapshot:
+                response, nft_type_key_exists = transform_to_paytaca_expected_format(identity_snapshot, nft_type_key, True)
+                if nft_type_key:
+                    if nft_type_key_exists:
+                        client.set(f'metadata:token:{category}:{nft_type_key}', json.dumps(response), ex=(60 * 60 * 24))
+                    else:
+                        # Saving, the default token metadata of non existing key, but expire early
+                        client.set(f'metadata:token:{category}:{nft_type_key}', json.dumps(response), ex=(60 * 15))
+                else:
+                    client.set(f'metadata:token:{category}', json.dumps(response), ex=(60 * 60 * 24)) 
+
 
 @shared_task(queue='watch_registry_changes')
 def watch_registry_changes():
