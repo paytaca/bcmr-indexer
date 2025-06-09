@@ -55,7 +55,7 @@ class TokenView(APIView):
         token = Token.objects.filter(category=category)
         
         if not token.exists():
-            return JsonResponse({'error': 'category not found'}, safe=False)
+            return JsonResponse({'error': 'category not found'}, safe=False, status=404)
         
         response = {
             'category': category,
