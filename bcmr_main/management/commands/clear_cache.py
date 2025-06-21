@@ -25,7 +25,8 @@ class Command(BaseCommand):
                 keys_to_delete += client.keys(token_metadata_keys)      
 
         for key in keys_to_delete:
-            client.delete(key)
+            if key is not None:
+                client.delete(key)
         if options.get('category') == 'all':
             print('Cache cleared!')
         else:

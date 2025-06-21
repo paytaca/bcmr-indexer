@@ -48,4 +48,7 @@ def clear_cache(sender, instance=None, created=False, **kwargs):
     for c in categories:
         keys = client.keys(f'registry:token:{c}:*')
         keys += client.keys(f'metadata:token:{c}:*')
-        client.delete(*keys)
+        # Filter out None values and only delete if there are actual keys
+        valid_keys = [key for key in keys if key is not None]
+        if valid_keys:
+            client.delete(*valid_keys)
