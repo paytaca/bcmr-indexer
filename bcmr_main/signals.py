@@ -35,7 +35,7 @@ def generate_metadata(sender, instance=None, created=False, **kwargs):
 def clear_cache(sender, instance=None, created=False, **kwargs):
     
     categories = set()
-    if created and instance.contents:
+    if instance.contents:
         authbases = list((instance.contents.get('identities') or {}).keys())
         for a in authbases:
             timestamps = list((instance.contents.get('identities').get(a) or {}).keys())
