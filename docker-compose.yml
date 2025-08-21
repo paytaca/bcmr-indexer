@@ -1,31 +1,31 @@
 version: "3"
 services:
-  zmq:
-    image: cagataygurturk/docker-ssh-tunnel
-    volumes:
-      - ~/.ssh:/root/ssh:ro
-    environment:
-      SSH_DEBUG: "-v"
-      TUNNEL_HOST: bchn-mainnet
-      REMOTE_HOST: "${BCHN_MAINNET_HOST}"
-      LOCAL_PORT: 28332
-      REMOTE_PORT: 28332
-  bchn:
-    image: cagataygurturk/docker-ssh-tunnel
-    volumes:
-      - ~/.ssh:/root/ssh:ro
-    environment:
-      SSH_DEBUG: "-v"
-      TUNNEL_HOST: bchn-mainnet
-      REMOTE_HOST: "${BCHN_MAINNET_HOST}"
-      LOCAL_PORT: 8332
-      REMOTE_PORT: 8332
+  # zmq:
+  #   image: cagataygurturk/docker-ssh-tunnel
+  #   volumes:
+  #     - ~/.ssh:/root/ssh:ro
+  #   environment:
+  #     SSH_DEBUG: "-v"
+  #     TUNNEL_HOST: bchn-mainnet
+  #     REMOTE_HOST: "${BCHN_MAINNET_HOST}"
+  #     LOCAL_PORT: 28332
+  #     REMOTE_PORT: 28332
+  # bchn:
+  #   image: cagataygurturk/docker-ssh-tunnel
+  #   volumes:
+  #     - ~/.ssh:/root/ssh:ro
+  #   environment:
+  #     SSH_DEBUG: "-v"
+  #     TUNNEL_HOST: bchn-mainnet
+  #     REMOTE_HOST: "${BCHN_MAINNET_HOST}"
+  #     LOCAL_PORT: 8332
+  #     REMOTE_PORT: 8332
   postgres:
     image: "postgres:11.1-alpine"
     expose:
       - "5432"
     env_file:
-      - .env_dev
+      - .env
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
   backend:
@@ -34,7 +34,7 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - .env_dev
+      - .env
     depends_on:
       - postgres
     volumes:

@@ -86,15 +86,19 @@ def download_url(url):
         ipfs_cid = url[ipfs_cid_index:]
 
     if ipfs_cid:
-        ipfs_gateways = [
-            "ipfs.paytaca.com",
-            # "w3s.link",
-            # "nftstorage.link",
-            # "cf-ipfs.com",
-            # "cloudflare-ipfs.com",
-            # "ipfs-gateway.clud",
-            # "ipfs.filebase.io"
-        ]
+        if settings.PINATA_GATEWAY_TOKEN:
+            ipfs_gateways = [
+                "ipfs.paytaca.com",
+            ]
+        else:
+            ipfs_gateways = [
+                "w3s.link",
+                "nftstorage.link",
+                "cf-ipfs.com",
+                "cloudflare-ipfs.com",
+                "ipfs-gateway.clud",
+                "ipfs.filebase.io"
+            ]
         # random.shuffle(ipfs_gateways)
         for ipfs_gateway in ipfs_gateways:
             final_url = f'https://{ipfs_gateway}/ipfs/{ipfs_cid}'

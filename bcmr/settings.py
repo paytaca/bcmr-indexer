@@ -273,9 +273,15 @@ REST_FRAMEWORK = {
 
 
 # BCHN
+if config('RPC_USER', default=None):
+    RPC_USER = decipher(config('RPC_USER'))
+if config('BCHN_RPC_USER', default=None):
+    RPC_USER = decipher(config('BCHN_RPC_USER'))
 
-RPC_USER = decipher(config('RPC_USER'))
-BCHN_RPC_PASSWORD = decipher(config('BCHN_RPC_PASSWORD'))
+if config('RPC_PASSWORD', default=None):
+    BCHN_RPC_PASSWORD = decipher(config('RPC_PASSWORD'))
+if config('BCHN_RPC_PASSWORD', default=None):
+    BCHN_RPC_PASSWORD = decipher(config('BCHN_RPC_PASSWORD'))
 
 BCHN_HOST = config('BCHN_CHIPNET_HOST', 'bchn')
 if NETWORK == 'mainnet':
