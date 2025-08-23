@@ -1,4 +1,4 @@
-FROM nikolaik/python-nodejs:python3.9-nodejs15-slim
+FROM nikolaik/python-nodejs:python3.9-nodejs20-slim
 
 RUN apt-key adv --refresh-keys --keyserver keyserver.ubuntu.com
 RUN apt-get update -y
@@ -8,7 +8,7 @@ RUN apt-get -y install build-essential sudo postgresql libpq-dev postgresql-clie
     chmod +x /usr/local/bin/wait-for-it.sh
 
 COPY ./requirements.txt requirements.txt
-RUN pip install -r requirements.txt
+RUN pip install pip==24.0 && pip install -r requirements.txt
 
 COPY . /code
 WORKDIR /code
