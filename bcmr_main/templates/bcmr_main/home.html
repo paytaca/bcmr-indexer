@@ -48,58 +48,241 @@
         <div class="bg-white rounded-lg shadow-sm border border-gray-200">
             <div class="px-8 py-6 border-b border-gray-200">
                 <h2 class="text-2xl font-semibold text-gray-900">API Endpoints</h2>
-                <p class="mt-2 text-gray-600">Access token metadata and registry information through our RESTful API</p>
+                <p class="mt-2 text-gray-600">Access token metadata and registry information through our comprehensive RESTful API</p>
             </div>
             <div class="p-8">
-                <div class="space-y-6">
-                    <!-- Endpoint 1 -->
-                    <div class="border border-gray-200 rounded-lg p-6">
-                        <div class="flex items-start justify-between">
-                            <div class="flex-1">
+                <div class="space-y-8">
+                    
+                    <!-- Token Endpoints -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">Token Endpoints</h3>
+                        <div class="space-y-4">
+                            <div class="border border-gray-200 rounded-lg p-4">
                                 <div class="flex items-center space-x-3 mb-2">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
                                     <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/tokens/&lt;category-id&gt;</code>
                                 </div>
-                                <p class="text-gray-700">Returns specific token metadata for Fungible Tokens (FTs) and generic token information for Non-Fungible Tokens (NFTs)</p>
+                                <p class="text-gray-700 text-sm">Returns specific token metadata for Fungible Tokens (FTs) and generic token information for Non-Fungible Tokens (NFTs)</p>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Endpoint 2 -->
-                    <div class="border border-gray-200 rounded-lg p-6">
-                        <div class="flex items-start justify-between">
-                            <div class="flex-1">
+                            
+                            <div class="border border-gray-200 rounded-lg p-4">
                                 <div class="flex items-center space-x-3 mb-2">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
-                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/tokens/&lt;category-id&gt;/&lt;commitment&gt;/</code>
+                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/tokens/&lt;category-id&gt;/&lt;type_key&gt;/</code>
                                 </div>
-                                <p class="text-gray-700">Returns detailed token metadata for specific NFT types based on commitment</p>
+                                <p class="text-gray-700 text-sm">Returns token metadata for specific NFT types</p>
+                            </div>
+                            
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/tokens/&lt;category-id&gt;/icon-symbol</code>
+                                </div>
+                                <p class="text-gray-700 text-sm">Returns token icon and symbol information</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Endpoint 3 -->
-                    <div class="border border-gray-200 rounded-lg p-6">
-                        <div class="flex items-start justify-between">
-                            <div class="flex-1">
+                    <!-- Registry Endpoints -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">Registry Endpoints</h3>
+                        <div class="space-y-4">
+                            <div class="border border-gray-200 rounded-lg p-4">
                                 <div class="flex items-center space-x-3 mb-2">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
                                     <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/registries/&lt;category-id&gt;/latest/</code>
                                 </div>
-                                <p class="text-gray-700">Returns the latest registry record for the specified category ID</p>
+                                <p class="text-gray-700 text-sm">Returns the latest registry record for the specified category ID</p>
+                            </div>
+                            
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/registry/&lt;category-id&gt;/</code>
+                                </div>
+                                <p class="text-gray-700 text-sm">Returns the registry for the specified category ID</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Endpoint 4 -->
-                    <div class="border border-gray-200 rounded-lg p-6">
-                        <div class="flex items-start justify-between">
-                            <div class="flex-1">
+                    <!-- BCMR Endpoints -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">BCMR Endpoints</h3>
+                        <div class="space-y-4">
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/bcmr/&lt;category-id&gt;/</code>
+                                </div>
+                                <p class="text-gray-700 text-sm">Returns BCMR contents for the specified category ID</p>
+                            </div>
+                            
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/bcmr/&lt;category-id&gt;/token/</code>
+                                </div>
+                                <p class="text-gray-700 text-sm">Returns BCMR token information</p>
+                            </div>
+                            
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/bcmr/&lt;category-id&gt;/token/nfts/&lt;commitment&gt;/</code>
+                                </div>
+                                <p class="text-gray-700 text-sm">Returns BCMR token NFT information</p>
+                            </div>
+                            
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/bcmr/&lt;category-id&gt;/uris/</code>
+                                </div>
+                                <p class="text-gray-700 text-sm">Returns BCMR URIs</p>
+                            </div>
+                            
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/bcmr/&lt;category-id&gt;/uris/icon</code>
+                                </div>
+                                <p class="text-gray-700 text-sm">Returns BCMR icon URI</p>
+                            </div>
+                            
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/bcmr/&lt;category-id&gt;/uris/published-url</code>
+                                </div>
+                                <p class="text-gray-700 text-sm">Returns BCMR published URL</p>
+                            </div>
+                            
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">POST</span>
+                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/bcmr/&lt;category-id&gt;/reindex/</code>
+                                </div>
+                                <p class="text-gray-700 text-sm">Triggers reindexing of token registry</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Authchain Endpoints -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">Authchain Endpoints</h3>
+                        <div class="space-y-4">
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/authchain/&lt;category-id&gt;/head/</code>
+                                </div>
+                                <p class="text-gray-700 text-sm">Returns authchain head information</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Identity Snapshot Endpoints -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">Identity Snapshot Endpoints</h3>
+                        <div class="space-y-4">
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/registry/&lt;category-id&gt;/identity-snapshot/</code>
+                                </div>
+                                <p class="text-gray-700 text-sm">Returns identity snapshot</p>
+                            </div>
+                            
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/registry/&lt;category-id&gt;/identity-snapshot/token-category/</code>
+                                </div>
+                                <p class="text-gray-700 text-sm">Returns token category information</p>
+                            </div>
+                            
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/registry/&lt;category-id&gt;/identity-snapshot/token-category/nfts/</code>
+                                </div>
+                                <p class="text-gray-700 text-sm">Returns NFT information</p>
+                            </div>
+                            
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/registry/&lt;category-id&gt;/identity-snapshot/token-category/nfts/parse/bytecode/</code>
+                                </div>
+                                <p class="text-gray-700 text-sm">Parses NFT bytecode</p>
+                            </div>
+                            
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/registry/&lt;category-id&gt;/identity-snapshot/token-category/nfts/parse/types/</code>
+                                </div>
+                                <p class="text-gray-700 text-sm">Returns NFT types</p>
+                            </div>
+                            
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/registry/&lt;category-id&gt;/identity-snapshot/token-category/nfts/parse/types/&lt;commitment&gt;/</code>
+                                </div>
+                                <p class="text-gray-700 text-sm">Returns NFT types by commitment</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cash Token Endpoints -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">Cash Token Endpoints</h3>
+                        <div class="space-y-4">
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/cashtokens/</code>
+                                </div>
+                                <p class="text-gray-700 text-sm">Returns all cash tokens</p>
+                            </div>
+                            
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/cashtokens/&lt;category-id&gt;/</code>
+                                </div>
+                                <p class="text-gray-700 text-sm">Returns cash tokens by category</p>
+                            </div>
+                            
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/cashtokens/&lt;category-id&gt;/&lt;token_type&gt;/</code>
+                                </div>
+                                <p class="text-gray-700 text-sm">Returns cash tokens by category and type</p>
+                            </div>
+                            
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/cashtokens/&lt;category-id&gt;/&lt;token_type&gt;/&lt;commitment&gt;/</code>
+                                </div>
+                                <p class="text-gray-700 text-sm">Returns cash tokens by category, type, and commitment</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status Endpoints -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">Status Endpoints</h3>
+                        <div class="space-y-4">
+                            <div class="border border-gray-200 rounded-lg p-4">
                                 <div class="flex items-center space-x-3 mb-2">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
                                     <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">/api/status/latest-block/</code>
                                 </div>
-                                <p class="text-gray-700">Returns the latest block height that has been indexed</p>
+                                <p class="text-gray-700 text-sm">Returns the latest block height that has been indexed</p>
                             </div>
                         </div>
                     </div>
@@ -116,7 +299,7 @@
                         <div class="ml-3">
                             <h3 class="text-sm font-medium text-blue-800">API Usage</h3>
                             <div class="mt-2 text-sm text-blue-700">
-                                <p>Replace <code class="bg-blue-100 px-1 rounded">&lt;category-id&gt;</code> with the actual token category ID and <code class="bg-blue-100 px-1 rounded">&lt;commitment&gt;</code> with the NFT commitment value where applicable.</p>
+                                <p>Replace <code class="bg-blue-100 px-1 rounded">&lt;category-id&gt;</code> with the actual token category ID, <code class="bg-blue-100 px-1 rounded">&lt;type_key&gt;</code> with the token type, <code class="bg-blue-100 px-1 rounded">&lt;token_type&gt;</code> with the token type, and <code class="bg-blue-100 px-1 rounded">&lt;commitment&gt;</code> with the NFT commitment value where applicable.</p>
                             </div>
                         </div>
                     </div>
@@ -135,3 +318,4 @@
     </footer>
 </body>
 </html>
+
