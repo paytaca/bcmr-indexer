@@ -321,4 +321,41 @@ def is_authhead(token_id, identity_output_txid):
     authhead = fetch_authhead_from_chaingraph(token_id)
     return (identity_output_txid == authhead, authhead )
 
+def transform_to_paytaca_expected_format(identity_snapshot, nft_type_key, is_nft):
+    nft_type_key_exists = False
+    if nft_type_key:
+        if identity_snapshot.get('token') and identity_snapshot['token'].get('nfts'):
+            nfts = identity_snapshot['token'].pop('nfts')
+            if nft_type_key == 'empty' or nft_type_key == 'none':
+                nft_type_key = ''
+            nft_type_details = (nfts.get('parse') or {}).get('types' or {}).get(nft_type_key)
+            if nft_type_details: 
+                nft_type_key_exists = True
+                identity_snapshot['type_metadata'] = nfts['parse']['types'][nft_type_key]
+
+                # NOTE: This is a temporary fix for NFTs that do not have `image` field under `uris`
+                # The `image` field is needed by Paytaca to display NFTs propery in the wallet
+                type_uris = identity_snapshot['type_metadata']['uris']
+                if 'asset' in type_uris.keys()  and 'image' not in type_uris.keys():
+                    asset_uri = identity_snapshot['type_metadata']['uris']['asset']
+                    asset_uri_ext = asset_uri.split('.')[-1].lower()
+                    if asset_uri_ext in ['jpg', 'png', 'gif', 'svg']:
+                        identity_snapshot['type_metadata']['uris']['image'] = asset_uri
+
+                # For some collections that only specified an icon but not an image
+                if 'icon' in type_uris.keys()  and 'image' not in type_uris.keys():
+                    identity_snapshot['type_metadata']['uris']['image'] = identity_snapshot['type_metadata']['uris']['icon']
+            
+    if identity_snapshot.get('token') and identity_snapshot['token'].get('nfts'):
+        identity_snapshot['token'].pop('nfts')
+
+    if identity_snapshot.get('_meta'):
+        identity_snapshot.pop('_meta')
+
+    if identity_snapshot:
+        identity_snapshot['is_nft'] = is_nft
+    
+    return (identity_snapshot, nft_type_key_exists)
+
+
 
