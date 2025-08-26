@@ -16,7 +16,7 @@ LOGGER = logging.getLogger(__name__)
 class ZMQHandler():
 
     def __init__(self):
-        self.url = f"tcp://{settings.BCHN_HOST}:28332"
+        self.url = f"tcp://{settings.BCHN_HOST}:{settings.BCHN_ZMQ_PORT}"
         self.zmqContext = zmq.Context()
         self.zmqSubSocket = self.zmqContext.socket(zmq.SUB)
         self.zmqSubSocket.setsockopt_string(zmq.SUBSCRIBE, "rawtx")

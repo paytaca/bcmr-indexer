@@ -273,6 +273,8 @@ REST_FRAMEWORK = {
 
 
 # BCHN
+BCHN_SCHEME = config('BCHN_SCHEME', 'http')
+
 if config('RPC_USER', default=None):
     RPC_USER = decipher(config('RPC_USER'))
 if config('BCHN_RPC_USER', default=None):
@@ -287,7 +289,10 @@ BCHN_HOST = config('BCHN_CHIPNET_HOST', 'bchn')
 if NETWORK == 'mainnet':
     BCHN_HOST = config('BCHN_MAINNET_HOST', 'bchn')
 
-BCHN_NODE = f'http://{RPC_USER}:{BCHN_RPC_PASSWORD}@{BCHN_HOST}:8332'
+BCHN_RPC_PORT = config('BCHN_RPC_PORT', '8332')
+BCHN_NODE = f'{BCHN_SCHEME}://{RPC_USER}:{BCHN_RPC_PASSWORD}@{BCHN_HOST}:{BCHN_RPC_PORT}'
+
+BCHN_ZMQ_PORT = config('BCHN_ZMQ_PORT', '28332')
 
 
 # Watchtower webhook
