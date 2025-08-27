@@ -39,7 +39,7 @@ class RegistryTxoView(APIView):
         vout = int(kwargs.get('vout', -1))
 
         if not txid or vout < 0:
-            return JsonResponse(data=None, safe=False)
+            return Response(status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
         client = redis.Redis(host=config('REDIS_HOST', 'redis'), port=config('REDIS_PORT', 6379))
         cache_key = f'registry:{txid}:{vout}'
