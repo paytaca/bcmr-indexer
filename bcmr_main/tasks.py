@@ -163,15 +163,16 @@ def _process_tx(tx, bchn):
 
     # save authbase tx
     if tokens_created:
-        authbase_tx = bchn._get_raw_transaction(category)
-        output_data = {}
-        output_data['block'] = block
-        output_data['address'] = authbase_tx['vout'][0]['scriptPubKey']['addresses'][0]
-        output_data['txid'] = category
-        output_data['authbase'] = True
-        output_data['genesis'] = False
-        output_data['identities'] = list(set(tokens_created))
-        save_output(**output_data)
+        for created_token_id in tokens_created:
+            authbase_tx = bchn._get_raw_transaction(created_token_id)
+            output_data = {}
+            output_data['block'] = block
+            output_data['address'] = authbase_tx['vout'][0]['scriptPubKey']['addresses'][0]
+            output_data['txid'] = created_token_id
+            output_data['authbase'] = True
+            output_data['genesis'] = False
+            output_data['identities'] = [created_token_id]
+            save_output(**output_data)
 
     if parents.count():
         LOGGER.info(f'---PARENTS FOUND: {str([x.txid for x in parents])}')

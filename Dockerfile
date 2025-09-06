@@ -1,6 +1,5 @@
 FROM nikolaik/python-nodejs:python3.9-nodejs20-slim
 
-RUN apt-key adv --refresh-keys --keyserver keyserver.ubuntu.com
 RUN apt-get update -y
 RUN apt-get -y install build-essential sudo postgresql libpq-dev postgresql-client curl \
     postgresql-client-common libncurses5-dev libjpeg-dev zlib1g-dev git wget redis-server && \
