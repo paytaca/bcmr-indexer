@@ -335,15 +335,15 @@ def transform_to_paytaca_expected_format(identity_snapshot, nft_type_key, is_nft
 
                 # NOTE: This is a temporary fix for NFTs that do not have `image` field under `uris`
                 # The `image` field is needed by Paytaca to display NFTs propery in the wallet
-                type_uris = identity_snapshot['type_metadata']['uris']
-                if 'asset' in type_uris.keys()  and 'image' not in type_uris.keys():
+                type_uris = identity_snapshot['type_metadata'].get('uris')
+                if type_uris and 'asset' in type_uris.keys()  and 'image' not in type_uris.keys():
                     asset_uri = identity_snapshot['type_metadata']['uris']['asset']
                     asset_uri_ext = asset_uri.split('.')[-1].lower()
                     if asset_uri_ext in ['jpg', 'png', 'gif', 'svg']:
                         identity_snapshot['type_metadata']['uris']['image'] = asset_uri
 
                 # For some collections that only specified an icon but not an image
-                if 'icon' in type_uris.keys()  and 'image' not in type_uris.keys():
+                if type_uris and 'icon' in type_uris.keys()  and 'image' not in type_uris.keys():
                     identity_snapshot['type_metadata']['uris']['image'] = identity_snapshot['type_metadata']['uris']['icon']
             
     if identity_snapshot.get('token') and identity_snapshot['token'].get('nfts'):
