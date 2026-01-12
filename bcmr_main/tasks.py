@@ -133,7 +133,8 @@ def _process_tx(tx, bchn):
             
         capability = None
         commitment = None
-        is_nft = 'nft' in token_data.keys()
+        # Check if 'nft' key exists and has actual data (not None, not empty dict)
+        is_nft = 'nft' in token_data and token_data.get('nft') is not None and token_data.get('nft') != {}
 
         if is_nft:
             nft_data = token_data['nft']

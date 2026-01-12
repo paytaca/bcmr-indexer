@@ -150,7 +150,8 @@ def save_token(
         token.amount = amount
         token.debut_txid = txid
         token.date_created = date_created
-        token.is_nft = is_nft
+    # Always update is_nft, even for existing tokens
+    token.is_nft = is_nft
     token.save()
 
 
