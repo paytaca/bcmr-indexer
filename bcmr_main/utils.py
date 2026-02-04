@@ -324,6 +324,11 @@ def is_authhead(token_id, identity_output_txid):
 
 def transform_to_paytaca_expected_format(identity_snapshot, nft_type_key, is_nft):
     nft_type_key_exists = False
+    
+    nft_type = 'sequential'
+    if identity_snapshot.get('token', {}).get('nfts', {}).get('parse', {}).get('bytecode'):
+        nft_type = 'parsable'
+        
     if nft_type_key:
         if identity_snapshot.get('token') and identity_snapshot['token'].get('nfts'):
             nfts = identity_snapshot['token'].pop('nfts')
@@ -347,7 +352,7 @@ def transform_to_paytaca_expected_format(identity_snapshot, nft_type_key, is_nft
                 if type_uris and 'icon' in type_uris.keys()  and 'image' not in type_uris.keys():
                     identity_snapshot['type_metadata']['uris']['image'] = identity_snapshot['type_metadata']['uris']['icon']
             
-    if identity_snapshot.get('token') and identity_snapshot['token'].get('nfts'):
+    if identity_snapshot.get('token') and identity_snapshot['token'].get('nfts') and nft_type == 'sequential':
         identity_snapshot['token'].pop('nfts')
 
     if identity_snapshot.get('_meta'):
@@ -355,6 +360,7 @@ def transform_to_paytaca_expected_format(identity_snapshot, nft_type_key, is_nft
 
     if identity_snapshot:
         identity_snapshot['is_nft'] = is_nft
+        identity_snapshot['nft_type'] = nft_type
     
     return (identity_snapshot, nft_type_key_exists)
 
