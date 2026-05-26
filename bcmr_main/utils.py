@@ -5,13 +5,28 @@ from urllib3.exceptions import LocationParseError, MaxRetryError
 from bcmr_main.models import *
 from dateutil import parser
 from datetime import datetime
+from decouple import config
 import pytz
 import random
 import requests
 import hashlib
 import logging
+import redis
 
 LOGGER = logging.getLogger(__name__)
+
+# Shared Redis connection pool — one pool per process, reused across requests.
+_redis_pool = redis.ConnectionPool(
+    host=config('REDIS_HOST', 'redis'),
+    port=config('REDIS_PORT', cast=int, default=6379),
+    db=3,
+    decode_responses=False,
+    max_connections=20,
+)
+
+def get_redis_client():
+    """Return a Redis client backed by the shared connection pool."""
+    return redis.Redis(connection_pool=_redis_pool)
 
 
 def timestamp_to_date(timestamp):
