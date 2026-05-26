@@ -16,7 +16,7 @@ def _json_response_with_cache_headers(data: dict, max_age: int = 3600) -> JsonRe
     """Return a JsonResponse with ETag and Cache-Control headers."""
     body = json.dumps(data, separators=(',', ':')).encode()
     etag = _etag_for(body)
-    response = JsonResponse(data, safe=False)
+    response = JsonResponse(data, safe=False, json_dumps_params={'separators': (',', ':')})
     response['ETag'] = f'"{etag}"'
     response['Cache-Control'] = f'public, max-age={max_age}'
     return response
