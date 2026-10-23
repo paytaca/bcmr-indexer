@@ -1,4 +1,7 @@
+from unittest import mock
+
 import pytest
+from bcmr_main import op_return
 from bcmr_main.op_return import process_op_return
 from bcmr_main.utils import timestamp_to_date
 from bcmr_main.models import Registry
@@ -51,3 +54,57 @@ class TestOpReturnValidation:
         assert registry.txid == txid
         assert registry.op_return == op_return
         assert registry.bcmr_url == bcmr_url
+
+
+@pytest.mark.django_db
+class TestWatchedRegistryIdempotency:
+    """`watch_registry_changes` re-runs every 20s, so an unchanged registry must
+    not be written again: each save fires post_save signals that invalidate
+    caches and rewrite the row, forever."""
+
+    TXID, OP_RETURN, DATE, _URL = VALID_OP_RETURNS[0]
+
+    def _seed(self):
+        return process_op_return(
+            self.TXID, 0, self.OP_RETURN, None, timestamp_to_date(self.DATE)
+        )
+
+    def test_second_pass_does_not_write_an_unchanged_registry(self):
+        self._seed()
+        registry = Registry.objects.get()
+        original_save = Registry.save
+        saved = []
+
+        def counting_save(instance, *args, **kwargs):
+            saved.append(instance.pk)
+            return original_save(instance, *args, **kwargs)
+
+        with mock.patch.object(Registry, 'save', counting_save):
+            validity_checks, url = process_op_return(
+                self.TXID, 0, self.OP_RETURN, None, timestamp_to_date(self.DATE)
+            )
+
+        assert validity_checks['bcmr_hash_match'] is True
+        assert saved == [], "unchanged registry was written %s time(s)" % len(saved)
+        assert Registry.objects.get().contents == registry.contents
+
+    def test_changed_contents_are_still_saved(self):
+        self._seed()
+        before = Registry.objects.get().contents
+
+        class FakeResponse:
+            status_code = 200
+            text = '{"registry_version": 2, "name": "changed"}'
+
+        with mock.patch.object(op_return, 'download_url', return_value=FakeResponse()), \
+             mock.patch.object(op_return, 'encode_str', return_value=None), \
+             mock.patch.object(
+                 op_return.BitcoinCashMetadataRegistry, 'validate_contents'
+             ):
+            process_op_return(
+                self.TXID, 0, self.OP_RETURN, None, timestamp_to_date(self.DATE)
+            )
+
+        after = Registry.objects.get().contents
+        assert after != before
+        assert after == {'registry_version': 2, 'name': 'changed'}

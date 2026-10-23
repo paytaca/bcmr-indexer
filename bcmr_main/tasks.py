@@ -294,8 +294,14 @@ def process_tx(tx=None, tx_hash=None):
 def record_txn_dates(qs, bchn):
     for element in qs:
         if hasattr(element, 'txid'):
-            tx = bchn._get_raw_transaction(element.txid)
-                
+            try:
+                tx = bchn._get_raw_transaction(element.txid)
+            except Exception:
+                # Node may not have the tx (or the RPC hiccuped); skip it so
+                # one bad record doesn't abort the whole recheck pass.
+                LOGGER.exception(f'Could not fetch tx {element.txid} for date backfill')
+                continue
+
             if 'time' in tx.keys():
                 time = timestamp_to_date(tx['time'])
                 if isinstance(element, Registry) or isinstance(element, Token):
@@ -319,7 +325,11 @@ def recheck_unconfirmed_txn_details():
     record_txn_dates(registries, bchn)
 
     for output in outputs:
-        tx = bchn._get_raw_transaction(output.txid)
+        try:
+            tx = bchn._get_raw_transaction(output.txid)
+        except Exception:
+            LOGGER.exception(f'Could not fetch tx {output.txid} while rechecking')
+            continue
 
         if 'blockhash' in tx.keys():
             block = bchn.get_block_height(tx['blockhash'])

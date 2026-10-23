@@ -1,17 +1,17 @@
-import redis
 import json
 
-from decouple import config
 from rest_framework.views import APIView
 from django.http import JsonResponse
 from bcmr_main.models import Registry, Token
 from bcmr_main.tasks import update_registry_and_nft_cache
-from rest_framework.views import APIView
-from django.http import JsonResponse
 import dateutil.parser
 from operator import itemgetter
 from dateutil.parser import parse as parse_datetime
-from bcmr_main.utils import transform_to_paytaca_expected_format
+from bcmr_main.utils import get_redis_client, transform_to_paytaca_expected_format
+
+# Only refresh a cached entry in the background at most this often, so a hot
+# token endpoint doesn't enqueue one task per request.
+REFRESH_INTERVAL = 60 * 5
 
 class TokenView(APIView):
 
@@ -31,7 +31,7 @@ class TokenView(APIView):
 
         nft_type_key = kwargs.get('type_key', '') 
         
-        client = redis.Redis(host=config('REDIS_HOST', 'redis'), port=config('REDIS_PORT', 6379))
+        client = get_redis_client()
         cache_key = f'metadata:token:{category}'            
         if nft_type_key: 
             cache_key = f'metadata:token:{category}:{nft_type_key}'
@@ -39,7 +39,10 @@ class TokenView(APIView):
 
         if cached_response:
             response = json.loads(cached_response)
-            update_registry_and_nft_cache.delay(category, nft_type_key)
+
+            refresh_key = f'cache-refresh:{cache_key}'
+            if client.set(refresh_key, 1, nx=True, ex=REFRESH_INTERVAL):
+                update_registry_and_nft_cache.delay(category, nft_type_key)
         else:
             registry = Registry.objects.filter(contents__identities__has_key=category, publisher__identities__contains=[category])
             if registry.exists():

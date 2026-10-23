@@ -1,69 +1,118 @@
-from bitcoinrpc.authproxy import AuthServiceProxy
+from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 
 from django.conf import settings
 from django.utils import timezone
 
-import socket
-import ssl
+import logging
 import time
-import json
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class BCHN(object):
 
-    def __init__(self):
-        self.max_retries = 3
-        self.rpc_connection = AuthServiceProxy(settings.BCHN_NODE)
-    
+    def __init__(self, timeout=None):
+        self.max_retries = getattr(settings, 'BCHN_RPC_MAX_RETRIES', 3)
+        self.rpc_timeout = timeout or getattr(settings, 'BCHN_RPC_TIMEOUT', 60)
+        self._block_heights = {}
+        self._block_heights_limit = 256
+
+        self.rpc_connection = self._connect()
+
+    def _connect(self):
+        # AuthServiceProxy builds its socket without a timeout unless one is
+        # passed. Without it, an RPC call over a half-open connection (dropped
+        # SSH tunnel, NAT timeout, node restart) blocks forever and the caller
+        # never logs anything again.
+        try:
+            proxy = AuthServiceProxy(
+                settings.BCHN_NODE, timeout=self.rpc_timeout
+            )
+        except TypeError:
+            # Older python-bitcoinrpc builds do not accept a timeout kwarg.
+            proxy = AuthServiceProxy(settings.BCHN_NODE)
+
+        conn = getattr(proxy, '_AuthServiceProxy__conn', None)
+        if conn is not None:
+            conn.timeout = self.rpc_timeout
+            if conn.sock is not None:
+                conn.sock.settimeout(self.rpc_timeout)
+
+        return proxy
+
+    def _reset_connection(self):
+        # A failed request can leave the underlying httplib connection in a
+        # broken state; retrying on the same proxy would keep failing.
+        try:
+            self.rpc_connection = self._connect()
+        except Exception:
+            LOGGER.exception('Unable to recreate BCHN RPC connection')
+
+    def _call(self, method, *args):
+        last_exception = None
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                return getattr(self.rpc_connection, method)(*args)
+            except JSONRPCException as exc:
+                # The node answered: this is a deterministic error (unknown
+                # txid, block not found, bad params). Retrying the same request
+                # would just burn ~3.5s per call and still fail.
+                LOGGER.warning('BCHN RPC %s rejected: %s', method, exc)
+                raise
+            except Exception as exc:
+                last_exception = exc
+                LOGGER.warning(
+                    'BCHN RPC %s failed (attempt %s/%s): %s',
+                    method, attempt, self.max_retries, exc
+                )
+                self._reset_connection()
+                if attempt < self.max_retries:
+                    time.sleep(attempt * 1.25)
+        raise last_exception
+
     def get_latest_block(self):
-        return self.rpc_connection.getblockcount()
+        return self._call('getblockcount')
 
     def get_block(self, block):
-        retries = 0
-        while retries < self.max_retries:
-            try:
-                block_hash = self.rpc_connection.getblockhash(block)
-                block_data = self.rpc_connection.getblock(block_hash, 3)
-                return block_data['tx']
-            except:
-                retries += 1
-                time.sleep(retries * 1.25)
+        try:
+            block_hash = self._call('getblockhash', block)
+            block_data = self._call('getblock', block_hash, 3)
+            return block_data['tx']
+        except Exception:
+            # Caller is expected to retry this block on the next poll instead
+            # of dying (which used to crash the whole scanner process).
+            LOGGER.exception('Failed to fetch block #%s', block)
+            return None
 
     def get_block_height(self, block_hash):
-        retries = 0
-        while retries < self.max_retries:
-            try:
-                block = self.rpc_connection.getblock(block_hash)
-                return block['height']
-            except:
-                retries += 1
-                time.sleep(retries * 1.25)
+        if block_hash in self._block_heights:
+            return self._block_heights[block_hash]
+
+        try:
+            block = self._call('getblock', block_hash)
+            height = block['height']
+        except Exception:
+            LOGGER.exception('Failed to resolve height of block %s', block_hash)
+            return None
+
+        # Every tx in a block shares the same blockhash; caching this turns one
+        # RPC call per transaction into one call per block.
+        if len(self._block_heights) >= self._block_heights_limit:
+            self._block_heights.clear()
+        self._block_heights[block_hash] = height
+        return height
 
     def _get_raw_transaction(self, txid):
-        retries = 0
-        exception = None
-        while retries < self.max_retries:
-            try:
-                txn = self.rpc_connection.getrawtransaction(txid, 2)
-                return txn
-            except Exception as exc:
-                retries += 1
-                exception = exc
-                time.sleep(retries * 1.25)
-        if exception:
-            raise exception
+        return self._call('getrawtransaction', txid, 2)
 
     def get_transaction(self, tx_hash):
-        retries = 0
-        while retries < self.max_retries:
-            try:
-                txn = self._get_raw_transaction(tx_hash)
-                if txn:
-                    return self._parse_transaction(txn)
-                break
-            except:
-                retries += 1
-                time.sleep(retries * 1.25)
+        try:
+            txn = self._get_raw_transaction(tx_hash)
+            if txn:
+                return self._parse_transaction(txn)
+        except Exception:
+            LOGGER.exception('Failed to fetch transaction %s', tx_hash)
 
     def _parse_transaction(self, txn, include_outputs=True):
         tx_hash = txn['hash']
@@ -156,13 +205,4 @@ class BCHN(object):
         return None
 
     def decode_raw_transaction(self, tx_hex):
-        retries = 0
-        while retries < self.max_retries:
-            try:
-                txn = self.rpc_connection.decoderawtransaction(tx_hex)
-                return txn
-            except Exception as exception:
-                retries += 1
-                if retries >= self.max_retries:
-                    raise exception
-                time.sleep(1)
+        return self._call('decoderawtransaction', tx_hex)

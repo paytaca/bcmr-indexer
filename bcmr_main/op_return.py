@@ -8,10 +8,21 @@ from jsonschema import ValidationError
 from json.decoder import JSONDecodeError
 from urllib.parse import urlparse
 import logging
-import copy
 import json
 
 LOGGER = logging.getLogger(__name__)
+
+# Fields compared to decide whether a registry row actually needs saving.
+# Watched registries are re-checked every 20 seconds; writing unchanged rows
+# fires post_save signals which invalidate caches and rewrite the row forever.
+_COMPARED_FIELDS = (
+    'date_created',
+    'op_return',
+    'bcmr_url',
+    'contents',
+    'validity_checks',
+    'bcmr_request_status',
+)
 
 
 def log_invalid_op_return(txid, encoded_bcmr_json_hash, hash_standards):
@@ -19,6 +30,18 @@ def log_invalid_op_return(txid, encoded_bcmr_json_hash, hash_standards):
     LOGGER.error(f'TXID: {txid}')
     LOGGER.error(f'Encoded BCMR JSON Hash: {encoded_bcmr_json_hash}')
     LOGGER.error(f'COMPARED AGAINST: {str(hash_standards)}')
+
+
+def _save_if_changed(registry_obj, original):
+    changed = any(
+        getattr(registry_obj, field) != original[field]
+        for field in _COMPARED_FIELDS
+    )
+    if not changed:
+        return False
+
+    registry_obj.save()
+    return True
 
 
 def process_op_return(
@@ -40,11 +63,13 @@ def process_op_return(
         if op_return.split(' ')[1] != '1380795202':
             return False, decoded_bcmr_url 
 
-        registry_obj, _ = Registry.objects.update_or_create(
+        registry_obj, _ = Registry.objects.get_or_create(
             txid=txid,
             index=index,
             publisher=publisher
         )
+
+        original = {field: getattr(registry_obj, field) for field in _COMPARED_FIELDS}
 
         validity_checks = {
             'bcmr_file_accessible': None,
@@ -61,24 +86,20 @@ def process_op_return(
         registry_obj.op_return = op_return
         registry_obj.bcmr_url = decoded_bcmr_url
         registry_obj.validity_checks = validity_checks
-        registry_obj.save()
-        registry_obj.refresh_from_db()
 
-        print('--URL:', decoded_bcmr_url)
+        LOGGER.info(f'--URL: {decoded_bcmr_url}')
 
         response = download_url(decoded_bcmr_url)
         if not response:
             validity_checks['bcmr_file_accessible'] = False
             registry_obj.validity_checks = validity_checks
-            registry_obj.save()
-            registry_obj.refresh_from_db()
+            _save_if_changed(registry_obj, original)
 
             return False, decoded_bcmr_url
 
         status_code = response.status_code
-        
+
         registry_obj.bcmr_request_status = status_code
-        contents = None
 
         validity_checks['bcmr_file_accessible'] = status_code == 200
         proceed = False
@@ -87,10 +108,6 @@ def process_op_return(
                 proceed = True
             else:
                 encoded_response_json_hash = encode_str(response.text)
-                # if (
-                #     decoded_bcmr_json_hash == encoded_response_json_hash or  # bitcats (encoded before being hashed)
-                #     encoded_bcmr_json_hash == encoded_response_json_hash     # matthieu wallet (simple hash of BCMR json, no prior encoding)
-                # ):
                 if encoded_response_json_hash in [decoded_bcmr_json_hash, encoded_bcmr_json_hash]:
                     validity_checks['bcmr_hash_match'] = True
                     proceed = True
@@ -98,7 +115,7 @@ def process_op_return(
                     validity_checks['bcmr_hash_match'] = False
                     proceed = False
                     log_invalid_op_return(txid, encoded_response_json_hash, [decoded_bcmr_json_hash, encoded_bcmr_json_hash])
-                
+
                 try:
                     BitcoinCashMetadataRegistry.validate_contents(response.text)
                     validity_checks['bcmr_format_valid'] = True
@@ -109,15 +126,22 @@ def process_op_return(
 
             if proceed:
                 try:
-                    LOGGER.info(f'Saving content for registry ID # {registry_obj.id}')
-                    contents = copy.deepcopy(response.text)
-                    registry_obj.contents = json.loads(contents)
+                    new_contents = json.loads(response.text)
+                    if new_contents == registry_obj.contents:
+                        LOGGER.info(
+                            f'No changes for registry ID # {registry_obj.id}'
+                        )
+                    else:
+                        LOGGER.info(
+                            f'Saving content for registry ID # {registry_obj.id}'
+                        )
+                        registry_obj.contents = new_contents
                 except json.decoder.JSONDecodeError:
                     pass
         else:
             LOGGER.info(f'Something\'s wrong in fetching BCMR --- {decoded_bcmr_url} - {status_code}')
 
         registry_obj.validity_checks = validity_checks
-        registry_obj.save(force_update=True)
+        _save_if_changed(registry_obj, original)
 
     return validity_checks, decoded_bcmr_url

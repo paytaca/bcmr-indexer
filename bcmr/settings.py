@@ -292,6 +292,11 @@ if NETWORK == 'mainnet':
 BCHN_RPC_PORT = config('BCHN_RPC_PORT', '8332')
 BCHN_NODE = f'{BCHN_SCHEME}://{RPC_USER}:{BCHN_RPC_PASSWORD}@{BCHN_HOST}:{BCHN_RPC_PORT}'
 
+# Never let a half-open connection to the node (dropped SSH tunnel, NAT
+# timeout, node restart) block an indexing process forever.
+BCHN_RPC_TIMEOUT = config('BCHN_RPC_TIMEOUT', default=60, cast=int)
+BCHN_RPC_MAX_RETRIES = config('BCHN_RPC_MAX_RETRIES', default=3, cast=int)
+
 BCHN_ZMQ_PORT = config('BCHN_ZMQ_PORT', '28332')
 
 
