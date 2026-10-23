@@ -12,7 +12,11 @@ class Token(models.Model):
     amount = models.BigIntegerField(null=True)
     is_nft = models.BooleanField(default=False, db_index=True)
     commitment = models.CharField(
-        max_length=255,
+        # NFT commitments are raw bytes hex-encoded here, and the consensus
+        # maximum is 128 bytes (256 hex chars). The old value of 255 was one
+        # character short of a full-length commitment, so any NFT at the limit
+        # raised StringDataRightTruncation and the transaction was dropped.
+        max_length=512,
         null=True,
         blank=True,
         db_index=True
