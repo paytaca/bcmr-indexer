@@ -381,3 +381,69 @@ def transform_to_paytaca_expected_format(identity_snapshot, nft_type_key, is_nft
 
 
 
+from dataclasses import dataclass, asdict
+from typing import Optional
+
+
+@dataclass
+class DecodedBcmrOpReturn:
+    """Decoded CHIP-BCMR publication OP_RETURN data."""
+    content_hash: str
+    uris: list[str]
+    bare_cid: bool
+
+
+def _is_bcmr_protocol_token(token: str) -> bool:
+    """
+    Check if the first push token represents 'BCMR'.
+    Bitcoin RPC ASM outputs 4-byte pushes as little-endian signed integers
+    ('1380795202') or occasionally as hex ('42434d52').
+    """
+    if token.lower() == "42434d52":
+        return True
+    try:
+        # 1380795202 -> 0x524d4342 -> little-endian bytes b'BCMR'
+        val = int(token)
+        return val.to_bytes(4, "little", signed=True) == b"BCMR"
+    except (ValueError, OverflowError):
+        return False
+
+
+def decode_bcmr_op_return_asm(asm: str) -> Optional[DecodedBcmrOpReturn]:
+    """
+    Decode a CHIP-BCMR publication from Bitcoin RPC scriptPubKey.asm format.
+    """
+    tokens = asm.strip().split()
+    if len(tokens) < 3 or tokens[0] != "OP_RETURN":
+        return None
+
+    if not _is_bcmr_protocol_token(tokens[1]):
+        return None
+
+    payload_hex = tokens[2]
+    try:
+        payload_bytes = bytes.fromhex(payload_hex)
+    except ValueError:
+        return None
+
+    # `OP_RETURN BCMR <bare CID>`: no content hash, no URI chunks.
+    if len(tokens) == 3:
+        return DecodedBcmrOpReturn(
+            content_hash=payload_hex.lower(),
+            uris=[payload_bytes.decode("utf-8", errors="replace")],
+            bare_cid=True,
+        )
+
+    uris: list[str] = []
+    for uri_hex in tokens[3:]:
+        try:
+            uri_bytes = bytes.fromhex(uri_hex)
+            uris.append(uri_bytes.decode("utf-8", errors="replace"))
+        except ValueError:
+            continue
+
+    return DecodedBcmrOpReturn(
+        content_hash=payload_hex.lower(),
+        uris=uris,
+        bare_cid=False,
+    )
