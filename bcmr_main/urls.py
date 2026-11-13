@@ -21,6 +21,13 @@ urlpatterns += [
     re_path(r"^registries/(?P<category>[\w+:]+)/latest/$", views.RegistryView.as_view(), name='latest-token-registry'),
     re_path(r"^registries/(?P<txid>\w{64})\:(?P<vout>\d+)/$", views.RegistryTxoView.as_view(), name='token-registry'),
     re_path(r"^authchain/(?P<category>[\w+:]+)/head/$", views.AuthchainHeadView.as_view(), name='authchain-head'),
+
+    re_path(r"^authchain/(?P<authbase>[\w+:]+)/$", views.AuthchainView.as_view(), name="authchain"),
+    re_path(r"^authchain/(?P<authbase>[\w+:]+)/authhead/$", views.AuthchainAuthheadByAuthbase.as_view(), name="authchain-authhead"),
+    re_path(r"^authchain/(?P<authbase>[\w+:]+)/is-authhead/(?P<txid>[\w+:]+)/$", views.AuthchainIsAuthheadView.as_view(), name="authchain-is-head"),
+    re_path(r"^authchain/(?P<authbase>[\w+:]+)/last-publication/$", views.AuthchainLastPublicationView.as_view(), name="authchain-last-publication"),
+    re_path(r"^authchain/(?P<authbase>[\w+:]+)/latest-registry/$", views.AuthchainLatestRegistryView.as_view(), name="authchain-latest-registry"),
+    
     re_path(r"^bcmr/(?P<category>[\w+:]+)/$", views.get_contents, name='bcmr-get-contents'),
     re_path(r"^bcmr/(?P<category>[\w+:]+)/token/$", views.get_token, name='bcmr-get-token'),
     re_path(r"^bcmr/(?P<category>[\w+:]+)/token/nfts/(?P<commitment>[\w+:]+)/$", views.get_token_nft, name='bcmr-get-token-nft'),
