@@ -10,11 +10,13 @@ from bcmr_main.authchain import (
     get_authhead,
     get_last_identity_claim_detail,
     get_latest_registry,
-    is_authhead,
+    is_local_authhead,
     AuthchainIdentityClaimError
 )
 
 class AuthchainHeadView(APIView):
+    """GET /authchain/<category>/head/ (category-based lookup)."""
+
     def get(self, request, *args, **kwargs):
         category = kwargs.get('category', '')
         authhead_txid = None
@@ -38,6 +40,8 @@ class AuthchainHeadView(APIView):
 
 
 class AuthchainView(APIView):
+    """GET /authchain/<authbase>/ (full authchain)."""
+
     def get(self, request, authbase: str):
         authchain = get_authchain(authbase)
         if not authchain:
@@ -48,7 +52,7 @@ class AuthchainView(APIView):
         return JsonResponse({"authbase": authbase, "authchain": authchain}, status=status.HTTP_200_OK)
 
 class AuthchainAuthheadByAuthbase(APIView):
-    """GET /authchain/<authbase>/head/"""
+    """GET /authchain/<authbase>/authhead/"""
 
     def get(self, request, authbase: str):
         try:
@@ -69,11 +73,11 @@ class AuthchainAuthheadByAuthbase(APIView):
         )
 
 class AuthchainIsAuthheadView(APIView):
-    
-    """GET /authchain/<authbase>/is-head/<txid>/"""
+    """GET /authchain/<authbase>/is-authhead/<txid>/"""
+
     def get(self, request, authbase: str, txid: str):
         try:
-            result = is_authhead(authbase, txid)
+            result = is_local_authhead(authbase, txid)
         except ValueError as exc:
             return JsonResponse({"detail": str(exc)}, status=status.HTTP_404_NOT_FOUND)
 
@@ -88,10 +92,10 @@ class AuthchainLastPublicationView(APIView):
         try:
             last_identity_claim = get_last_identity_claim_detail(authbase)
         except AuthchainIdentityClaimError as exc:
-            logger.exception("Invalid identity claim for authbase=%s", authbase)
+            logger.warning("Invalid identity claim for authbase=%s: %s", authbase, exc)
             return JsonResponse(
                 {"detail": str(exc)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
 
         if not last_identity_claim:

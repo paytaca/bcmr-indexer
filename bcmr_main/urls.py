@@ -24,7 +24,7 @@ urlpatterns += [
 
     re_path(r"^authchain/(?P<authbase>[\w+:]+)/$", views.AuthchainView.as_view(), name="authchain"),
     re_path(r"^authchain/(?P<authbase>[\w+:]+)/authhead/$", views.AuthchainAuthheadByAuthbase.as_view(), name="authchain-authhead"),
-    re_path(r"^authchain/(?P<authbase>[\w+:]+)/is-authhead/(?P<txid>[\w+:]+)/$", views.AuthchainIsAuthheadView.as_view(), name="authchain-is-head"),
+    re_path(r"^authchain/(?P<authbase>[\w+:]+)/is-authhead/(?P<txid>[\w+:]+)/$", views.AuthchainIsAuthheadView.as_view(), name="authchain-is-authhead"),
     re_path(r"^authchain/(?P<authbase>[\w+:]+)/last-publication/$", views.AuthchainLastPublicationView.as_view(), name="authchain-last-publication"),
     re_path(r"^authchain/(?P<authbase>[\w+:]+)/latest-registry/$", views.AuthchainLatestRegistryView.as_view(), name="authchain-latest-registry"),
     
