@@ -1,3 +1,6 @@
+from dataclasses import dataclass
+from typing import Optional
+
 from django.conf import settings
 from django.utils import timezone
 from requests.adapters import HTTPAdapter, Retry
@@ -334,8 +337,13 @@ def fetch_authchain_pub_from_chaingraph(token_id, sort='asc', offset=0):
     return authchain
 
 def is_authhead(token_id, identity_output_txid):
+    """Check an authhead via Chaingraph.
+
+    This is the remote/Chaingraph variant. The local, database-backed
+    equivalent is ``bcmr_main.authchain.is_local_authhead``.
+    """
     authhead = fetch_authhead_from_chaingraph(token_id)
-    return (identity_output_txid == authhead, authhead )
+    return (identity_output_txid == authhead, authhead)
 
 def transform_to_paytaca_expected_format(identity_snapshot, nft_type_key, is_nft):
     nft_type_key_exists = False
@@ -381,3 +389,79 @@ def transform_to_paytaca_expected_format(identity_snapshot, nft_type_key, is_nft
 
 
 
+@dataclass
+class DecodedBcmrOpReturn:
+    """Decoded CHIP-BCMR publication OP_RETURN data."""
+    content_hash: str
+    uris: list[str]
+
+
+def _is_bcmr_protocol_token(token: str) -> bool:
+    """
+    Check if the first push token represents 'BCMR'.
+
+    Bitcoin RPC ASM outputs 4-byte pushes as little-endian signed integers
+    ('1380795202') or occasionally as hex ('42434d52'). The signed integer
+    handling is intentional: BCHN renders 4-byte pushes as signed values.
+    """
+    normalized = token.lower()
+    if normalized in ("42434d52", "0x42434d52"):
+        return True
+    try:
+        # 1380795202 -> 0x524d4342 -> little-endian bytes b'BCMR'
+        val = int(token)
+        return val.to_bytes(4, "little", signed=True) == b"BCMR"
+    except (ValueError, OverflowError):
+        return False
+
+
+def _decode_hash_push(payload: bytes) -> Optional[str]:
+    """Return a publication hash as lowercase hex, or ``None`` if malformed.
+
+    CHIP-BCMR encodes the hash as a 32-byte push. Older publications pushed
+    the hash as 64 ASCII hex characters, so those are accepted too.
+    """
+    if len(payload) == 32:
+        return payload.hex()
+    if len(payload) == 64:
+        try:
+            decoded = payload.decode("ascii")
+        except UnicodeDecodeError:
+            return None
+        if all(char in "0123456789abcdefABCDEF" for char in decoded):
+            return decoded.lower()
+    return None
+
+
+def decode_bcmr_op_return_asm(asm: str) -> Optional[DecodedBcmrOpReturn]:
+    """
+    Decode a CHIP-BCMR publication from Bitcoin RPC scriptPubKey.asm format.
+
+    The expected shape is ``OP_RETURN <BCMR> <hash> [<uri> ...]``. URIs are
+    optional, so a hash-only output has an empty ``uris`` list.
+    """
+    tokens = asm.strip().split()
+    if len(tokens) < 3 or tokens[0] != "OP_RETURN":
+        return None
+
+    if not _is_bcmr_protocol_token(tokens[1]):
+        return None
+
+    try:
+        payload_bytes = bytes.fromhex(tokens[2])
+    except ValueError:
+        return None
+
+    content_hash = _decode_hash_push(payload_bytes)
+    if content_hash is None:
+        return None
+
+    uris: list[str] = []
+    for uri_hex in tokens[3:]:
+        try:
+            uri_bytes = bytes.fromhex(uri_hex)
+        except ValueError:
+            continue
+        uris.append(uri_bytes.decode("utf-8", errors="replace"))
+
+    return DecodedBcmrOpReturn(content_hash=content_hash, uris=uris)
