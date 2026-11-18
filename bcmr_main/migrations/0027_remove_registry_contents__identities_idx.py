@@ -9,9 +9,22 @@ class Migration(migrations.Migration):
         ('bcmr_main', '0026_registry_contents__identities_idx'),
     ]
 
+    # 0026 no longer creates this index, so its state is removed here without
+    # asking the schema editor for an index that may not exist. IF EXISTS keeps
+    # this a no-op for databases that still have the index from the old 0026.
     operations = [
-        migrations.RemoveIndex(
-            model_name='registry',
-            name='contents__identities_idx',
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql='DROP INDEX IF EXISTS contents__identities_idx',
+                    reverse_sql=migrations.RunSQL.noop,
+                ),
+            ],
+            state_operations=[
+                migrations.RemoveIndex(
+                    model_name='registry',
+                    name='contents__identities_idx',
+                ),
+            ],
         ),
     ]
