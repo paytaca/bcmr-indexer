@@ -10,9 +10,24 @@ class Migration(migrations.Migration):
         ('bcmr_main', '0025_registry_contents_idx'),
     ]
 
+    # This originally added a btree index on the jsonb expression
+    # contents->'identities'. Registry contents are whole BCMR documents, so an
+    # index row for that key regularly exceeds Postgres' 8191-byte limit and
+    # CREATE INDEX fails with ProgramLimitExceeded, which stops `migrate` dead
+    # on any database that has real registry data. The index was never useful
+    # and 0027 removes it again, so only the migration state is recorded and
+    # the database is left untouched.
     operations = [
-        migrations.AddIndex(
-            model_name='registry',
-            index=models.Index(django.db.models.expressions.F('contents__identities'), name='contents__identities_idx'),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[],
+            state_operations=[
+                migrations.AddIndex(
+                    model_name='registry',
+                    index=models.Index(
+                        django.db.models.expressions.F('contents__identities'),
+                        name='contents__identities_idx'
+                    ),
+                ),
+            ],
         ),
     ]
